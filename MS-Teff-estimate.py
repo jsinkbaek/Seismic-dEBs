@@ -93,7 +93,6 @@ def find_T2(R1, R2, T1, L_ratio):
     :param R2: radius of star 2 [same unit as R1]
     :param T1: effective temperature of star 1 [K]
     :param L_ratio: luminosity ratio L1/L2
-    :param T2_guess: initial guess for effective temperature of star 2 [K]
     :return: effective temperature of star 2 [K]
     """
     def minimize_fun(T2):
