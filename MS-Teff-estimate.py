@@ -100,7 +100,7 @@ def find_T2(R1, R2, T1, L_ratio):
     """
     def minimize_fun(T2):
         return np.abs(L_ratio - luminosity_ratio(R1, R2, T1, T2))
-    optimize_result = minimize_scalar(minimize_fun, method='Bounded', bounds=(5000, 8000))
+    optimize_result = minimize_scalar(minimize_fun, method='Bounded', bounds=(4000, 8000))
     if optimize_result.success:
         return optimize_result.x
     else:
@@ -109,8 +109,8 @@ def find_T2(R1, R2, T1, L_ratio):
 
 def read_jktebop_output(identifiers, loc='jktebop/param.out'):
     """
-    Function to read final results from JKTEBOP output parameter file using string identifiers.
-    Will only return the last occurrence of each value.
+    Convenience function to read results from JKTEBOP output parameter file using string identifiers.
+    Will only return the last occurrence of each value in the file.
     :param identifiers: List of string identifiers for lines to return (e.g. [str(Eccentricity * cos(omega):)])
     :param loc:         location of output parameter file in project folder
     :return:            tuple with array of identifiers found matching, and array of their last value in file
@@ -136,10 +136,10 @@ def read_jktebop_output(identifiers, loc='jktebop/param.out'):
     return name, val
 
 
-def read_limb_darkening_parameters(logg_range=np.array([1, 5]), Trange=np.array([4000, 7000]), MH_range=-0.5,
+def read_limb_darkening_parameters(logg_range=np.array([1, 5]), Trange=np.array([2000, 9000]), MH_range=-0.5,
                                    mTurb_range=2.0, loc='datafiles/tess_ldquad_table25.dat'):
     """
-    Reads limb-darkening parameters from grid file for varying temperature and logg and outputs.
+    Convenience function. Reads limb-darkening parameters from grid file for varying temperature and logg and outputs.
     :param logg_range:        log g range or requirement. Must be a numpy array for range, or float for requirement
     :param Trange:            temperature range or requirement
     :param MH_range:          metallicity range or requirement
@@ -179,7 +179,7 @@ def read_limb_darkening_parameters(logg_range=np.array([1, 5]), Trange=np.array(
     return data
 
 
-def interpolated_LD_param(logg, Teff, MH, mTurb, logg_range=np.array([1, 5]), Trange=np.array([4000, 7000]),
+def interpolated_LD_param(logg, Teff, MH, mTurb, logg_range=np.array([0, 7]), Trange=np.array([2000, 9000]),
                           MH_range=-0.5, mTurb_range=2.0, loc='datafiles/tess_ldquad_table25.dat'):
     """
     Interpolates limb-darkening parameters from grid data and evaluates in points given
@@ -198,6 +198,7 @@ def interpolated_LD_param(logg, Teff, MH, mTurb, logg_range=np.array([1, 5]), Tr
     vals = data[:, -2:]
     points = data[:, 0:-2]
     eval_points = np.array([])
+    # # Flexibility depending on size of parameter space (how many have grid points)
     if isinstance(logg_range, np.ndarray):
         eval_points = np.append(eval_points, logg)
     if isinstance(Trange, np.ndarray):
@@ -213,19 +214,60 @@ def interpolated_LD_param(logg, Teff, MH, mTurb, logg_range=np.array([1, 5]), Tr
     return res[0, :]
 
 
-def jktebop_iterator(loc_infile='jktebop/infile.TESS'):
+def save_LD_to_infile(LD_param_MS=None, LD_param_RG=None, loc_infile='jktebop/infile.TESS'):
+    """
+    Convenience function to use for updating limb-darkening parameters directly in the JKTEBOP input file.
+    One or both components can be filled at a time.
+    """
+    if isinstance(LD_param_MS, np.ndarray) and isinstance(LD_param_RG, np.ndarray):
+        LD_a = np.array([LD_param_MS[0], LD_param_RG[0]])
+        LD_b = np.array([LD_param_MS[1], LD_param_RG[1]])
+        with open(loc_infile, "r") as f:
+            list_of_lines = f.readlines()
+            list_of_lines[7] = " " + str(LD_a[0]) + " " + str(LD_a[1]) \
+                               + "    LD star A (linear coeff)   LD star B (linear coeff)\n"
+            list_of_lines[8] = " " + str(LD_b[0]) + " " + str(LD_b[1]) \
+                               + "    LD star A (nonlin coeff)   LD star B (nonlin coeff)\n"
+    elif isinstance(LD_param_MS, np.ndarray):
+        with open(loc_infile, "r") as f:
+            list_of_lines = f.readlines()
+            list_of_lines[7] = " " + str(LD_param_MS[0]) + " " + list_of_lines[7].split()[1] \
+                               + "    LD star A (linear coeff)   LD star B (linear coeff)\n"
+            list_of_lines[8] = " " + str(LD_param_MS[1]) + " " + list_of_lines[8].split()[1] \
+                               + "    LD star A (nonlin coeff)   LD star B (nonlin coeff)\n"
+    elif isinstance(LD_param_RG, np.ndarray):
+        with open(loc_infile, "r") as f:
+            list_of_lines = f.readlines()
+            list_of_lines[7] = " " + list_of_lines[7].split()[0] + " " + str(LD_param_RG[0])\
+                               + "    LD star A (linear coeff)   LD star B (linear coeff)\n"
+            list_of_lines[8] = " " + list_of_lines[8].split()[0] + " " + str(LD_param_RG[1]) \
+                               + "    LD star A (nonlin coeff)   LD star B (nonlin coeff)\n"
+    else:
+        raise ValueError("No LD parameters to update were given.")
+
+    with open(loc_infile, "w") as f:
+        f.writelines(list_of_lines)
+
+
+def jktebop_iterator(n_iter=4, loc_infile='jktebop/infile.TESS'):
+    """
+    Calls JKTEBOP to perform fit, extracts key parameters, calculates MS effective temperature,
+    finds Limb-darkening parameters, and repeats iteratively.
+    :param n_iter:      number of iterations needed
+    :param loc_infile:  location of JKTEBOP input file
+    """
     T_RG = 5042
     MH = -0.5
     mTurb = 2.0
-    for i in range(0, 5):
-        print("\n")
+    for i in range(0, n_iter+1):
+        print("")
         print("Iteration ", i)
-        subprocess.run("cd /home/sinkbaek/PycharmProjects/Seismic-dEBs/jktebop/ && make clean && make", shell=True)
+        subprocess.run("cd jktebop/ && make clean -s && make -s", shell=True)
         _, jktebop_vals = read_jktebop_output(['Log surface gravity of star A (cgs):',
                                                'Log surface gravity of star B (cgs):', 'Radius of star A (Rsun)',
                                                'Radius of star B (Rsun)', 'Stellar light ratio (phase 0.1706):'])
         [L_ratio, R_MS, R_RG, loggMS, loggRG] = jktebop_vals
-        print("Using T_RG=", T_RG, ", MH=", MH, ", mTurb=", mTurb)
+        print("Using T_RG=", T_RG, "  MH=", MH, "  mTurb=", mTurb)
         print("log g MS         ", loggMS)
         print("log g RG         ", loggRG)
         print("Radius MS        ", R_MS)
@@ -235,33 +277,11 @@ def jktebop_iterator(loc_infile='jktebop/infile.TESS'):
         print("Calculated T_MS  ", T_MS)
         LD_param_MS = interpolated_LD_param(loggMS, T_MS, MH, mTurb)
         LD_param_RG = interpolated_LD_param(loggRG, T_RG, MH, mTurb)
-        LD_a = np.array([LD_param_MS[0], LD_param_RG[0]])
-        LD_b = np.array([LD_param_MS[1], LD_param_RG[1]])
         print("LD_param_MS      ", LD_param_MS)
         print("LD_param_RG      ", LD_param_RG)
-
-        with open(loc_infile, "r") as f:
-            list_of_lines = f.readlines()
-            list_of_lines[7] = " " + str(LD_a[0]) + " " + str(LD_a[1]) \
-                               + "    LD star A (linear coeff)   LD star B (linear coeff)\n"
-            list_of_lines[8] = " " + str(LD_b[0]) + " " + str(LD_b[1]) \
-                               + "    LD star A (nonlin coeff)   LD star B (nonlin coeff)\n"
-        with open(loc_infile, "w") as f:
-            f.writelines(list_of_lines)
+        save_LD_to_infile(LD_param_MS, LD_param_RG, loc_infile=loc_infile)
 
 
 jktebop_iterator()
-
-# Rb = 7.5436984091
-# Ra = 1.12416
-# Ra = 1.124480
-# Ra = 1.1318818664
-# Tb = 5042
-
-# Ta = find_T2(Rb, Ra, Tb, 29.75864)
-# Ta = find_T2(Rb, Ra, Tb, 29.75335096)
-# Ta = find_T2(Rb, Ra, Tb, 29.7533595146)
-# print(Ta)
-# print(luminosity_ratio(Rb, Ra, Tb, Ta))
 
 
