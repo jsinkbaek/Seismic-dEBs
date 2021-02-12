@@ -1,7 +1,9 @@
 import numpy as np
 import scipy.constants as c
 from scipy.interpolate import interp1d
+import scipy.interpolate as interp
 from scipy.optimize import minimize_scalar
+import matplotlib.pyplot as plt
 
 
 def planck_func(wl, T):
@@ -38,7 +40,7 @@ def tess_spectral_response(wl):
 
 def fold_summation(wl_a, wl_b, dw, T):
     """
-    Calls planck_func and tess_spectral_response, and folds the two by summation.
+    Calls planck_func and tess_spectral_response, and folds the two by summation of product.
     :param wl_a: initial wavelength [Å]
     :param wl_b: end wavelength [Å]
     :param dw: wavelength stepsize [Å]
@@ -104,17 +106,125 @@ def find_T2(R1, R2, T1, L_ratio):
         return
 
 
-Rb = 7.67996
+def read_jktebop_output(identifiers, loc='jktebop/param.out'):
+    """
+    Function to read final results from JKTEBOP output parameter file using string identifiers.
+    Will only return the last occurrence of each value.
+    :param identifiers: List of string identifiers for lines to return (e.g. [str(Eccentricity * cos(omega):)])
+    :param loc:         location of output parameter file in project folder
+    :return:            tuple with array of identifiers found matching, and array of their last value in file
+    """
+    name = np.array([])
+    val = np.array([])
+    used_id = np.array([])
+    with open(loc) as f:
+        for line in f:
+            lsplit = line.strip().split("  ")
+            if isinstance(lsplit, list):
+                try:
+                    for ident in identifiers:
+                        print(lsplit[0])
+                        if lsplit[0] == ident and ident not in used_id:
+                            used_id = np.append(used_id, ident)
+                            name = np.append(name, lsplit[0])
+                            val = np.append(val, np.double(lsplit[-1]))
+                        elif lsplit[0] == ident and ident in used_id:
+                            replace_idx = np.argwhere(name == ident)
+                            val[replace_idx] = np.double(lsplit[-1])
+                except IndexError:
+                    pass
+    return name, val
+
+
+def read_limb_darkening_parameters(logg_range=np.array([1, 5]), Trange=np.array([4000, 7000]), MH_range=-0.5,
+                                   mTurb_range=2.0, loc='datafiles/tess_ldquad_table25.dat'):
+    """
+    Reads limb-darkening parameters from grid file for varying temperature and logg and outputs.
+    :param logg_range:        log g range or requirement. Must be a numpy array for range, or float for requirement
+    :param Trange:            temperature range or requirement
+    :param MH_range:          metallicity range or requirement
+    :param mTurb_range:       microturbulence range or requirement
+    :param loc:               location of datafile in project folder
+    :return:                  array of logg and temperature combinations, and their corresponding
+                              limb-darkening parameters.
+    """
+    data = np.loadtxt(loc, usecols=(0, 1, 2, 3, 4, 5))
+    logg = data[:, 0]
+    Teff = data[:, 1]
+    MH   = data[:, 2]
+    mTurb= data[:, 3]
+    if isinstance(mTurb_range, np.ndarray):
+        mT_mask = (mTurb >= mTurb_range[0]) & (mTurb <= mTurb_range[1])
+    else:
+        mT_mask = mTurb == mTurb_range
+        data = np.delete(data, 3, 1)        # delete column with singular data value
+    if isinstance(MH_range, np.ndarray):
+        MH_mask = (MH >= MH_range[0]) & (MH <= MH_range[1])
+    else:
+        MH_mask = MH == MH_range
+        data = np.delete(data, 2, 1)
+    if isinstance(Trange, np.ndarray):
+        T_mask = (Teff >= Trange[0]) & (Teff <= Trange[1])
+    else:
+        T_mask = Teff == Trange
+        data = np.delete(data, 1, 1)
+    if isinstance(logg_range, np.ndarray):
+        lg_mask = (logg >= logg_range[0]) & (logg <= logg_range[1])
+    else:
+        lg_mask = logg == logg_range
+        data = np.delete(data, 0, 1)
+
+    mask = lg_mask & T_mask & MH_mask & mT_mask
+    data = data[mask, :]
+    return data
+
+
+def interpolated_LD_param(logg, Teff, MH, mTurb, logg_range=np.array([1, 5]), Trange=np.array([4000, 7000]),
+                          MH_range=-0.5, mTurb_range=2.0, loc='datafiles/tess_ldquad_table25.dat'):
+    """
+    Interpolates limb-darkening parameters from grid data and evaluates in points given
+    :param logg:        evaluation point
+    :param Teff:        evaluation point
+    :param MH:          evaluation point
+    :param mTurb:       evaluation point
+    :param logg_range:  range or requirement
+    :param Trange:      range or requirement
+    :param MH_range:    range or requirement
+    :param mTurb_range: range or requirement
+    :param loc:         datafile location in project folder
+    :return:            limbdarkening parameters a and b (quadratic LS fit values for default file)
+    """
+    data = read_limb_darkening_parameters(logg_range, Trange, MH_range, mTurb_range, loc)
+    vals = data[:, -2:]
+    points = data[:, 0:-2]
+    eval_points = np.array([])
+    if isinstance(logg_range, np.ndarray):
+        eval_points = np.append(eval_points, logg)
+    if isinstance(Trange, np.ndarray):
+        eval_points = np.append(eval_points, Teff)
+    if isinstance(MH_range, np.ndarray):
+        eval_points = np.append(eval_points, MH)
+    if isinstance(mTurb_range, np.ndarray):
+        eval_points = np.append(eval_points, mTurb)
+
+    eval_points = np.reshape(eval_points, (1, eval_points.size))
+    res = interp.griddata(points, vals, eval_points, method='cubic')
+
+    return res
+
+
+print(interpolated_LD_param(4.23, 5620, -0.5, 2.0))
+
+Rb = 7.5436984091
 # Ra = 1.12416
 # Ra = 1.124480
-Ra = 1.1245660185
+Ra = 1.1318818664
 Tb = 5042
-Ta = 5700
-print(luminosity_ratio(Rb, Ra, Tb, Ta))
-print((Rb/Ra)**2 * (Tb/Ta)**4)
 
 # Ta = find_T2(Rb, Ra, Tb, 29.75864)
 # Ta = find_T2(Rb, Ra, Tb, 29.75335096)
-Ta = find_T2(Rb, Ra, Tb, 29.7533890453)
-print(Ta)
-print(luminosity_ratio(Rb, Ra, Tb, Ta))
+# Ta = find_T2(Rb, Ra, Tb, 29.7533595146)
+# print(Ta)
+# print(luminosity_ratio(Rb, Ra, Tb, Ta))
+
+
