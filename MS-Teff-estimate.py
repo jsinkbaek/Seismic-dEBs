@@ -104,7 +104,7 @@ def find_T2(R1, R2, T1, L_ratio):
     if optimize_result.success:
         return optimize_result.x
     else:
-        return
+        return optimize_result.message
 
 
 def read_jktebop_output(identifiers, loc='jktebop/param.out'):
@@ -118,13 +118,12 @@ def read_jktebop_output(identifiers, loc='jktebop/param.out'):
     name = np.array([])
     val = np.array([])
     used_id = np.array([])
-    with open(loc) as f:
+    with open(loc, "r") as f:
         for line in f:
             lsplit = line.strip().split("  ")
             if isinstance(lsplit, list):
                 try:
                     for ident in identifiers:
-                        print(lsplit[0])
                         if lsplit[0] == ident and ident not in used_id:
                             used_id = np.append(used_id, ident)
                             name = np.append(name, lsplit[0])
@@ -211,24 +210,53 @@ def interpolated_LD_param(logg, Teff, MH, mTurb, logg_range=np.array([1, 5]), Tr
     eval_points = np.reshape(eval_points, (1, eval_points.size))
     res = interp.griddata(points, vals, eval_points, method='cubic')
 
-    return res
+    return res[0, :]
 
 
-def jktebop_iterator():
-    subprocess.run('cd jktebop && make clean && make')
-    _, jktebop_vals = read_jktebop_output(['Log surface gravity of star A (cgs):',
-                                           'Log surface gravity of star B (cgs):', 'Radius of star A (Rsun)',
-                                           'Radius of star B (Rsun)', 'Stellar light ratio (phase 0.1706):'])
-    [loggMS, loggRG, R_MS, R_RG, L_ratio] = jktebop_vals
+def jktebop_iterator(loc_infile='jktebop/infile.TESS'):
+    T_RG = 5042
+    MH = -0.5
+    mTurb = 2.0
+    for i in range(0, 5):
+        print("\n")
+        print("Iteration ", i)
+        subprocess.run("cd /home/sinkbaek/PycharmProjects/Seismic-dEBs/jktebop/ && make clean && make", shell=True)
+        _, jktebop_vals = read_jktebop_output(['Log surface gravity of star A (cgs):',
+                                               'Log surface gravity of star B (cgs):', 'Radius of star A (Rsun)',
+                                               'Radius of star B (Rsun)', 'Stellar light ratio (phase 0.1706):'])
+        [L_ratio, R_MS, R_RG, loggMS, loggRG] = jktebop_vals
+        print("Using T_RG=", T_RG, ", MH=", MH, ", mTurb=", mTurb)
+        print("log g MS         ", loggMS)
+        print("log g RG         ", loggRG)
+        print("Radius MS        ", R_MS)
+        print("Radius RG        ", R_RG)
+        print("L_ratio          ", L_ratio)
+        T_MS = find_T2(R_RG, R_MS, T_RG, L_ratio)
+        print("Calculated T_MS  ", T_MS)
+        LD_param_MS = interpolated_LD_param(loggMS, T_MS, MH, mTurb)
+        LD_param_RG = interpolated_LD_param(loggRG, T_RG, MH, mTurb)
+        LD_a = np.array([LD_param_MS[0], LD_param_RG[0]])
+        LD_b = np.array([LD_param_MS[1], LD_param_RG[1]])
+        print("LD_param_MS      ", LD_param_MS)
+        print("LD_param_RG      ", LD_param_RG)
+
+        with open(loc_infile, "r") as f:
+            list_of_lines = f.readlines()
+            list_of_lines[7] = " " + str(LD_a[0]) + " " + str(LD_a[1]) \
+                               + "    LD star A (linear coeff)   LD star B (linear coeff)\n"
+            list_of_lines[8] = " " + str(LD_b[0]) + " " + str(LD_b[1]) \
+                               + "    LD star A (nonlin coeff)   LD star B (nonlin coeff)\n"
+        with open(loc_infile, "w") as f:
+            f.writelines(list_of_lines)
 
 
-print(interpolated_LD_param(4.23, 5620, -0.5, 2.0))
+jktebop_iterator()
 
-Rb = 7.5436984091
+# Rb = 7.5436984091
 # Ra = 1.12416
 # Ra = 1.124480
-Ra = 1.1318818664
-Tb = 5042
+# Ra = 1.1318818664
+# Tb = 5042
 
 # Ta = find_T2(Rb, Ra, Tb, 29.75864)
 # Ta = find_T2(Rb, Ra, Tb, 29.75335096)
