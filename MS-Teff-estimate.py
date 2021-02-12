@@ -4,6 +4,7 @@ from scipy.interpolate import interp1d
 import scipy.interpolate as interp
 from scipy.optimize import minimize_scalar
 import matplotlib.pyplot as plt
+import subprocess
 
 
 def planck_func(wl, T):
@@ -211,6 +212,14 @@ def interpolated_LD_param(logg, Teff, MH, mTurb, logg_range=np.array([1, 5]), Tr
     res = interp.griddata(points, vals, eval_points, method='cubic')
 
     return res
+
+
+def jktebop_iterator():
+    subprocess.run('cd jktebop && make clean && make')
+    _, jktebop_vals = read_jktebop_output(['Log surface gravity of star A (cgs):',
+                                           'Log surface gravity of star B (cgs):', 'Radius of star A (Rsun)',
+                                           'Radius of star B (Rsun)', 'Stellar light ratio (phase 0.1706):'])
+    [loggMS, loggRG, R_MS, R_RG, L_ratio] = jktebop_vals
 
 
 print(interpolated_LD_param(4.23, 5620, -0.5, 2.0))
