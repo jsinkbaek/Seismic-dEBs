@@ -107,7 +107,7 @@ def find_T2(R1, R2, T1, L_ratio):
         return optimize_result.message
 
 
-def read_jktebop_output(identifiers, loc='jktebop/param.out'):
+def read_jktebop_output(identifiers, loc='jktebop_tess/param.out'):
     """
     Convenience function to read results from JKTEBOP output parameter file using string identifiers.
     Will only return the last occurrence of each value in the file.
@@ -249,12 +249,13 @@ def save_LD_to_infile(LD_param_MS=None, LD_param_RG=None, loc_infile='jktebop/in
         f.writelines(list_of_lines)
 
 
-def jktebop_iterator(n_iter=4, loc_infile='jktebop/infile.TESS'):
+def jktebop_iterator(n_iter=4, loc_infile='jktebop_tess/infile.TESS', loc_jktebop='jktebop_tess/'):
     """
     Calls JKTEBOP to perform fit, extracts key parameters, calculates MS effective temperature,
     finds Limb-darkening parameters, and repeats iteratively.
     :param n_iter:      number of iterations needed
     :param loc_infile:  location of JKTEBOP input file
+    :param loc_jktebop: location of JKTEBOP folder
     """
     T_RG = 5042
     MH = -0.5
@@ -262,10 +263,11 @@ def jktebop_iterator(n_iter=4, loc_infile='jktebop/infile.TESS'):
     for i in range(0, n_iter+1):
         print("")
         print("Iteration ", i)
-        subprocess.run("cd jktebop/ && make clean -s && make -s", shell=True)
+        subprocess.run("cd " + loc_jktebop + " && make clean -s && make -s", shell=True)
         _, jktebop_vals = read_jktebop_output(['Log surface gravity of star A (cgs):',
                                                'Log surface gravity of star B (cgs):', 'Radius of star A (Rsun)',
-                                               'Radius of star B (Rsun)', 'Stellar light ratio (phase 0.1706):'])
+                                               'Radius of star B (Rsun)', 'Stellar light ratio (phase 0.1706):'],
+                                              loc=loc_jktebop+'param.out')
         [L_ratio, R_MS, R_RG, loggMS, loggRG] = jktebop_vals
         print("Using T_RG=", T_RG, "  MH=", MH, "  mTurb=", mTurb)
         print("log g MS         ", loggMS)
