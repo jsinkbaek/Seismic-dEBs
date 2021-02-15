@@ -39,20 +39,38 @@ def tess_spectral_response(wl):
     return spectral_response
 
 
-def fold_summation(wl_a, wl_b, dw, T):
+def kepler_spectral_response(wl):
+    data = np.loadtxt("datafiles/Kepler_Kepler.K.dat")
+    intp = interp1d(data[:, 0], data[:, 1], kind='cubic')
+    spectral_response = intp(wl)
+    return spectral_response
+
+
+def spectral_response_limits(spectral_response):
+    if spectral_response==tess_spectral_response:
+        data = np.loadtxt("datafiles/TESS_TESS.Red.dat")
+    elif spectral_response==kepler_spectral_response:
+        data = np.loadtxt("datafiles/Kepler_Kepler.K.dat")
+    else:
+        raise AttributeError("Unknown spectral_response")
+    wl_a, wl_b = data[0, 0], data[-1, 0]
+    return wl_a, wl_b
+
+
+def fold_summation(dw, T, spectral_response=tess_spectral_response):
     """
     Calls planck_func and tess_spectral_response, and folds the two by summation of product.
-    :param wl_a: initial wavelength [Å]
-    :param wl_b: end wavelength [Å]
-    :param dw: wavelength stepsize [Å]
-    :param T: temperature [K]
+    :param dw:                  wavelength stepsize [Å]
+    :param T:                   temperature [K]
+    :param spectral_response:   spectral response function (e.g. tess_spectral_response)
     :return: np.sum(planck_func * tess_spectral_response) * dw
     """
+    wl_a, wl_b = spectral_response_limits(spectral_response)
     wl = np.linspace(wl_a, wl_b, int((wl_b-wl_a)//dw))
     dw_ = wl[1] - wl[0]     # actual dw used after integer division
     pfun = planck_func(wl, T)
-    tsr = tess_spectral_response(wl)
-    return np.sum(pfun*tsr)*dw_
+    sr = spectral_response(wl)[0]
+    return np.sum(pfun*sr)*dw_
 
 
 def regular_summation(wl_a, wl_b, dw, T):
@@ -71,7 +89,7 @@ def regular_summation(wl_a, wl_b, dw, T):
     return np.sum(pfun)*dw_
 
 
-def luminosity_ratio(R1, R2, T1, T2, wl_a=5670, wl_b=11270, dw=0.001):
+def luminosity_ratio(R1, R2, T1, T2, spectral_response, wl_a=5670, wl_b=11270, dw=0.001):
     """
     Calculates luminosity ratio between two stars essentially using blackbody model L propto R²T⁴.
     Does this by calculating TESS integrated radiance given planck function and TESS spectral response.
@@ -79,27 +97,29 @@ def luminosity_ratio(R1, R2, T1, T2, wl_a=5670, wl_b=11270, dw=0.001):
     :param R2: radius of star 2 [same unit as R1]
     :param T1: effective temperature of star 1  [K]
     :param T2: effective temperature of star 2  [K]
+    :param spectral_response: spectral response function of detector
     :param wl_a: initial wavelength to measure at [Å]
     :param wl_b: last wavelength to measure at [Å] (base them on TESS spectral response function)
     :param dw: wavelength stepsize. Defines precision of fold_summation [Å]
     :return: luminosity ratio L1/L2
     """
-    integrated_radiance_1 = fold_summation(wl_a, wl_b, dw, T1)
-    integrated_radiance_2 = fold_summation(wl_a, wl_b, dw, T2)
+    integrated_radiance_1 = fold_summation(dw, T1, spectral_response)
+    integrated_radiance_2 = fold_summation(dw, T2, spectral_response)
     return (R1/R2)**2 * (integrated_radiance_1/integrated_radiance_2)
 
 
-def find_T2(R1, R2, T1, L_ratio):
+def find_T2(R1, R2, T1, L_ratio, spectral_response):
     """
     Find T2, given R1, R2, T1, and L1/L2.
-    :param R1: radius of star 1
-    :param R2: radius of star 2 [same unit as R1]
-    :param T1: effective temperature of star 1 [K]
-    :param L_ratio: luminosity ratio L1/L2
+    :param R1:                  radius of star 1
+    :param R2:                  radius of star 2 [same unit as R1]
+    :param T1:                  effective temperature of star 1 [K]
+    :param L_ratio:             luminosity ratio L1/L2
+    :param spectral_response:   spectral response function to use for satellite detector
     :return: effective temperature of star 2 [K]
     """
     def minimize_fun(T2):
-        return np.abs(L_ratio - luminosity_ratio(R1, R2, T1, T2))
+        return np.abs(L_ratio - luminosity_ratio(R1, R2, T1, T2, spectral_response=spectral_response))
     optimize_result = minimize_scalar(minimize_fun, method='Bounded', bounds=(4000, 8000))
     if optimize_result.success:
         return optimize_result.x
@@ -148,33 +168,58 @@ def read_limb_darkening_parameters(logg_range=np.array([1, 5]), Trange=np.array(
     :return:                  array of logg and temperature combinations, and their corresponding
                               limb-darkening parameters.
     """
-    data = np.loadtxt(loc, usecols=(0, 1, 2, 3, 4, 5))
-    logg = data[:, 0]
-    Teff = data[:, 1]
-    MH   = data[:, 2]
-    mTurb= data[:, 3]
-    if isinstance(mTurb_range, np.ndarray):
-        mT_mask = (mTurb >= mTurb_range[0]) & (mTurb <= mTurb_range[1])
-    else:
-        mT_mask = mTurb == mTurb_range
-        data = np.delete(data, 3, 1)        # delete column with singular data value
-    if isinstance(MH_range, np.ndarray):
-        MH_mask = (MH >= MH_range[0]) & (MH <= MH_range[1])
-    else:
-        MH_mask = MH == MH_range
-        data = np.delete(data, 2, 1)
-    if isinstance(Trange, np.ndarray):
-        T_mask = (Teff >= Trange[0]) & (Teff <= Trange[1])
-    else:
-        T_mask = Teff == Trange
-        data = np.delete(data, 1, 1)
-    if isinstance(logg_range, np.ndarray):
-        lg_mask = (logg >= logg_range[0]) & (logg <= logg_range[1])
-    else:
-        lg_mask = logg == logg_range
-        data = np.delete(data, 0, 1)
+    if loc == 'datafiles/tess_ldquad_table25.dat':
+        data = np.loadtxt(loc, usecols=(0, 1, 2, 3, 4, 5))
+        logg = data[:, 0]
+        Teff = data[:, 1]
+        MH   = data[:, 2]
+        mTurb= data[:, 3]
+        if isinstance(mTurb_range, np.ndarray):
+            mT_mask = (mTurb >= mTurb_range[0]) & (mTurb <= mTurb_range[1])
+        else:
+            mT_mask = mTurb == mTurb_range
+            data = np.delete(data, 3, 1)  # delete column with singular data value
+        if isinstance(MH_range, np.ndarray):
+            MH_mask = (MH >= MH_range[0]) & (MH <= MH_range[1])
+        else:
+            MH_mask = MH == MH_range
+            data = np.delete(data, 2, 1)
+        if isinstance(Trange, np.ndarray):
+            T_mask = (Teff >= Trange[0]) & (Teff <= Trange[1])
+        else:
+            T_mask = Teff == Trange
+            data = np.delete(data, 1, 1)
+        if isinstance(logg_range, np.ndarray):
+            lg_mask = (logg >= logg_range[0]) & (logg <= logg_range[1])
+        else:
+            lg_mask = logg == logg_range
+            data = np.delete(data, 0, 1)
+        mask = lg_mask & T_mask & MH_mask & mT_mask
 
-    mask = lg_mask & T_mask & MH_mask & mT_mask
+    elif loc == 'datafiles/kepler_sing_table.dat':
+        data = np.loadtxt(loc, usecols=(0, 1, 2, 4, 5))
+        Teff = data[:, 0]
+        logg = data[:, 1]
+        MH = data[:, 2]
+        if isinstance(MH_range, np.ndarray):
+            MH_mask = (MH >= MH_range[0]) & (MH <= MH_range[1])
+        else:
+            MH_mask = MH == MH_range
+            data = np.delete(data, 2, 1)
+        if isinstance(logg_range, np.ndarray):
+            lg_mask = (logg >= logg_range[0]) & (logg <= logg_range[1])
+        else:
+            lg_mask = logg == logg_range
+            data = np.delete(data, 1, 1)
+        if isinstance(Trange, np.ndarray):
+            T_mask = (Teff >= Trange[0]) & (Teff <= Trange[1])
+        else:
+            T_mask = Teff == Trange
+            data = np.delete(data, 0, 1)
+        mask = lg_mask & T_mask & MH_mask
+    else:
+        raise IOError("Unknown datafile structure or wrongly defined location.")
+
     data = data[mask, :]
     return data
 
@@ -198,15 +243,25 @@ def interpolated_LD_param(logg, Teff, MH, mTurb, logg_range=np.array([0, 7]), Tr
     vals = data[:, -2:]
     points = data[:, 0:-2]
     eval_points = np.array([])
-    # # Flexibility depending on size of parameter space (how many have grid points)
-    if isinstance(logg_range, np.ndarray):
-        eval_points = np.append(eval_points, logg)
-    if isinstance(Trange, np.ndarray):
-        eval_points = np.append(eval_points, Teff)
-    if isinstance(MH_range, np.ndarray):
-        eval_points = np.append(eval_points, MH)
-    if isinstance(mTurb_range, np.ndarray):
-        eval_points = np.append(eval_points, mTurb)
+    # # Flexibility depending on size of parameter space (how many have grid points) and table structure used
+    if loc=='datafiles/tess_ldquad_table25.dat':
+        if isinstance(logg_range, np.ndarray):
+            eval_points = np.append(eval_points, logg)
+        if isinstance(Trange, np.ndarray):
+            eval_points = np.append(eval_points, Teff)
+        if isinstance(MH_range, np.ndarray):
+            eval_points = np.append(eval_points, MH)
+        if isinstance(mTurb_range, np.ndarray):
+            eval_points = np.append(eval_points, mTurb)
+    elif loc == 'datafiles/kepler_sing_table.dat':
+        if isinstance(Trange, np.ndarray):
+            eval_points = np.append(eval_points, Teff)
+        if isinstance(logg_range, np.ndarray):
+            eval_points = np.append(eval_points, logg)
+        if isinstance(MH_range, np.ndarray):
+            eval_points = np.append(eval_points, MH)
+    else:
+        raise IOError("Unknown datafile structure or wrongly defined location.")
 
     eval_points = np.reshape(eval_points, (1, eval_points.size))
     res = interp.griddata(points, vals, eval_points, method='cubic')
@@ -249,13 +304,15 @@ def save_LD_to_infile(LD_param_MS=None, LD_param_RG=None, loc_infile='jktebop/in
         f.writelines(list_of_lines)
 
 
-def jktebop_iterator(n_iter=4, loc_infile='jktebop_tess/infile.TESS', loc_jktebop='jktebop_tess/'):
+def jktebop_iterator(n_iter=4, loc_infile='jktebop_tess/infile.TESS', loc_jktebop='jktebop_tess/',
+                     loc_ld_table='datafiles/tess_ldquad_table25.dat'):
     """
     Calls JKTEBOP to perform fit, extracts key parameters, calculates MS effective temperature,
     finds Limb-darkening parameters, and repeats iteratively.
     :param n_iter:      number of iterations needed
     :param loc_infile:  location of JKTEBOP input file
     :param loc_jktebop: location of JKTEBOP folder
+    :param loc_ld_table: location of Limb darkening table
     """
     T_RG = 5042
     MH = -0.5
@@ -263,11 +320,11 @@ def jktebop_iterator(n_iter=4, loc_infile='jktebop_tess/infile.TESS', loc_jktebo
     for i in range(0, n_iter+1):
         print("")
         print("Iteration ", i)
-        subprocess.run("cd " + loc_jktebop + " && make clean -s && make -s", shell=True)
+        subprocess.run("cd " + loc_jktebop + " && make clean -s && make", shell=True)
         _, jktebop_vals = read_jktebop_output(['Log surface gravity of star A (cgs):',
                                                'Log surface gravity of star B (cgs):', 'Radius of star A (Rsun)',
                                                'Radius of star B (Rsun)', 'Stellar light ratio (phase 0.1706):'],
-                                              loc=loc_jktebop+'param.out')
+                                               loc=loc_jktebop+'param.out')
         [L_ratio, R_MS, R_RG, loggMS, loggRG] = jktebop_vals
         print("Using T_RG=", T_RG, "  MH=", MH, "  mTurb=", mTurb)
         print("log g MS         ", loggMS)
@@ -275,15 +332,22 @@ def jktebop_iterator(n_iter=4, loc_infile='jktebop_tess/infile.TESS', loc_jktebo
         print("Radius MS        ", R_MS)
         print("Radius RG        ", R_RG)
         print("L_ratio          ", L_ratio)
-        T_MS = find_T2(R_RG, R_MS, T_RG, L_ratio)
+        if loc_jktebop=='jktebop_tess/' or loc_jktebop=='jktebop_tess':
+            spectral_response=tess_spectral_response
+        elif loc_jktebop=='jktebop_kepler/' or loc_jktebop=='jktebop_kepler':
+            spectral_response=kepler_spectral_response
+        else:
+            raise AttributeError("Unknown spectral response")
+        T_MS = find_T2(R_RG, R_MS, T_RG, L_ratio, spectral_response)
         print("Calculated T_MS  ", T_MS)
-        LD_param_MS = interpolated_LD_param(loggMS, T_MS, MH, mTurb)
-        LD_param_RG = interpolated_LD_param(loggRG, T_RG, MH, mTurb)
+        LD_param_MS = interpolated_LD_param(loggMS, T_MS, MH, mTurb, loc=loc_ld_table)
+        LD_param_RG = interpolated_LD_param(loggRG, T_RG, MH, mTurb, loc=loc_ld_table)
         print("LD_param_MS      ", LD_param_MS)
         print("LD_param_RG      ", LD_param_RG)
         save_LD_to_infile(LD_param_MS, LD_param_RG, loc_infile=loc_infile)
 
 
-jktebop_iterator()
+jktebop_iterator(n_iter=3, loc_infile='jktebop_kepler/infile.KEPLER', loc_jktebop='jktebop_kepler/',
+                 loc_ld_table='datafiles/kepler_sing_table.dat')
 
 
