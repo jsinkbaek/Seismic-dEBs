@@ -69,7 +69,7 @@ def fold_summation(dw, T, spectral_response=tess_spectral_response):
     wl = np.linspace(wl_a, wl_b, int((wl_b-wl_a)//dw))
     dw_ = wl[1] - wl[0]     # actual dw used after integer division
     pfun = planck_func(wl, T)
-    sr = spectral_response(wl)[0]
+    sr = spectral_response(wl)
     return np.sum(pfun*sr)*dw_
 
 
@@ -89,7 +89,7 @@ def regular_summation(wl_a, wl_b, dw, T):
     return np.sum(pfun)*dw_
 
 
-def luminosity_ratio(R1, R2, T1, T2, spectral_response, wl_a=5670, wl_b=11270, dw=0.001):
+def luminosity_ratio(R1, R2, T1, T2, spectral_response, dw=0.001):
     """
     Calculates luminosity ratio between two stars essentially using blackbody model L propto R²T⁴.
     Does this by calculating TESS integrated radiance given planck function and TESS spectral response.
@@ -98,8 +98,6 @@ def luminosity_ratio(R1, R2, T1, T2, spectral_response, wl_a=5670, wl_b=11270, d
     :param T1: effective temperature of star 1  [K]
     :param T2: effective temperature of star 2  [K]
     :param spectral_response: spectral response function of detector
-    :param wl_a: initial wavelength to measure at [Å]
-    :param wl_b: last wavelength to measure at [Å] (base them on TESS spectral response function)
     :param dw: wavelength stepsize. Defines precision of fold_summation [Å]
     :return: luminosity ratio L1/L2
     """
@@ -320,7 +318,7 @@ def jktebop_iterator(n_iter=4, loc_infile='jktebop_tess/infile.TESS', loc_jktebo
     for i in range(0, n_iter+1):
         print("")
         print("Iteration ", i)
-        subprocess.run("cd " + loc_jktebop + " && make clean -s && make", shell=True)
+        subprocess.run("cd " + loc_jktebop + " && make clean -s && make -s", shell=True)
         _, jktebop_vals = read_jktebop_output(['Log surface gravity of star A (cgs):',
                                                'Log surface gravity of star B (cgs):', 'Radius of star A (Rsun)',
                                                'Radius of star B (Rsun)', 'Stellar light ratio (phase 0.1706):'],
@@ -339,6 +337,8 @@ def jktebop_iterator(n_iter=4, loc_infile='jktebop_tess/infile.TESS', loc_jktebo
         else:
             raise AttributeError("Unknown spectral response")
         T_MS = find_T2(R_RG, R_MS, T_RG, L_ratio, spectral_response)
+        if i==0 or i==1:
+            T_MS -= 500
         print("Calculated T_MS  ", T_MS)
         LD_param_MS = interpolated_LD_param(loggMS, T_MS, MH, mTurb, loc=loc_ld_table)
         LD_param_RG = interpolated_LD_param(loggRG, T_RG, MH, mTurb, loc=loc_ld_table)
@@ -347,7 +347,6 @@ def jktebop_iterator(n_iter=4, loc_infile='jktebop_tess/infile.TESS', loc_jktebo
         save_LD_to_infile(LD_param_MS, LD_param_RG, loc_infile=loc_infile)
 
 
-jktebop_iterator(n_iter=3, loc_infile='jktebop_kepler/infile.KEPLER', loc_jktebop='jktebop_kepler/',
-                 loc_ld_table='datafiles/kepler_sing_table.dat')
+jktebop_iterator(n_iter=4)
 
 

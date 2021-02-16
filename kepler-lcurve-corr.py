@@ -42,10 +42,42 @@ plt.errorbar(time, m, m_err, fmt='k.', markersize=0.5, elinewidth=0.5)
 plt.ylim([0.020, -0.003])
 plt.show()
 
+# # # Fold lightcurve and cut off data away from eclipses # # #
+period = 63.32713
+phase = np.mod(time, period) / period
+# plt.errorbar(phase, m, m_err, fmt='k.', markersize=0.5, elinewidth=0.5)
+# plt.ylim([0.020, -0.003])
+# plt.title('Select area to keep')
+# coords = plt.ginput(n=4, timeout=0, show_clicks=True, mouse_add=1, mouse_stop=3, mouse_pop=2)
+# x0, x1, x2, x3 = coords[0][0], coords[1][0], coords[2][0], coords[3][0]
+x0=0.09563040975326542
+x1=0.17768448464099507
+x2=0.4452842604009781
+x3=0.5169891726902555
+print(x0, x1, x2, x3)
+mask = ((phase>=x0) & (phase<=x1)) | ((phase>=x2) & (phase<=x3))
+
+m_ = m[mask]
+time_ = time[mask]
+m_err_ = m_err[mask]
+phase_ = phase[mask]
+
+plt.errorbar(phase, m, m_err, fmt='.', color='gray', markersize=0.5, elinewidth=0.4)
+plt.errorbar(phase_, m_, m_err_, fmt='k.', markersize=0.5, elinewidth=0.5)
+plt.xlabel('Phase')
+plt.ylabel('Relative Magnitude')
+plt.legend(['Excluded data', 'Included data'])
+plt.ylim([0.020, -0.003])
+plt.show()
 
 # # # Save lightcurve to file # # #
-save_data = np.zeros((m.size, 3))
-save_data[:, 0] = time
-save_data[:, 1] = m
-save_data[:, 2] = m_err
+mask = ~np.isnan(m_) & ~np.isnan(m_err_) & ~np.isnan(time_)
+m_ = m_[mask]
+time_ = time_[mask]
+m_err_ = m_err_[mask]
+
+save_data = np.zeros((m_.size, 3))
+save_data[:, 0] = time_
+save_data[:, 1] = m_
+save_data[:, 2] = m_err_
 np.savetxt('lcmag_kepler.txt', save_data, header='Time\tMagnitude\tError', delimiter='\t')
