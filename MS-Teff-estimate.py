@@ -337,8 +337,6 @@ def jktebop_iterator(n_iter=4, loc_infile='jktebop_tess/infile.TESS', loc_jktebo
         else:
             raise AttributeError("Unknown spectral response")
         T_MS = find_T2(R_RG, R_MS, T_RG, L_ratio, spectral_response)
-        if i==0 or i==1:
-            T_MS -= 500
         print("Calculated T_MS  ", T_MS)
         LD_param_MS = interpolated_LD_param(loggMS, T_MS, MH, mTurb, loc=loc_ld_table)
         LD_param_RG = interpolated_LD_param(loggRG, T_RG, MH, mTurb, loc=loc_ld_table)
@@ -347,6 +345,12 @@ def jktebop_iterator(n_iter=4, loc_infile='jktebop_tess/infile.TESS', loc_jktebo
         save_LD_to_infile(LD_param_MS, LD_param_RG, loc_infile=loc_infile)
 
 
-jktebop_iterator(n_iter=4)
+T2 = find_T2(7.513, 0.727, 5042, 61.16, kepler_spectral_response)
+print(T2)
+# print(interpolated_LD_param(4.62640, T2, -0.5, 2.0, loc='datafiles/kepler_sing_table.dat'))
+# print(interpolated_LD_param(2.80835, 5042, -0.5, 2.0, loc='datafiles/kepler_sing_table.dat'))
+
+# jktebop_iterator(n_iter=3, loc_infile='jktebop_kepler/infile.KEPLER', loc_jktebop='jktebop_kepler/',
+#                  loc_ld_table='datafiles/kepler_sing_table.dat')
 
 
