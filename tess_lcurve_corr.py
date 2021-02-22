@@ -5,7 +5,8 @@ photometry and asteroseismology.
 """
 
 import lightkurve as lk
-from lightkurve.collections import TargetPixelFileCollection, LightCurveCollection, LightCurveFileCollection
+from lightkurve import RegressionCorrector, DesignMatrix
+# from lightkurve.collections import TargetPixelFileCollection, LightCurveCollection, LightCurveFileCollection
 import numpy as np
 import matplotlib.pyplot as plt
 import astropy.units as u, astropy.constants as c
@@ -69,10 +70,10 @@ aper = tpf_2min.pipeline_mask
 raw_lc_2min = tpf_2min.to_lightcurve()
 
 # Make design matrix
-dm = lk.DesignMatrix(tpf_2min.flux[:, ~aper], name='pixels').pca(2).append_constant()
+dm = DesignMatrix(tpf_2min.flux[:, ~aper], name='pixels').pca(2).append_constant()
 
 # Regression corrector object
-reg = lk.RegressionCorrector(raw_lc_2min)
+reg = RegressionCorrector(raw_lc_2min)
 corrected_lc_2min = reg.correct(dm)
 
 # Plot result

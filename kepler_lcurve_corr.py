@@ -70,6 +70,15 @@ plt.legend(['F_short', 'F_phase'])
 plt.ylim([np.min(corr_short[~np.isnan(corr_short)]), np.max(corr_short[~np.isnan(corr_short)])])
 plt.xlabel('Phase')
 plt.ylabel('e-/s')
+plt.show(block=False)
+corr_long_plot = corr_long/np.median(corr_long)
+plt.figure()
+plt.plot(phase, corr_long_plot, 'r.', markersize=1)
+plt.plot(phase, 1-corr_transit/np.min(corr_transit), 'b.', markersize=0.5)
+plt.legend(['F_long', 'F_phase'])
+plt.ylim([np.min(corr_long_plot[~np.isnan(corr_long_plot)]), np.max(corr_long_plot[~np.isnan(corr_long_plot)])])
+plt.xlabel('Phase')
+plt.ylabel('Normalized filter')
 plt.show(block=True)
 
 # # # Convert to magnitudes # # #
@@ -106,7 +115,7 @@ plt.legend(['Excluded data', 'Included data'])
 plt.ylim([0.020, -0.003])
 plt.show()
 
-# # # Save lightcurve to file # # #
+# # # Save fit lightcurve to file # # #
 mask = ~np.isnan(m_) & ~np.isnan(m_err_) & ~np.isnan(time_)
 m_ = m_[mask]
 time_ = time_[mask]
@@ -117,3 +126,15 @@ save_data[:, 0] = time_
 save_data[:, 1] = m_
 save_data[:, 2] = m_err_
 np.savetxt('lcmag_kepler.txt', save_data, header='Time\tMagnitude\tError', delimiter='\t')
+
+# # # Save full lightcurve to file # # #
+mask = ~np.isnan(m) & ~np.isnan(m_err) & ~np.isnan(time)
+m = m[mask]
+time = time[mask]
+m_err = m_err[mask]
+
+save_data = np.zeros((m.size, 3))
+save_data[:, 0] = time
+save_data[:, 1] = m
+save_data[:, 2] = m_err
+np.savetxt('lcmag_kepler_full.txt', save_data, header='Time\tMagnitude\tError', delimiter='\t')

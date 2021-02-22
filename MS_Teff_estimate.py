@@ -345,8 +345,8 @@ def jktebop_iterator(n_iter=4, loc_infile='jktebop_tess/infile.TESS', loc_jktebo
         save_LD_to_infile(LD_param_MS, LD_param_RG, loc_infile=loc_infile)
 
 
-T2 = find_T2(7.513, 0.727, 5042, 61.16, kepler_spectral_response)
-print(T2)
+# T2 = find_T2(7.513, 0.727, 5042, 61.16, kepler_spectral_response)
+# print(T2)
 # print(interpolated_LD_param(4.62640, T2, -0.5, 2.0, loc='datafiles/kepler_sing_table.dat'))
 # print(interpolated_LD_param(2.80835, 5042, -0.5, 2.0, loc='datafiles/kepler_sing_table.dat'))
 
