@@ -114,7 +114,6 @@ def jktebop_model(loc_model, loc_lc, loc_lc_fit, loc_rvA, loc_rvB, period, initi
 
 def temperature_profile(T_MS, T_RG, R_MS, R_RG):
     plt.rcParams.update({
-        "text.usetex": True,
         "font.family": "sans-serif",
         "font.sans-serif": ["Helvetica"]})
     lim_tess = Tlib.spectral_response_limits(Tlib.tess_spectral_response)
@@ -182,9 +181,9 @@ def temperature_profile(T_MS, T_RG, R_MS, R_RG):
     plt.show()
 
 
-# temperature_profile(5616, 5042, 0.727, 7.513)
-jktebop_model('jktebop_kepler/model.out', 'lcmag_kepler_full.txt', 'lcmag_kepler.txt', 'jktebop_kepler/rvA.dat',
-              'jktebop_kepler/rvB.dat', 63.32713, 54976.6351499878)
+temperature_profile(5616, 5042, 0.727, 7.513)
+# jktebop_model('jktebop_kepler/model.out', 'lcmag_kepler_full.txt', 'lcmag_kepler.txt', 'jktebop_kepler/rvA.dat',
+#              'jktebop_kepler/rvB.dat', 63.32713, 54976.6351499878)
 #jktebop_model('jktebop_tess/model.out', 'lcmag_tess_full.txt', 'jktebop_tess/rvA.dat',
 #              'jktebop_tess/rvB.dat', 63.32713, 58712.9377353396)
 # lc(loc='lcmag_kepler.txt', period=63.32713)

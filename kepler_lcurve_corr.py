@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 from astropy.io import fits
 
 
+# # # Start of Script # # #
+# Load data
 with fits.open("datafiles/kasoc/kplr008430105_kasoc-ts_llc_v1.fits") as hdul:
     print(hdul.info())
     hdu = hdul[1]
@@ -17,69 +19,88 @@ with fits.open("datafiles/kasoc/kplr008430105_kasoc-ts_llc_v1.fits") as hdul:
     corr_full = hdu.data['FILTER']
     kasoc_qflag = hdu.data['KASOC_FLAG']
 
+# Remove nan's
+nan_mask = np.isnan(time) | np.isnan(flux_seism) | np.isnan(corr_full)
+time = time[~nan_mask]
+flux_seism = flux_seism[~nan_mask]
+err_seism = err_seism[~nan_mask]
+corr_long = corr_long[~nan_mask]
+corr_transit = corr_transit[~nan_mask]
+corr_short = corr_short[~nan_mask]
+corr_full = corr_full[~nan_mask]
+corr_pos = corr_pos[~nan_mask]
+
+
+# Make uncorrected relative flux
 flux = (flux_seism * 1E-6 + 1) * corr_full
+# Correct flux for transit
 flux_transit = flux / (corr_long + corr_short)
+# Do phase fold
 period = 63.32713
 phase = np.mod(time, period) / period
 
 
-plt.figure()
-plt.plot(time, corr_long, 'g.', markersize=0.5)
-plt.plot(time, flux, 'b.', markersize=0.2)
-plt.legend(['F_long', 'Flux'])
-plt.xlabel('BJD - 2400000')
-plt.ylabel('e-/s')
-plt.show(block=False)
 
-plt.figure()
-plt.plot(time, corr_transit, 'r.', markersize=1)
-plt.plot(time, corr_short, 'b.', markersize=0.5)
-plt.legend(['F_phase', 'F_short'])
-plt.xlabel('BJD - 2400000')
-plt.ylabel('e-/s')
-plt.show(block=False)
+if False:
+    plt.figure()
+    plt.plot(time, corr_long, 'g.', markersize=0.5)
+    plt.plot(time, flux, 'b.', markersize=0.2)
+    plt.legend(['F_long', 'Flux'])
+    plt.xlabel('BJD - 2400000')
+    plt.ylabel('e-/s')
+    plt.show(block=False)
+
+    plt.figure()
+    plt.plot(time, corr_transit, 'r.', markersize=1)
+    plt.plot(time, corr_short, 'b.', markersize=0.5)
+    plt.legend(['F_phase', 'F_short'])
+    plt.xlabel('BJD - 2400000')
+    plt.ylabel('e-/s')
+    plt.show(block=False)
 
 
-fig, axs = plt.subplots(2, 2, sharey='row')
-ax1 = axs[0, 0]
-ax2 = axs[0, 1]
-ax3 = axs[1, 0]
-ax4 = axs[1, 1]
-ax1.plot(phase, flux/corr_long, 'r.', markersize=0.7)
-ax1.legend(['LC/F_long'])
-ax1.set_xlim([0.04, 0.24])
-ax1.set_ylabel('Relative Flux')
-ax2.plot(phase, flux/(corr_long+corr_short), 'b.', markersize=0.7)
-ax2.legend(['LC/(F_long+F_short)'])
-ax2.set_xlim([0.04, 0.24])
-ax3.plot(phase, flux/corr_long, 'r.', markersize=0.7)
-ax3.set_xlim([0.38, 0.58])
-ax3.legend(['LC/F_long'])
-ax3.set_ylabel('Relative Flux')
-ax3.set_xlabel('Phase')
-ax4.plot(phase, flux/(corr_long+corr_short), 'b.', markersize=0.7)
-ax4.legend(['LC/(F_long+F_short)'])
-ax4.set_xlim([0.38, 0.58])
-ax4.set_xlabel('Phase')
-plt.show(block=False)
+if True:
+    _, axs = plt.subplots(2, 2, sharey='row')
+    ax1 = axs[0, 0]
+    ax2 = axs[0, 1]
+    ax3 = axs[1, 0]
+    ax4 = axs[1, 1]
+    ax1.plot(phase, flux / corr_long, 'r.', markersize=0.7)
+    ax1.legend(['LC/F_long'])
+    ax1.set_xlim([0.04, 0.24])
+    ax1.set_ylabel('Relative Flux')
+    ax2.plot(phase, flux / (corr_long + corr_short), 'b.', markersize=0.7)
+    ax2.legend(['LC/(F_long+F_short)'])
+    ax2.set_xlim([0.04, 0.24])
+    ax3.plot(phase, flux / corr_long, 'r.', markersize=0.7)
+    ax3.set_xlim([0.38, 0.58])
+    ax3.legend(['LC/F_long'])
+    ax3.set_ylabel('Relative Flux')
+    ax3.set_xlabel('Phase')
+    ax4.plot(phase, flux / (corr_long + corr_short), 'b.', markersize=0.7)
+    ax4.legend(['LC/(F_long+F_short)'])
+    ax4.set_xlim([0.38, 0.58])
+    ax4.set_xlabel('Phase')
+    plt.show(block=False)
 
-plt.figure()
-plt.plot(phase, corr_short, 'r.', markersize=1)
-plt.plot(phase, corr_transit, 'b.', markersize=0.5)
-plt.legend(['F_short', 'F_phase'])
-plt.ylim([np.min(corr_short[~np.isnan(corr_short)]), np.max(corr_short[~np.isnan(corr_short)])])
-plt.xlabel('Phase')
-plt.ylabel('e-/s')
-plt.show(block=False)
-corr_long_plot = corr_long/np.median(corr_long)
-plt.figure()
-plt.plot(phase, corr_long_plot, 'r.', markersize=1)
-plt.plot(phase, 1-corr_transit/np.min(corr_transit), 'b.', markersize=0.5)
-plt.legend(['F_long', 'F_phase'])
-plt.ylim([np.min(corr_long_plot[~np.isnan(corr_long_plot)]), np.max(corr_long_plot[~np.isnan(corr_long_plot)])])
-plt.xlabel('Phase')
-plt.ylabel('Normalized filter')
-plt.show(block=True)
+if False:
+    plt.figure()
+    plt.plot(phase, corr_short, 'r.', markersize=1)
+    plt.plot(phase, corr_transit, 'b.', markersize=0.5)
+    plt.legend(['F_short', 'F_phase'])
+    plt.ylim([np.min(corr_short[~np.isnan(corr_short)]), np.max(corr_short[~np.isnan(corr_short)])])
+    plt.xlabel('Phase')
+    plt.ylabel('e-/s')
+    plt.show(block=False)
+    corr_long_plot = corr_long / np.median(corr_long)
+    plt.figure()
+    plt.plot(phase, corr_long_plot, 'r.', markersize=1)
+    plt.plot(phase, 1 - corr_transit / np.min(corr_transit), 'b.', markersize=0.5)
+    plt.legend(['F_long', 'F_phase'])
+    plt.ylim([np.min(corr_long_plot[~np.isnan(corr_long_plot)]), np.max(corr_long_plot[~np.isnan(corr_long_plot)])])
+    plt.xlabel('Phase')
+    plt.ylabel('Normalized filter')
+    plt.show(block=True)
 
 # # # Convert to magnitudes # # #
 m = -2.5*np.log10(flux_transit)
@@ -90,11 +111,6 @@ plt.ylim([0.020, -0.003])
 plt.show()
 
 # # # Fold lightcurve and cut off data away from eclipses # # #
-# plt.errorbar(phase, m, m_err, fmt='k.', markersize=0.5, elinewidth=0.5)
-# plt.ylim([0.020, -0.003])
-# plt.title('Select area to keep')
-# coords = plt.ginput(n=4, timeout=0, show_clicks=True, mouse_add=1, mouse_stop=3, mouse_pop=2)
-# x0, x1, x2, x3 = coords[0][0], coords[1][0], coords[2][0], coords[3][0]
 x0=0.076
 x1=0.20
 x2=0.42
@@ -107,6 +123,7 @@ time_ = time[mask]
 m_err_ = m_err[mask]
 phase_ = phase[mask]
 
+plt.figure()
 plt.errorbar(phase, m, m_err, fmt='.', color='gray', markersize=0.5, elinewidth=0.4)
 plt.errorbar(phase_, m_, m_err_, fmt='k.', markersize=0.5, elinewidth=0.5)
 plt.xlabel('Phase')
