@@ -37,7 +37,7 @@ def lc(x=None, y=None, yerr=None, loc=None, period=None):
         plt.errorbar(phase, y, yerr, fmt='k.', markersize=0.5, elinewidth=0.5)
         plt.xlabel('Phase')
         plt.ylabel('Relative Magnitude')
-        plt.ylim([np.max(y + yerr) * 1.1, -0.003])
+        plt.ylim([np.max(y + yerr) * 1.1, -0.007])
     plt.show()
 
 
@@ -181,10 +181,10 @@ def temperature_profile(T_MS, T_RG, R_MS, R_RG):
     plt.show()
 
 
-temperature_profile(5616, 5042, 0.727, 7.513)
+# temperature_profile(5616, 5042, 0.727, 7.513)
 # jktebop_model('jktebop_kepler/model.out', 'lcmag_kepler_full.txt', 'lcmag_kepler.txt', 'jktebop_kepler/rvA.dat',
 #              'jktebop_kepler/rvB.dat', 63.32713, 54976.6351499878)
-#jktebop_model('jktebop_tess/model.out', 'lcmag_tess_full.txt', 'jktebop_tess/rvA.dat',
-#              'jktebop_tess/rvB.dat', 63.32713, 58712.9377353396)
-# lc(loc='lcmag_kepler.txt', period=63.32713)
+# jktebop_model(loc_model='jktebop_tess/model.out', loc_lc='lcmag_tess.txt', loc_rvA='jktebop_tess/rvA.dat',
+#              loc_rvB='jktebop_tess/rvB.dat', period=63.32713, initial_t=58712.9377353396)
+lc(loc='lcmag_tess.txt', period=63.32713)
 # psd(loc="datafiles/kasoc/8430105_psd.txt")

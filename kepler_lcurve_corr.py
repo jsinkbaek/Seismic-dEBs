@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits
+from numpy.polynomial import Polynomial
 
 
 # # # Start of Script # # #
@@ -40,7 +41,6 @@ period = 63.32713
 phase = np.mod(time, period) / period
 
 
-
 if False:
     plt.figure()
     plt.plot(time, corr_long, 'g.', markersize=0.5)
@@ -59,7 +59,7 @@ if False:
     plt.show(block=False)
 
 
-if True:
+if False:
     _, axs = plt.subplots(2, 2, sharey='row')
     ax1 = axs[0, 0]
     ax2 = axs[0, 1]
@@ -102,13 +102,21 @@ if False:
     plt.ylabel('Normalized filter')
     plt.show(block=True)
 
+
 # # # Convert to magnitudes # # #
 m = -2.5*np.log10(flux_transit)
-m_err = np.abs(-2.5/np.log(10) * ((err_seism * 1E-6)*(corr_full/(corr_long+corr_short)))/flux_transit)
-plt.figure()
-plt.errorbar(time, m, m_err, fmt='k.', markersize=0.5, elinewidth=0.5)
-plt.ylim([0.020, -0.003])
-plt.show()
+# Measure spread within full eclipse as estimator of flux error
+rmse_measure_mask = (phase > 0.126) & (phase < 0.149)
+rmse_used_vals = flux_transit[rmse_measure_mask]
+mean_val = np.mean(rmse_used_vals)
+error = np.sqrt(np.sum((mean_val - rmse_used_vals)**2) / rmse_used_vals.size)
+m_err = np.abs(-2.5/np.log(10) * (error/flux_transit))
+# m_err = np.abs(-2.5/np.log(10) * ((err_seism * 1E-6)*(corr_full/(corr_long+corr_short)))/flux_transit)
+if False:
+    plt.figure()
+    plt.errorbar(time, m, m_err, fmt='k.', markersize=0.5, elinewidth=0.5)
+    plt.ylim([0.020, -0.003])
+    plt.show()
 
 # # # Fold lightcurve and cut off data away from eclipses # # #
 x0=0.076
@@ -123,14 +131,28 @@ time_ = time[mask]
 m_err_ = m_err[mask]
 phase_ = phase[mask]
 
-plt.figure()
-plt.errorbar(phase, m, m_err, fmt='.', color='gray', markersize=0.5, elinewidth=0.4)
-plt.errorbar(phase_, m_, m_err_, fmt='k.', markersize=0.5, elinewidth=0.5)
-plt.xlabel('Phase')
-plt.ylabel('Relative Magnitude')
-plt.legend(['Excluded data', 'Included data'])
-plt.ylim([0.020, -0.003])
-plt.show()
+if True:
+    plt.figure()
+    plt.errorbar(phase, m, m_err, fmt='.', color='gray', markersize=0.5, elinewidth=0.4)
+    plt.errorbar(phase_, m_, m_err_, fmt='k.', markersize=0.5, elinewidth=0.5)
+    plt.xlabel('Phase')
+    plt.ylabel('Relative Magnitude')
+    plt.legend(['Excluded data', 'Included data'])
+    plt.ylim([0.020, -0.003])
+    plt.show()
+
+if True:
+    _, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
+    print('phase.size', phase.size)
+    ax1.errorbar(phase, m, m_err, fmt='k.', ecolor='gray', markersize=0.5, elinewidth=0.1, errorevery=10)
+    ax1.set_xlim([0.04, 0.24])
+    ax1.set_xlabel('Phase')
+    ax1.set_ylabel('Relative Magnitude')
+    ax1.set_ylim([0.020, -0.003])
+    ax2.errorbar(phase, m, m_err, fmt='k.', ecolor='gray', markersize=0.5, elinewidth=0.1, errorevery=10)
+    ax2.set_xlim([0.38, 0.58])
+    ax2.set_xlabel('Phase')
+    plt.show()
 
 # # # Save fit lightcurve to file # # #
 mask = ~np.isnan(m_) & ~np.isnan(m_err_) & ~np.isnan(time_)
@@ -155,3 +177,85 @@ save_data[:, 0] = time
 save_data[:, 1] = m
 save_data[:, 2] = m_err
 np.savetxt('lcmag_kepler_full.txt', save_data, header='Time\tMagnitude\tError', delimiter='\t')
+
+
+# # # # # # # # PART 2 # # # # # # # # # #
+
+# # # Fit polynomials close to eclipses # # #
+eclipse1 = (phase > 0.1228) & (phase < 0.1515)
+eclipse2 = (phase > 0.4620) & (phase < 0.4934)
+mask_1 = ((phase > 0.0799) & (phase < 0.1976))
+mask_2 = ((phase > 0.4283) & (phase < 0.5241))
+mask_poly1 = mask_1 & ~eclipse1
+mask_poly2 = mask_2 & ~eclipse2
+
+poly1 = Polynomial.fit(phase[mask_poly1], flux_transit[mask_poly1], deg=2)
+poly2 = Polynomial.fit(phase[mask_poly2], flux_transit[mask_poly2], deg=4)
+
+time_1 = time[mask_1]
+time_2 = time[mask_2]
+phase_1 = phase[mask_1]
+phase_2 = phase[mask_2]
+flux_1 = flux_transit[mask_1] / poly1(phase_1)
+flux_2 = flux_transit[mask_2] / poly2(phase_2)
+
+if True:
+    _, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
+    ax1.scatter(phase_1, flux_transit[mask_1], 0.5, color='b', marker='.')
+    # ax1.scatter(phase_1, flux_1, 0.5, color='k', marker='.')
+    ax1.scatter(phase_1, poly1(phase_1), 0.3, color='r', marker='.')
+    ax1.set_xlabel('Phase')
+    ax2.scatter(phase_2, flux_transit[mask_2], 0.5, color='b', marker='.')
+    # ax2.scatter(phase_2, flux_2, 0.5, color='k', marker='.')
+    ax2.scatter(phase_2, poly2(phase_2), 0.3, color='r', marker='.')
+    ax2.set_xlabel('Phase')
+    plt.show()
+
+# # Cut down data set to nearer eclipse # #
+mask_1 = (phase_1 > 0.117) & (phase_1 < 0.156)
+mask_2 = (phase_2 > 0.457) & (phase_2 < 0.500)
+
+phase_1 = phase_1[mask_1]
+phase_2 = phase_2[mask_2]
+flux_1 = flux_1[mask_1]
+flux_2 = flux_2[mask_2]
+time_1 = time_1[mask_1]
+time_2 = time_2[mask_2]
+
+# # Convert to magnitudes and make error estimate # #
+m_1 = -2.5*np.log10(flux_1)
+m_2 = -2.5*np.log10(flux_2)
+# Measure spread within full eclipse as estimator of flux error
+rmse_measure_mask = (phase_1 > 0.126) & (phase_1 < 0.149)
+rmse_used_vals = flux_1[rmse_measure_mask]
+mean_val = np.mean(rmse_used_vals)
+error = np.sqrt(np.sum((mean_val - rmse_used_vals)**2) / rmse_used_vals.size)
+m_err_1 = np.abs(-2.5/np.log(10) * (error/flux_1))
+m_err_2 = np.abs(-2.5/np.log(10) * (error/flux_2))
+
+m = np.append(m_1, m_2)
+m_err = np.append(m_err_1, m_err_2)
+phase_12 = np.append(phase_1, phase_2)
+time_12 = np.append(time_1, time_2)
+
+mask = ~np.isnan(m) & ~np.isnan(m_err) & ~np.isnan(time_12) & ~np.isnan(phase_12)
+m = m[mask]
+time_12 = time_12[mask]
+m_err = m_err[mask]
+phase_12 = phase_12[mask]
+
+if True:
+    _, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
+    ax1.errorbar(phase_1, m_1, m_err_1, fmt='k.', ecolor='gray', markersize=0.5, elinewidth=0.1, errorevery=10)
+    ax1.set_xlabel('Phase')
+    ax1.set_ylabel('Relative Magnitude')
+    ax1.set_ylim([0.020, -0.003])
+    ax2.errorbar(phase_2, m_2, m_err_2, fmt='k.', ecolor='gray', markersize=0.5, elinewidth=0.1, errorevery=10)
+    ax2.set_xlabel('Phase')
+    plt.show()
+
+save_data = np.zeros((m.size, 3))
+save_data[:, 0] = time_12
+save_data[:, 1] = m
+save_data[:, 2] = m_err
+np.savetxt('lcmag_kepler_reduced.txt', save_data, delimiter='\t')
