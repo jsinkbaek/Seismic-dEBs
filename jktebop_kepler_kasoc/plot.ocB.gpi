@@ -1,0 +1,8 @@
+set term svg font ",13" background rgb "white" size 750,750
+set title "RV O-C found with JKTEBOP"
+set xlabel "BJD - 2400000 days"
+set ylabel "O-C [km/s]"
+set out "Plot.ocB.svg"
+
+plot "rvB.out" u 1:6 with points ls 1 title "RV B O-C"\
+	, 0
