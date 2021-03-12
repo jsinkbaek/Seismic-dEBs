@@ -19,25 +19,63 @@ def psd(x=None, y=None, loc=None):
     plt.show()
 
 
-def lc(x=None, y=None, yerr=None, loc=None, period=None):
+def lc(x=None, y=None, yerr=None, loc=None, period=None, model_loc=None, phase_xlim=None):
+    matplotlib.rcParams.update({'font.size': 18})
     if isinstance(loc, str):
         data = np.loadtxt(loc)
-        x, y, yerr = data[:, 0], data[:, 1], data[:, 2]
+        x, y, yerr = data[:, 0] - 58712.9380709522, data[:, 1], data[:, 2]
     elif x and y is None:
         raise AttributeError("No input given to psd. Give either x and y, or a datafile location.")
     plt.figure()
     plt.errorbar(x, y, yerr, fmt='k.', markersize=0.5, elinewidth=0.5)
     plt.xlabel('BJD - 2400000')
     plt.ylabel('Relative Magnitude')
-    plt.ylim([np.max(y+yerr)*1.1, -0.03])
+    plt.ylim([np.max(y+yerr)*1.1, -0.007])
 
     if period is not None:
         plt.figure()
         phase = np.mod(x, period)/period
-        plt.errorbar(phase, y, yerr, fmt='k.', markersize=0.5, elinewidth=0.5)
+        plt.errorbar(phase, y, yerr, fmt='.', color='gray', markersize=0.5, elinewidth=0.5, errorevery=10)
+        plt.errorbar(phase-1, y, yerr, fmt='.', color='gray', markersize=0.5, elinewidth=0.5, errorevery=10)
+        plt.errorbar(phase+1, y, yerr, fmt='.', color='gray', markersize=0.5, elinewidth=0.5, errorevery=10)
         plt.xlabel('Phase')
         plt.ylabel('Relative Magnitude')
         plt.ylim([np.max(y + yerr) * 1.1, -0.007])
+        if isinstance(phase_xlim, list):
+            plt.xlim(phase_xlim)
+        else:
+            plt.xlim([-0.05, 1.05])
+        if isinstance(model_loc, str):
+            model_data = np.loadtxt(model_loc)
+            model_phase = model_data[:, 0]
+            model_mag = model_data[:, 1]
+            plt.plot(model_phase, model_mag, 'k--')
+            plt.plot(model_phase-1, model_mag, 'k--')
+            plt.plot(model_phase+1, model_mag, 'k--')
+
+    plt.show()
+
+
+def lc_plot2(loc1, loc2, fmt1='b.', fmt2='r.', xlabel='BJD - 2400000', ylabel='Relative Magnitude', xlim=None,
+             ylim=None, legend=None):
+
+    data1 = np.loadtxt(loc1)
+    tm1, fl1, fl1_err = data1[:, 0], data1[:, 1], data1[:, 2]
+    data2 = np.loadtxt(loc2)
+
+    tm2, fl2, fl2_err = data2[:, 0], data2[:, 1], data2[:, 2]
+    tm2_u, u_idx = np.unique(tm2, return_index=True)
+    plt.figure()
+    plt.plot(tm1, fl1, fmt1, markersize=1)
+    plt.plot(tm2_u, fl2[u_idx], fmt2, markersize=1)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    if xlim is not None:
+        plt.xlim(xlim)
+    if ylim is not None:
+        plt.ylim(ylim)
+    if legend is not None:
+        plt.legend(legend)
     plt.show()
 
 
@@ -127,6 +165,15 @@ def temperature_profile(T_MS, T_RG, R_MS, R_RG):
     planck_rg = Tlib.planck_func(wl_planck, T_RG)
     planck_ms = Tlib.planck_func(wl_planck, T_MS)
 
+    plt.figure()
+    plt.plot(wl_planck, planck_rg/np.max(planck_rg))
+    plt.xlabel('Wavelength [Å]')
+    plt.ylabel('Normalized units')
+    plt.title('Planck Curve and Kepler spectral response function')
+    plt.plot(wl_kepler, srk, 'r')
+    plt.legend(['Radiance of Planck Curve (T=5042K)', 'Spectral Response Function of Kepler CCD'])
+    plt.show()
+
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
     ax1.plot(wl_planck, planck_rg, 'r')
     ax1.plot(wl_planck, planck_ms, 'y')
@@ -186,5 +233,8 @@ def temperature_profile(T_MS, T_RG, R_MS, R_RG):
 #              'jktebop_kepler/rvB.dat', 63.32713, 54976.6351499878)
 # jktebop_model(loc_model='jktebop_tess/model.out', loc_lc='lcmag_tess.txt', loc_rvA='jktebop_tess/rvA.dat',
 #              loc_rvB='jktebop_tess/rvB.dat', period=63.32713, initial_t=58712.9377353396)
-lc(loc='lcmag_tess.txt', period=63.32713)
+# lc(loc='lcmag_tess_tot.txt', period=63.32713, model_loc='jktebop_tess/model.out', phase_xlim=[-0.05, 0.4])
 # psd(loc="datafiles/kasoc/8430105_psd.txt")
+
+lc_plot2('lcmag_kepler_reduced.txt', 'jktebop_kepler_LTF/lc.KEPLER',
+         legend=['KASOC filtered Light Curve', 'LTF light curve'], ylim=[0.0225, -0.0025])

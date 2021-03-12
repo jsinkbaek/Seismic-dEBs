@@ -119,10 +119,14 @@ if False:
     plt.show()
 
 # # # Fold lightcurve and cut off data away from eclipses # # #
-x0=0.076
-x1=0.20
-x2=0.42
-x3=0.53
+x0 = 0.117
+x1 = 0.156
+x2 = 0.457
+x3 = 0.500
+# x0=0.076
+# x1=0.20
+# x2=0.42
+# x3=0.53
 print(x0, x1, x2, x3)
 mask = ((phase>=x0) & (phase<=x1)) | ((phase>=x2) & (phase<=x3))
 
@@ -152,6 +156,18 @@ if True:
     ax2.errorbar(phase, m, m_err, fmt='k.', ecolor='gray', markersize=0.5, elinewidth=0.1, errorevery=10)
     ax2.set_xlim([0.38, 0.58])
     ax2.set_xlabel('Phase')
+    plt.show()
+
+if True:
+    _, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
+    ax1.errorbar(phase_, m_, m_err_, fmt='k.', ecolor='gray', markersize=0.5, elinewidth=0.1, errorevery=10)
+    ax1.set_xlabel('Phase')
+    ax1.set_ylabel('Relative Magnitude')
+    ax1.set_xlim([0.115, 0.158])
+    ax1.set_ylim([0.020, -0.003])
+    ax2.errorbar(phase_, m_, m_err_, fmt='k.', ecolor='gray', markersize=0.5, elinewidth=0.1, errorevery=10)
+    ax2.set_xlabel('Phase')
+    ax2.set_xlim([0.455, 0.502])
     plt.show()
 
 # # # Save fit lightcurve to file # # #
@@ -211,6 +227,23 @@ if True:
     ax2.set_xlabel('Phase')
     plt.show()
 
+# # Save flux # #
+rmse_measure_mask = (phase_1 > 0.126) & (phase_1 < 0.149)
+rmse_used_vals = flux_1[rmse_measure_mask]
+mean_val = np.mean(rmse_used_vals)
+error = np.sqrt(np.sum((mean_val - rmse_used_vals)**2) / rmse_used_vals.size)
+
+flux = np.append(flux_1, flux_2)
+time_12 = np.append(time_1, time_2)
+flux_err = np.ones(flux.shape)
+flux_err[:] = error
+
+save_data = np.zeros((flux.size, 3))
+save_data[:, 0] = time_12
+save_data[:, 1] = flux
+save_data[:, 2] = flux_err
+np.savetxt('lcflux_kasoc_reduced_full.txt', save_data, delimiter="\t")
+
 # # Cut down data set to nearer eclipse # #
 mask_1 = (phase_1 > 0.117) & (phase_1 < 0.156)
 mask_2 = (phase_2 > 0.457) & (phase_2 < 0.500)
@@ -221,6 +254,7 @@ flux_1 = flux_1[mask_1]
 flux_2 = flux_2[mask_2]
 time_1 = time_1[mask_1]
 time_2 = time_2[mask_2]
+
 
 # # Convert to magnitudes and make error estimate # #
 m_1 = -2.5*np.log10(flux_1)
@@ -259,3 +293,22 @@ save_data[:, 0] = time_12
 save_data[:, 1] = m
 save_data[:, 2] = m_err
 np.savetxt('lcmag_kepler_reduced.txt', save_data, delimiter='\t')
+
+
+# # Save flux data # #
+flux = np.append(flux_1, flux_2)
+flux = flux[mask]
+flux_err = np.ones(flux.shape)
+flux_err[:] = error
+
+if True:
+    plt.figure()
+    plt.errorbar(phase_12, flux, flux_err, fmt='k.', ecolor='gray', markersize=0.5, elinewidth=0.1, errorevery=10)
+    plt.show()
+
+save_data = np.zeros((flux.size, 3))
+save_data[:, 0] = time_12
+save_data[:, 1] = flux
+save_data[:, 2] = flux_err
+np.savetxt('lcflux_kasoc_reduced.txt', save_data, delimiter="\t")
+

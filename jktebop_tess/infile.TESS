@@ -3,10 +3,10 @@
  89.01	 1.0      Orbital inclination (deg)  Mass ratio of system    
  10.2564  169.3   ecosw or eccentricity      esinw or periastron long
  0.0  0.0         Gravity darkening (star A) Grav darkening (star B) 
- 0.5827  0.0      Surface brightness ratio   Amount of third light   
+ 0.5827  0.075983      Surface brightness ratio   Amount of third light   
  quad  quad       LD law type for star A     LD law type for star B  
- 0.2887143432592303 0.3661753535527632    LD star A (linear coeff)   LD star B (linear coeff)
- 0.2811515484571064 0.24468680464103212    LD star A (nonlin coeff)   LD star B (nonlin coeff)
+ 0.28774171820559485 0.36633494579430154    LD star A (linear coeff)   LD star B (linear coeff)
+ 0.281416856750969 0.24455868034807138    LD star A (nonlin coeff)   LD star B (nonlin coeff)
  0.0  0.0         Reflection effect star A   Reflection effect star B
  0.0  0.0         Phase of primary eclipse   Light scale factor (mag)
  63.32713         Orbital period of eclipsing binary system (days) 

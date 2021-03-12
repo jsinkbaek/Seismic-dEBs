@@ -5,6 +5,9 @@ from astropy.io import fits
 from numpy.polynomial import Polynomial
 from scipy.signal import medfilt
 
+matplotlib.use('Qt5Agg')
+print(matplotlib.get_backend())
+
 
 # # # Functions for script # # #
 def poly_trendfit(ph, fl, tm, msk, deg=2, res_msk=None):
@@ -26,7 +29,7 @@ def poly_trendfit(ph, fl, tm, msk, deg=2, res_msk=None):
     return (ph_res, fl_res, tm_res), pfit
 
 
-def poly_plt(fl, tm, fln, tmn, pfit, tm0, tm1, fignr, component, res_mask, fit_mask):
+def poly_plt(fl, tm, fln, tmn, pfit, tm0, tm1, fignr, component, res_mask, fit_mask, include_kasoc=False):
     matplotlib.rcParams.update({'font.size': 17})
     tmfit = np.linspace(tm[0], tm[-1], 1000)
     pvals = pfit(tmfit)
@@ -44,22 +47,28 @@ def poly_plt(fl, tm, fln, tmn, pfit, tm0, tm1, fignr, component, res_mask, fit_m
     plt.plot(tm[res_mask], fl[res_mask]-yavg*0.004, 'g.', markersize=1.0)
     plt.plot(tmfit, pvals, 'k--')
     plt.xlim([tm0, tm1])
-    plt.ylim([ylow-ylow*0.005, yhigh +0.005*yhigh])
+    plt.ylim([ylow-ylow*0.008, yhigh +0.008*yhigh])
     plt.xlabel('Time: BJD - 2400000')
     plt.ylabel('Flux [e-/s]')
     plt.yticks(fontsize=13)
     plt.xticks(fontsize=13)
     plt.legend(['Uncorrected light curve', 'Data used for fit', 'Data for corrected LC', 'Chosen LTF polynomial'],
-               markerscale=8)
+                markerscale=8)
     plt.savefig(fname='figures/LTF/fig_'+str(fignr)+component+'1', orientation='landscape', dpi=150)
     plt.close(fig)
 
     fig = plt.figure(figsize=[6.4*1.5, 4.8*1.5])
-    plt.plot(tmn, fln, 'r.', markersize=1.0)
-    plt.xlim([tm0, tm1])
+    plt.plot(tmn, fln, 'r.', markersize=2.5)
+    plt.xlim([np.min(tmn)-0.5, np.max(tmn)+0.5])
     plt.xlabel('Time: BJD - 2400000')
+    plt.ylim([0.97, 1.005])
     plt.ylabel('Relative Flux')
-    plt.legend(['LTF corrected light curve'], markerscale=8)
+    if include_kasoc:
+        tm_kas, fl_kas, fl_err_kas = load_kasoc_lc()
+        plt.plot(tm_kas, fl_kas, 'b.', markersize=2)
+        plt.legend(['LTF corrected light curve', 'KASOC filtered light curve'], markerscale=8)
+    else:
+        plt.legend(['LTF corrected light curve'], markerscale=8)
     plt.ticklabel_format(axis='x', style='plain', useOffset=False)
     plt.savefig(fname='figures/LTF/fig_'+str(fignr)+component+'2', orientation='landscape', dpi=150)
     plt.close(fig)
@@ -161,9 +170,18 @@ def load_phase(i_, component, loc='datafiles/kepler_local_trendfitting_results/'
             print('Datafile '+str(i_)+component+' is missing. Was probably skipped intentionally.')
 
 
+def load_kasoc_lc(loc='lcflux_kasoc_reduced_full.txt'):
+    """
+    Loads a previously corrected lightkurve using parts of KASOC filter (see kepler_lcurve_corr.py).
+    """
+    data = np.loadtxt(loc)
+    tm, flx, flx_err = data[:, 0], data[:, 1], data[:, 2]
+    return tm, flx, flx_err
+
+
 # # # Start of Script # # #
 # Load data (Either previous trend fitted dataset, or KASOC datafile)
-load_previous = False
+load_previous = True
 if load_previous:
     flux_p1 = np.array([])
     flux_p2 = np.array([])
@@ -225,7 +243,7 @@ else:
     period = 63.32713
     phase = np.mod(time, period) / period
 
-    # # # Cut uncorrected light curve down to eclipses, normalize and plot # # #
+    # # # Cut uncorrected light curve down to eclipses and do Local Trend Fitting # # #
     # Split dataset into separate orbits
     phasecut_mask = np.diff(phase) < -0.8
     phasecut_idxs = np.where(phasecut_mask)[0]
@@ -254,17 +272,6 @@ else:
         current_flux = flux_split[i]
         current_time = time_split[i]
 
-        # # Legacy eclipse bottom normalization, only used for if statement # #
-        eclipse1_mask = (current_phases > 0.1269) & (current_phases < 0.1485)
-        norm_flux1_ = current_flux / np.median(current_flux[eclipse1_mask])
-        norm_flux1 = np.append(norm_flux1, norm_flux1_)
-
-        eclipse2_mask = (current_phases > 0.4724) & (current_phases < 0.4851)
-        norm_flux2_ = current_flux / np.median(current_flux[eclipse2_mask])
-        norm_flux2 = np.append(norm_flux2, norm_flux2_)
-
-        norm_phase = np.append(norm_phase, current_phases)
-
         fit_mask1 = ((current_phases > 0.02) & (current_phases < 0.12292)) \
                     | ((current_phases > 0.15164) & (current_phases < 0.3))
         fit_mask2 = ((current_phases > 0.34) & (current_phases < 0.46269)) \
@@ -273,7 +280,7 @@ else:
         res_mask2 = (current_phases > 0.38) & (current_phases < 0.58)
 
         # # Polynomial local trend fitting normalization # #
-        if norm_flux1_[~np.isnan(norm_flux1_)].size > 30:
+        if current_phases[fit_mask1].size > 10:
             polydeg = 2
             ct_masked = current_time[fit_mask1]
             inspect_res = inspection_loop(current_phases, current_flux, current_time, fit_mask1,
@@ -286,12 +293,11 @@ else:
                 flux_p12 = np.append(flux_p12, fln1)
                 phase_p12 = np.append(phase_p12, phn1)
                 time_p12 = np.append(time_p12, tmn1)
-                save_phase(phase_p1, flux_p1, time_p1, i, pfit=p1_, component='A')
+                save_phase(phn1, fln1, tmn1, i, pfit=p1_, component='A')
 
                 poly_plt(current_flux, current_time, fln1, tmn1, p1_, ct_masked[0], ct_masked[-1], i, 'A',
-                         rmsk1, fmsk1)
-
-        if norm_flux2_[~np.isnan(norm_flux2_)].size > 30:
+                         rmsk1, fmsk1, include_kasoc=True)
+        if current_phases[fit_mask2].size > 10:
             polydeg = 2
             ct_masked = current_time[fit_mask2]
             inspect_res = inspection_loop(current_phases, current_flux, current_time, fit_mask2,
@@ -304,10 +310,9 @@ else:
                 flux_p12 = np.append(flux_p12, fln2)
                 phase_p12 = np.append(phase_p12, phn2)
                 time_p12 = np.append(time_p12, tmn2)
-                save_phase(phase_p2, flux_p2, time_p2, i, pfit=p2_, component='B')
+                save_phase(phn2, fln2, tmn2, i, pfit=p2_, component='B')
                 poly_plt(current_flux, current_time, fln2, tmn2, p2_, ct_masked[0], ct_masked[-1], i, 'B', rmsk2,
-                         fmsk2)
-
+                         fmsk2, include_kasoc=True)
 
 t0 = 54976
 
@@ -396,15 +401,28 @@ m_err = m_err[mask]
 print(m.shape)
 
 # Cut fit data down to bone
-mask = ((phase_p12 > 0.098) & (phase_p12 < 0.182)) | ((phase_p12 > 0.442) & (phase_p12 < 0.521))
+mask = ((phase_p12 > 0.117) & (phase_p12 < 0.156)) | ((phase_p12 > 0.457) & (phase_p12 < 0.500))
 m = m[mask]
 time_p12 = time_p12[mask]
 phase_p12 = phase_p12[mask]
 m_err = m_err[mask]
+print(m.shape)
 
 if True:
     ax1.scatter(phase_p12, m, marker='.', color='k', s=0.5)
     ax2.scatter(phase_p12, m, marker='.', color='k', s=0.5)
+    plt.show()
+
+if True:
+    _, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
+    ax1.errorbar(phase_p12, m, m_err, fmt='k.', ecolor='gray', markersize=0.5, elinewidth=0.1, errorevery=10)
+    ax1.set_xlabel('Phase')
+    ax1.set_ylabel('Relative Magnitude')
+    ax1.set_xlim([0.115, 0.158])
+    ax1.set_ylim([0.020, -0.003])
+    ax2.errorbar(phase_p12, m, m_err, fmt='k.', ecolor='gray', markersize=0.5, elinewidth=0.1, errorevery=10)
+    ax2.set_xlabel('Phase')
+    ax2.set_xlim([0.455, 0.502])
     plt.show()
 
 save_data = np.zeros((m.size, 3))

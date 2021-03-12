@@ -312,6 +312,7 @@ def jktebop_iterator(n_iter=4, loc_infile='jktebop_tess/infile.TESS', loc_jktebo
     :param loc_jktebop: location of JKTEBOP folder
     :param loc_ld_table: location of Limb darkening table
     """
+    print('JKTEBOP folder:      ', loc_jktebop)
     T_RG = 5042
     MH = -0.5
     mTurb = 2.0
@@ -332,7 +333,8 @@ def jktebop_iterator(n_iter=4, loc_infile='jktebop_tess/infile.TESS', loc_jktebo
         print("L_ratio          ", L_ratio)
         if loc_jktebop=='jktebop_tess/' or loc_jktebop=='jktebop_tess':
             spectral_response=tess_spectral_response
-        elif loc_jktebop=='jktebop_kepler/' or loc_jktebop=='jktebop_kepler':
+        elif loc_jktebop=='jktebop_kepler/' or loc_jktebop=='jktebop_kepler_kasfit/' \
+                or loc_jktebop=='jktebop_kepler_kasoc/' or loc_jktebop=='jktebop_kepler_LTF/':
             spectral_response=kepler_spectral_response
         else:
             raise AttributeError("Unknown spectral response")
@@ -345,12 +347,17 @@ def jktebop_iterator(n_iter=4, loc_infile='jktebop_tess/infile.TESS', loc_jktebo
         save_LD_to_infile(LD_param_MS, LD_param_RG, loc_infile=loc_infile)
 
 
-# T2 = find_T2(7.513, 0.727, 5042, 61.16, kepler_spectral_response)
-# print(T2)
-# print(interpolated_LD_param(4.62640, T2, -0.5, 2.0, loc='datafiles/kepler_sing_table.dat'))
-# print(interpolated_LD_param(2.80835, 5042, -0.5, 2.0, loc='datafiles/kepler_sing_table.dat'))
+def main():
+    # T2 = find_T2(7.513, 0.727, 5042, 61.16, kepler_spectral_response)
+    # print(T2)
+    # print(interpolated_LD_param(4.62640, T2, -0.5, 2.0, loc='datafiles/kepler_sing_table.dat'))
+    # print(interpolated_LD_param(2.80835, 5042, -0.5, 2.0, loc='datafiles/kepler_sing_table.dat'))
+    # jktebop_iterator(n_iter=1, loc_infile='jktebop_tess/infile.TESS', loc_jktebop='jktebop_tess/',
+    #                  loc_ld_table='datafiles/tess_ldquad_table25.dat')
+    jktebop_iterator(n_iter=2, loc_infile='jktebop_kepler_LTF/infile.KEPLER', loc_jktebop='jktebop_kepler_LTF/',
+                     loc_ld_table='datafiles/kepler_sing_table.dat')
 
-# jktebop_iterator(n_iter=3, loc_infile='jktebop_kepler/infile.KEPLER', loc_jktebop='jktebop_kepler/',
-#                  loc_ld_table='datafiles/kepler_sing_table.dat')
 
+if __name__ == "__main__":
+    main()
 
