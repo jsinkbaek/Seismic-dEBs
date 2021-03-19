@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
 import MS_Teff_estimate as Tlib
+from scipy.interpolate import interp1d
 
 
 def psd(x=None, y=None, loc=None):
@@ -228,6 +229,304 @@ def temperature_profile(T_MS, T_RG, R_MS, R_RG):
     plt.show()
 
 
+def obs_v_cal(loc_lc1, loc_model1, loc_lc2=None, loc_model2=None, t0=54976.635, period=63.32713,
+              phase_lim_primary=np.array([-0.023, 0.177-0.156]), phase_lim_secondary=np.array([0.473-0.156, 0.522-0.156])):
+    data_lc1 = np.loadtxt(loc_lc1)
+    time_lc1, mag_lc1 = data_lc1[:, 0], data_lc1[:, 1]
+
+    data_model1 = np.loadtxt(loc_model1)
+    phase_model1, mag_model1 = data_model1[:, 0], data_model1[:, 1]
+    phase_lc1 = np.mod(time_lc1, period)/period
+    cut_mask_1 = np.diff(phase_lc1) < -0.002
+    cut_idx_1 = np.where(cut_mask_1)[0]
+    time_lc1_split = np.split(time_lc1, cut_idx_1)
+    mag_lc1_split = np.split(mag_lc1, cut_idx_1)
+
+    time_lc2, mag_lc2, phase_model2, mag_model2 = None, None, None, None
+    if loc_lc2 and loc_model2 is not None:
+        data_lc2 = np.loadtxt(loc_lc2)
+        time_lc2, mag_lc2 = data_lc2[:, 0], data_lc2[:, 1]
+        data_model2 = np.loadtxt(loc_model2)
+        phase_model2, mag_model2 = data_model2[:, 0], data_model2[:, 1]
+        phase_lc2 = np.mod(time_lc2, period)/period
+        cut_mask_2 = np.diff(phase_lc2) < -0.002
+        cut_idx_2 = np.where(cut_mask_2)[0]
+        time_lc2_split = np.split(time_lc2, cut_idx_2)
+        mag_lc2_split = np.split(mag_lc2, cut_idx_2)
+
+    # # # Plot Model Comparison # # #
+    nrows = 6
+    for i in range(0, int(np.ceil(len(time_lc1_split)/nrows))):
+        fig, axs = plt.subplots(nrows=nrows, ncols=2)
+        j = 0
+        for k in range(i*nrows, i*nrows + nrows):
+            try:
+                time_lc1_split[k]
+                if loc_lc2 and loc_model2 is not None:
+                    time_lc2_split[k]
+            except IndexError:
+                print('Out of bounds')
+                break
+            ax1, ax2 = axs[j, 0], axs[j, 1]
+            ax1.plot(time_lc1_split[k], mag_lc1_split[k], 'r.', markersize=1.5)
+            ax2.plot(time_lc1_split[k], mag_lc1_split[k], 'r.', markersize=1.5)
+            ax1.plot(t0 + period * phase_model1 + period*k, mag_model1, 'k--', linewidth=1)
+            ax1.plot(t0 - period * phase_model1 + period*k, mag_model1[::-1], 'k--', label='_nolegend_', linewidth=1)
+            ax2.plot(t0 + period * phase_model1 + period*k, mag_model1, 'k--', linewidth=1)
+            ax2.plot(t0 - period * phase_model1 + period*k, mag_model1[::-1, ], 'k--', label='_nolegend_', linewidth=1)
+            if loc_lc2 and loc_model2 is not None:
+                ax1.plot(time_lc2_split[k], mag_lc2_split[k], 'b.', markersize=1.5)
+                ax2.plot(time_lc2_split[k], mag_lc2_split[k], 'b.', markersize=1.5)
+                ax1.plot(t0 + period * phase_model2 + period*k, mag_model2, 'k-', linewidth=1)
+                ax1.plot(t0 - period * phase_model2 + period * k, mag_model2[::-1], 'k-', label='_nolegend_',
+                         linewidth=1)
+                ax2.plot(t0 + period * phase_model2 + period*k, mag_model2, 'k-', linewidth=1)
+                ax2.plot(t0 - period * phase_model2 + period * k, mag_model2[::-1, ], 'k-', label='_nolegend_',
+                         linewidth=1)
+                if j==0:
+                    ax2.legend(['Light Curve 1', 'Light Curve 1 Model', 'Light Curve 2', 'Light Curve 2 Model'])
+            else:
+                if j==0:
+                    ax2.legend(['Light Curve', 'Light Curve Model'])
+            ax1.set_xlim(t0 + period * phase_lim_primary + period*k)
+            ax2.set_xlim(t0 + period * phase_lim_secondary + period*k)
+            j+=1
+        else:
+            plt.show(block=False)
+            continue
+        plt.show(block=False)
+        break
+    plt.show(block=False)
+
+    # # # Plot O-C # # #
+    nrows = 6
+    mag_itp_dat1 = np.append(mag_model1[::-1], mag_model1)
+    if loc_lc2 and loc_model2 is not None:
+        mag_itp_dat2 = np.append(mag_model2[::-1], mag_model2)
+    for i in range(0, int(np.ceil(len(time_lc1_split) / nrows))):
+        fig, axs = plt.subplots(nrows=nrows, ncols=2, sharey='all')
+        j = 0
+        for k in range(i * nrows, i * nrows + nrows):
+            try:
+                time_lc1_split[k]
+                if loc_lc2 and loc_model2 is not None:
+                    time_lc2_split[k]
+            except IndexError:
+                print('Out of bounds')
+                break
+            ax1, ax2 = axs[j, 0], axs[j, 1]
+            t_itp_dat1 = np.append(t0 - period*phase_model1 + period*k, t0 + period*phase_model1 + period*k)
+            f_itp_1 = interp1d(t_itp_dat1, mag_itp_dat1)
+            ax1.plot(time_lc1_split[k], mag_lc1_split[k] - f_itp_1(time_lc1_split[k]), 'r.', markersize=1.5)
+            ax1.plot(t_itp_dat1, np.zeros(t_itp_dat1.shape), 'k--', linewidth=1, label='_nolegend_')
+            ax2.plot(time_lc1_split[k], mag_lc1_split[k] - f_itp_1(time_lc1_split[k]), 'r.', markersize=1.5)
+            ax2.plot(t_itp_dat1, np.zeros(t_itp_dat1.shape), 'k--', linewidth=1, label='_nolegend_')
+
+            if loc_lc2 and loc_model2 is not None:
+                t_itp_dat2 = np.append(t0 - period*phase_model2 + period*k, t0 + period*phase_model2 + period*k)
+                f_itp_2 = interp1d(t_itp_dat2, mag_itp_dat2)
+                ax1.plot(time_lc2_split[k], mag_lc2_split[k] - f_itp_2(time_lc2_split[k]), 'b.', markersize=1.5)
+                ax2.plot(time_lc2_split[k], mag_lc2_split[k] - f_itp_2(time_lc2_split[k]), 'b.', markersize=1.5)
+
+                if j == 0:
+                    ax2.legend(['O-C Light Curve 1', 'O-C Light Curve 2'])
+            else:
+                if j == 0:
+                    ax2.legend(['O-C Light Curve'])
+            ax1.set_xlim(t0 + period * phase_lim_primary + period * k)
+            ax2.set_xlim(t0 + period * phase_lim_secondary + period * k)
+            ax1.set_ylim([-0.002, 0.002])
+            ax2.set_ylim([-0.002, 0.002])
+            j += 1
+        else:
+            plt.show(block=False)
+            continue
+        plt.show(block=False)
+        break
+    plt.show(block=True)
+
+
+# noinspection PyUnboundLocalVariable
+def obs_v_cal_folded(loc_lc1, loc_model1, loc_lc2=None, loc_model2=None, t0=54976.635, period=63.32713, legend=None,
+                     phase_lim_primary=np.array([-0.0205, 0.01915]),
+                     phase_lim_secondary=np.array([0.341355-0.0219, 0.341355+0.0218]), label1='Light Curve 1',
+                     labelm1='Model 1', label2='Light Curve 2', labelm2='Model 2', o_c_ylim=None, plot_std=True,
+                     marker1='y.', marker2='c.', line1='k--', line2='m-.', errorbar=True):
+    matplotlib.rcParams.update({'font.size': 17})
+
+    data_lc1 = np.loadtxt(loc_lc1)
+    time_lc1, mag_lc1, err_lc1 = data_lc1[:, 0], data_lc1[:, 1], data_lc1[:, 2]
+    data_model1 = np.loadtxt(loc_model1)
+    phase_model1, mag_model1 = data_model1[:, 0], data_model1[:, 1]
+    phase_lc1 = np.mod(time_lc1-t0, period) / period
+
+    if loc_lc2 and loc_model2 is not None:
+        data_lc2 = np.loadtxt(loc_lc2)
+        time_lc2, mag_lc2, err_lc2 = data_lc2[:, 0], data_lc2[:, 1], data_lc2[:, 2]
+        data_model2 = np.loadtxt(loc_model2)
+        phase_model2, mag_model2 = data_model2[:, 0], data_model2[:, 1]
+        phase_lc2 = np.mod(time_lc2-t0, period)/period
+
+    fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2)
+
+    ax1.plot(phase_lc1, mag_lc1, 'y.', markersize=1)
+    ax1.plot(phase_lc1-1, mag_lc1, 'y.', markersize=1, label='_nolegend_')
+    ax1.plot(phase_model1, mag_model1, 'k--', linewidth=2)
+    ax1.plot(phase_model1 - 1, mag_model1, 'k--', linewidth=2, label='_nolegend_')
+    ax1.set_xlim(phase_lim_primary)
+    ax1.set_xlabel('Phase')
+    ax1.set_ylabel('Relative Magnitude')
+    if loc_lc2 and loc_model2 is not None:
+        ax1.plot(phase_lc2, mag_lc2, 'c.', markersize=1)
+        ax1.plot(phase_lc2 - 1, mag_lc2, 'c.', markersize=1, label='_nolegend_')
+        ax1.plot(phase_model2, mag_model2, 'm-.', linewidth=2)
+        ax1.plot(phase_model2-1, mag_model2, 'm-.', linewidth=2, label='_nolegend_')
+
+    ax2.plot(phase_lc1, mag_lc1, 'y.', markersize=1)
+    ax2.plot(phase_model1, mag_model1, 'k--', linewidth=2)
+    ax2.set_xlim(phase_lim_secondary)
+    ax2.set_xlabel('Phase')
+    if loc_lc2 and loc_model2 is not None:
+        ax2.plot(phase_lc2, mag_lc2, 'c.', markersize=1)
+        ax2.plot(phase_model2, mag_model2, 'm-.', linewidth=2)
+        ax2.legend(['Light Curve 1', 'Model 1', 'Light Curve 2', 'Model 2'], markerscale=8)
+    else:
+        ax2.legend(['Light Curve', 'Model'], markerscale=8)
+    if legend is not None:
+        ax2.legend(legend, markerscale=8)
+
+    ax1.set_ylim(ax1.get_ylim()[::-1])
+    ax2.set_ylim(ax2.get_ylim()[::-1])
+
+    plt.show(block=False)
+
+    if loc_lc2 and loc_model2 is not None:
+        fig, axs = plt.subplots(nrows=2, ncols=2, sharey='all')
+        ax1, ax2, ax3, ax4 = axs[0, 0], axs[0, 1], axs[1, 0], axs[1, 1]
+
+        ax1.plot(phase_lc1, mag_lc1, 'y.', markersize=1, label='_nolegend_')
+        ax1.plot(phase_lc1 - 1, mag_lc1, 'y.', markersize=1, label='_nolegend_')
+        ax1.plot(phase_model1, mag_model1, 'k--', linewidth=2, label='_nolegend_')
+        ax1.plot(phase_model1 - 1, mag_model1, 'k--', linewidth=2, label='_nolegend_')
+        ax1.set_xlim(phase_lim_primary)
+        ax1.set_ylabel('Relative Magnitude')
+
+        ax2.plot(phase_lc2, mag_lc2, 'c.', markersize=1, label=label1)
+        ax2.plot(phase_lc2 - 1, mag_lc2, 'c.', markersize=1, label='_nolegend_')
+        ax2.plot(phase_model2, mag_model2, 'm-.', linewidth=2, label=labelm1)
+        ax2.plot(phase_model2 - 1, mag_model2, 'm-.', linewidth=2, label='_nolegend_')
+        ax2.set_xlim(phase_lim_primary)
+
+        ax3.plot(phase_lc1, mag_lc1, 'y.', markersize=1, label=label2)
+        ax3.plot(phase_model1, mag_model1, 'k--', linewidth=2,  label=labelm2)
+        ax3.set_xlim(phase_lim_secondary)
+        ax3.set_ylabel('Relative Magnitude')
+        ax3.set_xlabel('Phase')
+
+        ax4.plot(phase_lc2, mag_lc2, 'c.', markersize=1, label='_nolegend_')
+        ax4.plot(phase_model2, mag_model2, 'm-.', linewidth=2, label='_nolegend_')
+        ax4.set_xlim(phase_lim_secondary)
+        ax4.set_xlabel('Phase')
+
+        lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
+        lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
+
+        fig.legend(lines, labels, markerscale=8)
+        ax1.set_ylim(ax1.get_ylim()[::-1])
+        plt.show(block=False)
+
+    # # # O - C plot # # #
+
+    model1_interp = interp1d(phase_model1, mag_model1)
+    o_c_1 = mag_lc1 - model1_interp(phase_lc1)
+    if loc_lc2 and loc_model2 is not None:
+        model2_interp = interp1d(phase_model2, mag_model2)
+        o_c_2 = mag_lc2 - model2_interp(phase_lc2)
+
+    fig, axs = plt.subplots(nrows=2, ncols=2, sharex='col', sharey='row', gridspec_kw={'hspace': 0, 'wspace': 0,
+                                                                                       'height_ratios': [2, 1]})
+    ax1, ax2, ax3, ax4 = axs[0, 0], axs[0, 1], axs[1, 0], axs[1, 1]
+    print(mag_lc1.shape, err_lc1.shape)
+    if errorbar:
+        ax1.errorbar(phase_lc1, mag_lc1, err_lc1, fmt=marker1, markersize=1, errorevery=10)
+        ax1.errorbar(phase_lc1-1, mag_lc1, err_lc1, fmt=marker1, markersize=1, errorevery=10, label='_nolegend_')
+    else:
+        ax1.plot(phase_lc1, mag_lc1, marker1, markersize=1)
+        ax1.plot(phase_lc1 - 1, mag_lc1, marker1, markersize=1, label='_nolegend_')
+    ax1.plot(phase_model1, mag_model1, line1, linewidth=2)
+    ax1.plot(phase_model1 - 1, mag_model1, line1, linewidth=2, label='_nolegend_')
+    ax1.set_xlim(phase_lim_primary)
+    if loc_lc2 and loc_model2 is not None:
+        if errorbar:
+            ax1.errorbar(phase_lc2, mag_lc2, err_lc2, fmt=marker2, markersize=1, errorevery=10)
+            ax1.errorbar(phase_lc2-1, mag_lc2, err_lc2, fmt=marker2, markersize=1, errorevery=10, label='_nolegend_')
+        else:
+            ax1.plot(phase_lc2, mag_lc2, marker2, markersize=1)
+            ax1.plot(phase_lc2 - 1, mag_lc2, marker2, markersize=1, label='_nolegend_')
+        ax1.plot(phase_model2, mag_model2, line2, linewidth=2)
+        ax1.plot(phase_model2 - 1, mag_model2, line2, linewidth=2, label='_nolegend_')
+
+    if errorbar:
+        ax2.errorbar(phase_lc1, mag_lc1, err_lc1, fmt=marker1, markersize=1, errorevery=10)
+    else:
+        ax2.plot(phase_lc1, mag_lc1, marker1, markersize=1)
+    ax2.plot(phase_model1, mag_model1, line1, linewidth=2)
+    ax2.set_xlim(phase_lim_secondary)
+    if loc_lc2 and loc_model2 is not None:
+        if errorbar:
+            ax2.errorbar(phase_lc2, mag_lc2, err_lc2, fmt=marker2, markersize=1, errorevery=10)
+        else:
+            ax2.plot(phase_lc2, mag_lc2, marker2, markersize=1)
+        ax2.plot(phase_model2, mag_model2, line2, linewidth=2)
+        ax2.legend(['Light Curve 1', 'Model 1', 'Light Curve 2', 'Model 2'], markerscale=8)
+    else:
+        ax2.legend(['Light Curve', 'Model'], markerscale=8)
+    if legend is not None:
+        ax2.legend(legend, markerscale=8)
+
+    if errorbar:
+        ax3.errorbar(phase_lc1, o_c_1, err_lc1, fmt=marker1, markersize=1.5, errorevery=10)
+        ax3.errorbar(phase_lc1-1, o_c_1, err_lc1, fmt=marker1, markersize=1.5, errorevery=10)
+    else:
+        ax3.plot(phase_lc1, o_c_1, marker1, markersize=1.5)
+        ax3.plot(phase_lc1-1, o_c_1, marker1, markersize=1.5)
+    ax3.plot([-0.5, 1.5], [0, 0], color='gray', linewidth=2)
+    if plot_std:
+        ax3.plot([-0.5, 1.5], [np.std(o_c_1), np.std(o_c_1)], '--', color='gray')
+        ax3.plot([-0.5, 1.5], [-np.std(o_c_1), -np.std(o_c_1)], '--', color='gray')
+        ax4.plot([-0.5, 1.5], [np.std(o_c_1), np.std(o_c_1)], '--', color='gray')
+        ax4.plot([-0.5, 1.5], [-np.std(o_c_1), -np.std(o_c_1)], '--', color='gray')
+    if errorbar:
+        ax4.errorbar(phase_lc1, o_c_1, err_lc1, fmt=marker1, markersize=1.5, errorevery=10)
+    else:
+        ax4.plot(phase_lc1, o_c_1, marker1, markersize=1.5)
+    ax4.plot([-0.5, 1.5], [0, 0], color='gray', linewidth=2)
+    if loc_lc2 and loc_model2 is not None:
+        if errorbar:
+            ax3.errorbar(phase_lc2, o_c_2, err_lc2, fmt=marker2, markersize=1.5, errorevery=10)
+            ax3.errorbar(phase_lc2-1, o_c_2, err_lc2, fmt=marker2, markersize=1.5, errorevery=10)
+            ax4.errorbar(phase_lc2, o_c_2, err_lc2, fmt=marker2, markersize=1.5, errorevery=10)
+        else:
+            ax3.plot(phase_lc2, o_c_2, marker2, markersize=1.5)
+            ax3.plot(phase_lc2-1, o_c_2, marker2, markersize=1.5)
+            ax4.plot(phase_lc2, o_c_2, marker2, markersize=1.5)
+
+    ax1.set_ylabel('Relative Magnitude')
+    ax3.set_xlabel('Phase')
+    ax3.set_ylabel('O - C')
+    ax4.set_xlabel('Phase')
+
+    ax1.set_ylim(ax1.get_ylim()[::-1])
+    if o_c_ylim is not None:
+        ax3.set_ylim(o_c_ylim)
+    else:
+        ax3.set_ylim(ax3.get_ylim()[::-1])
+
+    plt.show(block=False)
+
+    plt.show()
+
+
 # temperature_profile(5616, 5042, 0.727, 7.513)
 # jktebop_model('jktebop_kepler/model.out', 'lcmag_kepler_full.txt', 'lcmag_kepler.txt', 'jktebop_kepler/rvA.dat',
 #              'jktebop_kepler/rvB.dat', 63.32713, 54976.6351499878)
@@ -236,5 +535,15 @@ def temperature_profile(T_MS, T_RG, R_MS, R_RG):
 # lc(loc='lcmag_tess_tot.txt', period=63.32713, model_loc='jktebop_tess/model.out', phase_xlim=[-0.05, 0.4])
 # psd(loc="datafiles/kasoc/8430105_psd.txt")
 
-lc_plot2('lcmag_kepler_reduced.txt', 'jktebop_kepler_LTF/lc.KEPLER',
-         legend=['KASOC filtered Light Curve', 'LTF light curve'], ylim=[0.0225, -0.0025])
+# lc_plot2('lcmag_kepler_reduced.txt', 'jktebop_kepler_LTF/lc.KEPLER',
+#         legend=['KASOC filtered Light Curve', 'LTF light curve'], ylim=[0.0225, -0.0025])
+
+# obs_v_cal('jktebop_kepler_kasfit/lc.KEPLER', 'jktebop_kepler_kasfit/model.out')
+if False:
+    obs_v_cal_folded('jktebop_kepler_LTF/lc.KEPLER', 'jktebop_kepler_LTF/model.out', 'jktebop_kepler_kasfit/lc.KEPLER',
+                     'jktebop_kepler_kasfit/model.out', legend=['Kepler LTF LC', 'JKTEBOP model LTF', 'Kepler KASOC LC',
+                                                                'JKTEBOP model KASOC'],
+                     o_c_ylim=[0.003, -0.003], marker1='y.', marker2='c.', line1='k--', line2='m-.', errorbar=True)
+obs_v_cal_folded('jktebop_kepler_LTF/lc.KEPLER', 'jktebop_kepler_LTF/model.out',
+                 legend=['Kepler LTF LC', 'JKTEBOP model LTF'],
+                 o_c_ylim=[0.003, -0.003], marker1='r.', marker2='c.', line1='k--', line2='m-.', errorbar=True)
