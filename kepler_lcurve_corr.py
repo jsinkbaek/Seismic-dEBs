@@ -34,7 +34,7 @@ corr_pos = corr_pos[~nan_mask]
 
 # Make uncorrected relative flux
 flux = (flux_seism * 1E-6 + 1) * corr_full
-# Correct flux for transit
+# Correct flux while keeping transits
 flux_transit = flux / (corr_long + corr_short)
 # Do phase fold
 period = 63.32713
@@ -102,6 +102,21 @@ if False:
     plt.ylabel('Normalized filter')
     plt.show(block=True)
 
+
+# # # Exclude bad data regions found by LTF in other data reduction method # # #
+mask_bad_data = ((time > 54990) & (time < 55008)) | ((time > 55117) & (time < 55136)) | \
+                ((time > 55223) & (time < 55240)) | ((time > 55560) & (time < 55575)) | \
+                ((time > 56383) & (time < 56403))
+
+if False:
+    plt.figure()
+    plt.plot(time, flux_transit, 'r.', markersize=1.5)
+    plt.plot(time[~mask_bad_data], flux_transit[~mask_bad_data], 'b.', markersize=1)
+    plt.xlim([56373, 56413])
+    plt.show()
+
+time, flux, flux_transit, phase = time[~mask_bad_data], flux[~mask_bad_data], flux_transit[~mask_bad_data], \
+                                  phase[~mask_bad_data]
 
 # # # Convert to magnitudes # # #
 m = -2.5*np.log10(flux_transit)

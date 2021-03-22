@@ -351,7 +351,7 @@ def obs_v_cal_folded(loc_lc1, loc_model1, loc_lc2=None, loc_model2=None, t0=5497
                      phase_lim_primary=np.array([-0.0205, 0.01915]),
                      phase_lim_secondary=np.array([0.341355-0.0219, 0.341355+0.0218]), label1='Light Curve 1',
                      labelm1='Model 1', label2='Light Curve 2', labelm2='Model 2', o_c_ylim=None, plot_std=True,
-                     marker1='y.', marker2='c.', line1='k--', line2='m-.', errorbar=True):
+                     marker1='y.', marker2='c.', line1='k--', line2='m-.', errorbar=True, color1='k', color2='m'):
     matplotlib.rcParams.update({'font.size': 17})
 
     data_lc1 = np.loadtxt(loc_lc1)
@@ -491,7 +491,17 @@ def obs_v_cal_folded(loc_lc1, loc_model1, loc_lc2=None, loc_model2=None, t0=5497
         ax3.plot(phase_lc1, o_c_1, marker1, markersize=1.5)
         ax3.plot(phase_lc1-1, o_c_1, marker1, markersize=1.5)
     ax3.plot([-0.5, 1.5], [0, 0], color='gray', linewidth=2)
-    if plot_std:
+
+    if plot_std == 'both':
+        ax3.plot([-0.5, 1.5], [np.std(o_c_1), np.std(o_c_1)], '--', color=color1)
+        ax3.plot([-0.5, 1.5], [-np.std(o_c_1), -np.std(o_c_1)], '--', color=color1)
+        ax4.plot([-0.5, 1.5], [np.std(o_c_1), np.std(o_c_1)], '--', color=color1)
+        ax4.plot([-0.5, 1.5], [-np.std(o_c_1), -np.std(o_c_1)], '--', color=color1)
+        ax3.plot([-0.5, 1.5], [np.std(o_c_2), np.std(o_c_2)], '--', color=color2)
+        ax3.plot([-0.5, 1.5], [-np.std(o_c_2), -np.std(o_c_2)], '--', color=color2)
+        ax4.plot([-0.5, 1.5], [np.std(o_c_2), np.std(o_c_2)], '--', color=color2)
+        ax4.plot([-0.5, 1.5], [-np.std(o_c_2), -np.std(o_c_2)], '--', color=color2)
+    elif plot_std:
         ax3.plot([-0.5, 1.5], [np.std(o_c_1), np.std(o_c_1)], '--', color='gray')
         ax3.plot([-0.5, 1.5], [-np.std(o_c_1), -np.std(o_c_1)], '--', color='gray')
         ax4.plot([-0.5, 1.5], [np.std(o_c_1), np.std(o_c_1)], '--', color='gray')
@@ -539,11 +549,12 @@ def obs_v_cal_folded(loc_lc1, loc_model1, loc_lc2=None, loc_model2=None, t0=5497
 #         legend=['KASOC filtered Light Curve', 'LTF light curve'], ylim=[0.0225, -0.0025])
 
 # obs_v_cal('jktebop_kepler_kasfit/lc.KEPLER', 'jktebop_kepler_kasfit/model.out')
-if False:
+if True:
     obs_v_cal_folded('jktebop_kepler_LTF/lc.KEPLER', 'jktebop_kepler_LTF/model.out', 'jktebop_kepler_kasfit/lc.KEPLER',
-                     'jktebop_kepler_kasfit/model.out', legend=['Kepler LTF LC', 'JKTEBOP model LTF', 'Kepler KASOC LC',
-                                                                'JKTEBOP model KASOC'],
-                     o_c_ylim=[0.003, -0.003], marker1='y.', marker2='c.', line1='k--', line2='m-.', errorbar=True)
+                     'jktebop_kepler_kasfit/model.out', legend=['JKTEBOP model LTF','JKTEBOP model KASOC',
+                                                                'Kepler LTF LC', 'Kepler KASOC LC'],
+                     o_c_ylim=[0.003, -0.003], marker1='y.', marker2='c.', line1='k--', line2='m-.', errorbar=True,
+                     color1='k', color2='m', plot_std='both')
 obs_v_cal_folded('jktebop_kepler_LTF/lc.KEPLER', 'jktebop_kepler_LTF/model.out',
                  legend=['Kepler LTF LC', 'JKTEBOP model LTF'],
                  o_c_ylim=[0.003, -0.003], marker1='r.', marker2='c.', line1='k--', line2='m-.', errorbar=True)
