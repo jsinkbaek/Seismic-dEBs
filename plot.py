@@ -537,6 +537,78 @@ def obs_v_cal_folded(loc_lc1, loc_model1, loc_lc2=None, loc_model2=None, t0=5497
     plt.show()
 
 
+def plot_many_lc(loc, period, phaselim1, phaselim2, subplot_text, figname):
+    data = np.loadtxt(loc)
+    time = data[:, 0]
+    flux = data[:, 1]
+
+    sort_idx = np.argsort(time)
+    time = time[sort_idx]
+    flux = flux[sort_idx]
+    phase = np.mod(time, period) / period
+    pdiff = np.diff(phase)
+
+    cut_idx = np.where(pdiff < 0)[0]
+    time_split = np.split(time, cut_idx)
+    flux_split = np.split(flux, cut_idx)
+    phase_split = np.split(phase, cut_idx)
+
+    ncols = 2
+    nrows = 9
+
+    fig, axs = plt.subplots(nrows, ncols, figsize=(5, 10))
+    k = 0
+    for i in range(len(time_split)//2+3-nrows, len(time_split)//2+3):
+        ax1, ax2 = axs[k, 0], axs[k, 1]
+
+        timei = time_split[i]
+        fluxi = flux_split[i]
+        phasei = phase_split[i]
+
+        ax1.plot(phasei, fluxi, 'r.', markersize=2)
+        ax2.plot(phasei, fluxi, 'r.', markersize=2)
+
+        ax1.text(0, 1, 'BJD '+"{:.2f}".format(timei[0])+subplot_text, transform=ax1.transAxes, verticalalignment='top')
+
+        ax1.set_xlim(phaselim1)
+        ax2.set_xlim(phaselim2)
+
+        # y limits
+        mask1 = (phasei > phaselim1[0]) & (phasei < phaselim1[1])
+        mask2 = (phasei > phaselim2[0]) & (phasei < phaselim2[1])
+        yvals1 = fluxi[mask1]
+        yvals2 = fluxi[mask2]
+        ax1.set_ylim([np.min(yvals1), np.max(yvals1)])
+        ax2.set_ylim([np.min(yvals2), np.max(yvals2)])
+
+        ylim1 = ax1.get_ylim()
+        ylim_diff1 = ylim1[1] - ylim1[0]
+        ylim2 = ax2.get_ylim()
+        ylim_diff2 = ylim2[1] - ylim2[0]
+        ax1.set_ylim([ylim1[0]-0.2*ylim_diff1, ylim1[1]+0.2*ylim_diff1])
+        ax2.set_ylim([ylim2[0]-0.2*ylim_diff2, ylim2[1]+0.2*ylim_diff2])
+
+        ax1.set_xticklabels([])
+        ax2.set_xticklabels([])
+        ax1.set_yticklabels([])
+        ax2.set_yticklabels([])
+        ax1.xaxis.set_ticks_position('none')
+        ax2.xaxis.set_ticks_position('none')
+        ax1.yaxis.set_ticks_position('none')
+        ax2.yaxis.set_ticks_position('none')
+        # ax1.axis("off")
+        # ax2.axis("off")
+
+        k += 1
+
+    plt.tight_layout()
+    plt.subplots_adjust(wspace=0.0)
+    plt.subplots_adjust(hspace=0.0)
+    plt.savefig(fname=figname+'.png', dpi=900)
+    plt.savefig(fname=figname+'.pdf', dpi=300)
+    plt.show()
+
+
 # temperature_profile(5616, 5042, 0.727, 7.513)
 # jktebop_model('jktebop_kepler/model.out', 'lcmag_kepler_full.txt', 'lcmag_kepler.txt', 'jktebop_kepler/rvA.dat',
 #              'jktebop_kepler/rvB.dat', 63.32713, 54976.6351499878)
@@ -549,12 +621,17 @@ def obs_v_cal_folded(loc_lc1, loc_model1, loc_lc2=None, loc_model2=None, t0=5497
 #         legend=['KASOC filtered Light Curve', 'LTF light curve'], ylim=[0.0225, -0.0025])
 
 # obs_v_cal('jktebop_kepler_kasfit/lc.KEPLER', 'jktebop_kepler_kasfit/model.out')
-if True:
+if False:
     obs_v_cal_folded('jktebop_kepler_LTF/lc.KEPLER', 'jktebop_kepler_LTF/model.out', 'jktebop_kepler_kasfit/lc.KEPLER',
                      'jktebop_kepler_kasfit/model.out', legend=['JKTEBOP model LTF','JKTEBOP model KASOC',
                                                                 'Kepler LTF LC', 'Kepler KASOC LC'],
                      o_c_ylim=[0.003, -0.003], marker1='y.', marker2='c.', line1='k--', line2='m-.', errorbar=True,
                      color1='k', color2='m', plot_std='both')
-obs_v_cal_folded('jktebop_kepler_LTF/lc.KEPLER', 'jktebop_kepler_LTF/model.out',
-                 legend=['Kepler LTF LC', 'JKTEBOP model LTF'],
-                 o_c_ylim=[0.003, -0.003], marker1='r.', marker2='c.', line1='k--', line2='m-.', errorbar=True)
+if False:
+    obs_v_cal_folded('jktebop_kepler_LTF/lc.KEPLER', 'jktebop_kepler_LTF/model.out',
+                     legend=['Kepler LTF LC', 'JKTEBOP model LTF'],
+                     o_c_ylim=[0.003, -0.003], marker1='r.', marker2='c.', line1='k--', line2='m-.', errorbar=True)
+
+if True:
+    plot_many_lc('datafiles/kasoc/8430105_unfiltered.txt', 63.32713, [0.1, 0.17], [0.445, 0.51], ' + 2400000',
+                 'figures/report/kepler/unfiltered_lc')

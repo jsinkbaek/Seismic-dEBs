@@ -78,8 +78,8 @@ plt.show()
 raw_lc_2min = tpf_2min.to_lightcurve()
 
 # Make design matrix
-dm = DesignMatrix(tpf_2min.flux[:, ~aper2], name='pixels').pca(3)
-plt.plot(tpf_2min.time.value, dm.values + np.arange(3)*0.2, '.')
+dm = DesignMatrix(tpf_2min.flux[:, ~aper2], name='pixels').pca(2)
+plt.plot(tpf_2min.time.value, dm.values + np.arange(2)*0.2, '.')
 plt.show(block=False)
 dm.validate()
 dm = dm.append_constant()

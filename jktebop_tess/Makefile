@@ -19,7 +19,7 @@ Plot.rv.svg: plot.rv.gpi rvB.out rvA.out model.out
 	gnuplot plot.rv.gpi
 
 lc.out model.out param.out rvA.out rvB.out: jktebop
-	./jktebop infile.TESS >> console.out
+	./jktebop infile.TESS
 
 jktebop: jktebop.f
 	gfortran -o jktebop jktebop.f

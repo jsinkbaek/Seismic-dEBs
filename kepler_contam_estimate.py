@@ -17,7 +17,9 @@ for filename in os.listdir(loc_datafiles):
         # tend = np.append(tend, hdr1['TEND']+54833.0)
 contamination = 1 - crowding
 contamination_avg = np.average(contamination)
+contamination_std = np.std(contamination)
 print(contamination)
 print(contamination_avg)
+print(contamination_std)
 
 

@@ -1,10 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
 from astropy.io import fits
 from numpy.polynomial import Polynomial
 
 
 # # # Start of Script # # #
+matplotlib.use('Qt5Agg')
+matplotlib.rcParams.update({'font.size': 25})
 # Load data
 with fits.open("datafiles/kasoc/kplr008430105_kasoc-ts_llc_v1.fits") as hdul:
     print(hdul.info())
@@ -60,27 +63,29 @@ if False:
 
 
 if False:
-    _, axs = plt.subplots(2, 2, sharey='row')
+    _, axs = plt.subplots(2, 2, sharey='row', figsize=(17.78, 10))
     ax1 = axs[0, 0]
     ax2 = axs[0, 1]
     ax3 = axs[1, 0]
     ax4 = axs[1, 1]
     ax1.plot(phase, flux / corr_long, 'r.', markersize=0.7)
-    ax1.legend(['LC/F_long'])
     ax1.set_xlim([0.04, 0.24])
     ax1.set_ylabel('Relative Flux')
     ax2.plot(phase, flux / (corr_long + corr_short), 'b.', markersize=0.7)
-    ax2.legend(['LC/(F_long+F_short)'])
     ax2.set_xlim([0.04, 0.24])
     ax3.plot(phase, flux / corr_long, 'r.', markersize=0.7)
     ax3.set_xlim([0.38, 0.58])
-    ax3.legend(['LC/F_long'])
+    ax3.legend([r'$\frac{x}{x_{long}}$'], markerscale=15)
     ax3.set_ylabel('Relative Flux')
     ax3.set_xlabel('Phase')
     ax4.plot(phase, flux / (corr_long + corr_short), 'b.', markersize=0.7)
-    ax4.legend(['LC/(F_long+F_short)'])
+    ax4.legend([r'$\frac{x}{x_{long}+x_{short}}$'], markerscale=15)
     ax4.set_xlim([0.38, 0.58])
     ax4.set_xlabel('Phase')
+    plt.tight_layout()
+    plt.subplots_adjust(wspace=0)
+    plt.savefig(fname='figures/report/kasoc/shortlong.png', dpi=400)
+    plt.savefig(fname='figures/report/kasoc/shortlong.pdf', dpi=300)
     plt.show(block=False)
 
 if False:
@@ -101,6 +106,17 @@ if False:
     plt.xlabel('Phase')
     plt.ylabel('Normalized filter')
     plt.show(block=True)
+
+if True:
+    plt.figure(figsize=(17.78, 10))
+    plt.plot(phase, corr_transit, '.', markersize=7)
+    plt.xlabel('Phase')
+    plt.ylabel('e-/s')
+    plt.xlim([0, 0.6])
+    plt.tight_layout()
+    plt.savefig(fname='figures/report/kasoc/xphase.png', dpi=400)
+    plt.savefig(fname='figures/report/kasoc/xphase.pdf', dpi=300)
+    plt.show()
 
 
 # # # Exclude bad data regions found by LTF in other data reduction method # # #
@@ -161,16 +177,20 @@ if True:
     plt.show()
 
 if True:
-    _, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
+    _, (ax1, ax2) = plt.subplots(1, 2, sharey=True, figsize=(17.78, 10))
     print('phase.size', phase.size)
-    ax1.errorbar(phase, m, m_err, fmt='k.', ecolor='gray', markersize=0.5, elinewidth=0.1, errorevery=10)
+    ax1.errorbar(phase, m, m_err, fmt='k.', ecolor='darkgray', markersize=0.9, elinewidth=0.4, errorevery=3)
     ax1.set_xlim([0.04, 0.24])
     ax1.set_xlabel('Phase')
     ax1.set_ylabel('Relative Magnitude')
     ax1.set_ylim([0.020, -0.003])
-    ax2.errorbar(phase, m, m_err, fmt='k.', ecolor='gray', markersize=0.5, elinewidth=0.1, errorevery=10)
+    ax2.errorbar(phase, m, m_err, fmt='k.', ecolor='darkgray', markersize=0.9, elinewidth=0.4, errorevery=3)
     ax2.set_xlim([0.38, 0.58])
     ax2.set_xlabel('Phase')
+    plt.tight_layout()
+    plt.subplots_adjust(wspace=0)
+    plt.savefig(fname='figures/report/kasoc/mag_uncorr.png', dpi=400)
+    plt.savefig(fname='figures/report/kasoc/mag_uncorr.pdf', dpi=300)
     plt.show()
 
 if True:
