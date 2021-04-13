@@ -114,7 +114,7 @@ save_data = np.zeros((m_tot.size, 3))
 save_data[:, 0] = lc.time.value + time_correct
 save_data[:, 1] = m_tot
 save_data[:, 2] = m_err_tot
-np.savetxt('lcmag_tess_tot.txt', save_data, delimiter='\t')
+np.savetxt('Data/processed/lcmag_tess_tot.txt', save_data, delimiter='\t')
 
 plt.figure()
 plt.plot(lc.time.value, m_tot, 'r.')
@@ -201,4 +201,4 @@ save_data = np.zeros((lc_mag.flux.size, 3))
 save_data[:, 0] = lc_mag.time.value + time_correct
 save_data[:, 1] = lc_mag.flux
 save_data[:, 2] = lc_mag.flux_err
-np.savetxt('lcmag_tess.txt', save_data, header='Time\tMagnitude\tError', delimiter='\t')
+np.savetxt('Data/processed/lcmag_tess.txt', save_data, header='Time\tMagnitude\tError', delimiter='\t')

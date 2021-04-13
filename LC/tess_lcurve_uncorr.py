@@ -99,6 +99,6 @@ save_data = np.zeros((m.size, 3))
 save_data[:, 0] = tnorm + time_correct
 save_data[:, 1] = m
 save_data[:, 2] = m_err
-np.savetxt('lcmag_tess_ltf.txt', save_data, delimiter='\t')
+np.savetxt('Data/processed/lcmag_tess_ltf.txt', save_data, delimiter='\t')
 
 plt.show()

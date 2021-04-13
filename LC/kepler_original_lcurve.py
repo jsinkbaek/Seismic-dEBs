@@ -2,7 +2,7 @@ import numpy as np
 from astropy.io import fits
 
 # Load and save uncorrected light curve # #
-with fits.open("datafiles/kasoc/kplr008430105_kasoc-ts_llc_v1.fits") as hdul:
+with fits.open("Data/unprocessed/kasoc/kplr008430105_kasoc-ts_llc_v1.fits") as hdul:
     print(hdul.info())
     hdu = hdul[1]
     print(hdu.columns)
@@ -33,5 +33,5 @@ flux = (flux_seism * 1E-6 + 1) * corr_full
 save_data = np.empty((flux.size, 2))
 save_data[:, 0] = time
 save_data[:, 1] = flux
-np.savetxt('datafiles/kasoc/8430105_unfiltered.txt', save_data)
+np.savetxt('Data/unprocessed/kic8430105_kepler_unfiltered.txt', save_data)
 

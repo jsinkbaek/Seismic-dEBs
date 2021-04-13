@@ -9,7 +9,7 @@ from numpy.polynomial import Polynomial
 matplotlib.use('Qt5Agg')
 matplotlib.rcParams.update({'font.size': 25})
 # Load data
-with fits.open("datafiles/kasoc/kplr008430105_kasoc-ts_llc_v1.fits") as hdul:
+with fits.open("Data/unprocessed/kasoc/kplr008430105_kasoc-ts_llc_v1.fits") as hdul:
     print(hdul.info())
     hdu = hdul[1]
     print(hdu.columns)
@@ -84,8 +84,8 @@ if False:
     ax4.set_xlabel('Phase')
     plt.tight_layout()
     plt.subplots_adjust(wspace=0)
-    plt.savefig(fname='figures/report/kasoc/shortlong.png', dpi=400)
-    plt.savefig(fname='figures/report/kasoc/shortlong.pdf', dpi=300)
+    plt.savefig(fname='../figures/report/kasoc/shortlong.png', dpi=400)
+    plt.savefig(fname='../figures/report/kasoc/shortlong.pdf', dpi=300)
     plt.show(block=False)
 
 if False:
@@ -114,8 +114,8 @@ if True:
     plt.ylabel('e-/s')
     plt.xlim([0, 0.6])
     plt.tight_layout()
-    plt.savefig(fname='figures/report/kasoc/xphase.png', dpi=400)
-    plt.savefig(fname='figures/report/kasoc/xphase.pdf', dpi=300)
+    plt.savefig(fname='../figures/report/kasoc/xphase.png', dpi=400)
+    plt.savefig(fname='../figures/report/kasoc/xphase.pdf', dpi=300)
     plt.show()
 
 
@@ -189,8 +189,8 @@ if True:
     ax2.set_xlabel('Phase')
     plt.tight_layout()
     plt.subplots_adjust(wspace=0)
-    plt.savefig(fname='figures/report/kasoc/mag_uncorr.png', dpi=400)
-    plt.savefig(fname='figures/report/kasoc/mag_uncorr.pdf', dpi=300)
+    plt.savefig(fname='../figures/report/kasoc/mag_uncorr.png', dpi=400)
+    plt.savefig(fname='../figures/report/kasoc/mag_uncorr.pdf', dpi=300)
     plt.show()
 
 if True:
@@ -215,7 +215,7 @@ save_data = np.zeros((m_.size, 3))
 save_data[:, 0] = time_
 save_data[:, 1] = m_
 save_data[:, 2] = m_err_
-np.savetxt('lcmag_kepler.txt', save_data, header='Time\tMagnitude\tError', delimiter='\t')
+np.savetxt('Data/processed/lcmag_kepler.txt', save_data, header='Time\tMagnitude\tError', delimiter='\t')
 
 # # # Save full lightcurve to file # # #
 mask = ~np.isnan(m) & ~np.isnan(m_err) & ~np.isnan(time)
@@ -227,7 +227,7 @@ save_data = np.zeros((m.size, 3))
 save_data[:, 0] = time
 save_data[:, 1] = m
 save_data[:, 2] = m_err
-np.savetxt('lcmag_kepler_full.txt', save_data, header='Time\tMagnitude\tError', delimiter='\t')
+np.savetxt('Data/processed/lcmag_kepler_full.txt', save_data, header='Time\tMagnitude\tError', delimiter='\t')
 
 
 # # # # # # # # PART 2 # # # # # # # # # #
@@ -277,7 +277,7 @@ save_data = np.zeros((flux.size, 3))
 save_data[:, 0] = time_12
 save_data[:, 1] = flux
 save_data[:, 2] = flux_err
-np.savetxt('lcflux_kasoc_reduced_full.txt', save_data, delimiter="\t")
+np.savetxt('Data/processed/lcflux_kasoc_polyfit_full.txt', save_data, delimiter="\t")
 
 # # Cut down data set to nearer eclipse # #
 mask_1 = (phase_1 > 0.117) & (phase_1 < 0.156)
@@ -327,7 +327,7 @@ save_data = np.zeros((m.size, 3))
 save_data[:, 0] = time_12
 save_data[:, 1] = m
 save_data[:, 2] = m_err
-np.savetxt('lcmag_kepler_reduced.txt', save_data, delimiter='\t')
+np.savetxt('Data/processed/lcmag_kepler_reduced.txt', save_data, delimiter='\t')
 
 
 # # Save flux data # #
@@ -345,5 +345,5 @@ save_data = np.zeros((flux.size, 3))
 save_data[:, 0] = time_12
 save_data[:, 1] = flux
 save_data[:, 2] = flux_err
-np.savetxt('lcflux_kasoc_reduced.txt', save_data, delimiter="\t")
+np.savetxt('Data/processed/lcflux_kasoc_reduced.txt', save_data, delimiter="\t")
 

@@ -54,7 +54,7 @@ def poly_plt(fl, tm, fln, tmn, pfit, tm0, tm1, fignr, component, res_mask, fit_m
     plt.xticks(fontsize=13)
     plt.legend(['Uncorrected light curve', 'Data used for fit', 'Data for corrected LC', 'Chosen LTF polynomial'],
                 markerscale=8)
-    plt.savefig(fname='figures/LTF/fig_'+str(fignr)+component+'1', orientation='landscape', dpi=150)
+    plt.savefig(fname='../figures/LTF/fig_'+str(fignr)+component+'1', orientation='landscape', dpi=150)
     plt.close(fig)
 
     fig = plt.figure(figsize=[6.4*1.5, 4.8*1.5])
@@ -70,7 +70,7 @@ def poly_plt(fl, tm, fln, tmn, pfit, tm0, tm1, fignr, component, res_mask, fit_m
     else:
         plt.legend(['LTF corrected light curve'], markerscale=8)
     plt.ticklabel_format(axis='x', style='plain', useOffset=False)
-    plt.savefig(fname='figures/LTF/fig_'+str(fignr)+component+'2', orientation='landscape', dpi=150)
+    plt.savefig(fname='../figures/LTF/fig_'+str(fignr)+component+'2', orientation='landscape', dpi=150)
     plt.close(fig)
 
 
@@ -136,7 +136,7 @@ def inspection_loop(ph, fl, tm, fit_mask, res_mask, deg, tm0, tm1):
     return (phn, fln, tmn), pfit, fit_mask_, res_mask_
 
 
-def save_phase(ph, fl, tm, i_, pfit, component, loc='datafiles/kepler_local_trendfitting_results/'):
+def save_phase(ph, fl, tm, i_, pfit, component, loc='Data/processed/kepler_local_trendfitting_results/'):
     """
 
     :param ph: phase
@@ -153,7 +153,7 @@ def save_phase(ph, fl, tm, i_, pfit, component, loc='datafiles/kepler_local_tren
     np.savetxt(loc+str(i_)+component+'.pfit', pfit.coef)
 
 
-def load_phase(i_, component, loc='datafiles/kepler_local_trendfitting_results/'):
+def load_phase(i_, component, loc='Data/processed/kepler_local_trendfitting_results/'):
     """
     :param i_: integer designating phase to load
     :param component: string 'A' or 'B' designating first (full) or second eclipse
@@ -170,7 +170,7 @@ def load_phase(i_, component, loc='datafiles/kepler_local_trendfitting_results/'
             print('Datafile '+str(i_)+component+' is missing. Was probably skipped intentionally.')
 
 
-def load_kasoc_lc(loc='lcflux_kasoc_reduced_full.txt'):
+def load_kasoc_lc(loc='Data/processed/lcflux_kasoc_reduced_full.txt'):
     """
     Loads a previously corrected lightkurve using parts of KASOC filter (see kepler_lcurve_corr.py).
     """
@@ -210,7 +210,7 @@ if load_previous:
             phase_p12 = np.append(phase_p12, phase2)
             time_p12 = np.append(time_p12, time2)
 else:
-    with fits.open("datafiles/kasoc/kplr008430105_kasoc-ts_llc_v1.fits") as hdul:
+    with fits.open("Data/unprocessed/kasoc/kplr008430105_kasoc-ts_llc_v1.fits") as hdul:
         print(hdul.info())
         hdu = hdul[1]
         print(hdu.columns)
@@ -430,4 +430,4 @@ print(save_data.shape)
 save_data[:, 0] = time_p12
 save_data[:, 1] = m
 save_data[:, 2] = m_err
-np.savetxt('lcmag_kepler_ltf.txt', save_data)
+np.savetxt('Data/processed/lcmag_kepler_ltf.txt', save_data)

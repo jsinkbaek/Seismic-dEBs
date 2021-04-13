@@ -5,6 +5,8 @@ from astropy.coordinates import EarthLocation
 import os
 from scipy.interpolate import interp1d
 from barycorrpy import get_BC_vel, get_stellar_data, utc_tdb
+from matplotlib import pyplot as plt
+import RV.spectrum_processing_functions as spf
 
 """
 This script is used to prepare observed (reduced) spectra from NOT in the form of .fits files into a format that can be
@@ -13,7 +15,7 @@ to use with the data as well, so input variables can be manually typed in this s
 """
 
 # # Set variables for script # #
-data_path = 'datafiles/NOT/KIC8430105/'
+data_path = 'RV/Data/unprocessed/NOT/KIC8430105/'
 masterfile_name = 'not_kic8430105.master.obs'
 observatory_location = EarthLocation.of_site("lapalma")
 observatory_name = "lapalma"
@@ -29,13 +31,15 @@ light_factors = (0.0002855, 0.9997145)     # len=2 if component_switches (1,1,0)
                                            # can also be np.array of shape (n, len(component_switches)) if varying
 independent_runs = 50
 allowed_iterations_per_run = 1000
-simplex_shrink_limit = 0.001               # stops run if this limit is reached before max iterations
+simplex_shrink_limit = 0.0001              # stops iteration if chisq fractional improvement is less than this
 
 # wide AB--C orbit parameters (only change if component_switches=(1,1,1) and 3rd component is not static contamination)
 period_abC                   = 1      # for A-B system set to 1
 period_err_abC               = 0      # for A-B system set to 0
 t_periastron_passage_abC     = 0      # for A-B system set to 0
 t_periastron_passage_err_abC = 0      # for A-B system set to 0
+eccentricity_abC             = 0
+eccentricity_err_abC         = 0
 periastron_longitude_abC     = 0      # for A-B system set to 0
 periastron_longitude_err_abC = 0      # for A-B system set to 0
 asini_ab_in_abC              = 0      # for A-B system set to 0     (a*sin(i) of AB in wide AB--C orbit)
@@ -44,18 +48,18 @@ asini_c_in_abC               = 0      # for A-B system set to 0     (a*sin(i) of
 asini_c_err_in_abC           = 0      # for A-B system set to 0
 
 # tight A--B orbit parameters
-period_AB                    = 63.327
+period_AB                    = 63.3271331694
 period_AB_err                = 0
-t_periastron_passage_AB      = 54976
-t_periastron_passage_err_AB  = 0
-eccentricity_AB              = 0.257
-eccentricity_err_AB          = 0
-periastron_longitude_AB      = 168.9649
-periastron_longitude_err_AB  = 0
-RV_semiamplitude_A           = 43.7
-RV_semiamplitude_err_A       = 0
-RV_semiamplitude_B           = 27.5
-RV_semiamplitude_err_B       = 0
+t_periastron_passage_AB      = 5800
+t_periastron_passage_err_AB  = 5000
+eccentricity_AB              = 0.2567655768
+eccentricity_err_AB          = 0.05
+periastron_longitude_AB      = 180
+periastron_longitude_err_AB  = 180
+RV_semiamplitude_A           = 43.7024471242
+RV_semiamplitude_err_A       = 6
+RV_semiamplitude_B           = 27.5255136967
+RV_semiamplitude_err_B       = 1
 perilong_advance_AB          = 0       # is not functional in current version of fd3, so should always be set to 0
 perilong_advance_err_AB      = 0
 
@@ -68,7 +72,7 @@ wl_start = np.array([])
 delta_wl_array = np.array([])
 dates = np.array([])
 
-# # Load fits files and save data # #
+# # Load fits files, collect and prepare data # #
 for filename in os.listdir(data_path):
     if '.fits' in filename and '.lowSN' not in filename:
         with fits.open(data_path + filename) as hdul:
@@ -76,21 +80,36 @@ for filename in os.listdir(data_path):
             data = hdul[0].data
             wl0 = hdr['CRVAL1']
             delta_wl = hdr['CDELT1']
-            date = hdr['DATE_OBS']
+            date = hdr['DATE-AVG']
+            vhelio = hdr['VHELIO']
+            ra = hdr['OBJRA']*15.0      # degrees originally
+            dec = hdr['OBJDEC']
 
         wl = np.linspace(wl0, wl0+delta_wl*data.size, data.size)
+        selection_mask = (wl > 4400) & (wl < 9400)
+        wl = wl[selection_mask]
+        data = data[selection_mask]
+
+        wl = np.log(wl)
         wl_list.append(wl)
         yvals_list.append(data)
         wl_end = np.append(wl_end, wl[-1])
-        wl_start = np.append(wl_start, wl0)
-        delta_wl_array = np.append(delta_wl_array, delta_wl)
+        wl_start = np.append(wl_start, np.log(wl0))
         dates = np.append(dates, date)
 
+        plt.figure()
+        plt.plot(np.exp(wl), data, 'r')
+        plt.plot(np.exp(wl), spf.moving_median_filter(data, window=20001))
+        plt.show()
+
 # # Set unified wavelength grid # #
+
 wl0_unified = np.max(wl_start)
 wl1_unified = np.min(wl_end)
-delta_wl_unified = np.average(delta_wl_array)*100
+wl_sizes = np.array([x.size for x in wl_list])
+delta_wl_unified = (wl1_unified - wl0_unified) / np.average(wl_sizes)
 wl_unified = np.arange(wl0_unified, wl1_unified, delta_wl_unified)
+print('wl_unified.size', wl_unified.size)
 
 # # Interpolate data to wavelength grid # #
 yvals_new = []
@@ -98,16 +117,14 @@ for i in range(0, len(wl_list)):
     f_intp = interp1d(wl_list[i], yvals_list[i], kind='cubic')
     yvals_new.append(f_intp(wl_unified))
 
-# # Convert to wavelength logarithm # #
-log_wl = np.log(wl_unified)
-
 # # Save spectrum data # #
-save_data = np.empty(shape=(log_wl.size, len(yvals_new)+1))
-save_data[:, 0] = log_wl
+save_data = np.empty(shape=(wl_unified.size, len(yvals_new)+1))
+save_data[:, 0] = wl_unified
+
 for i in range(0, len(yvals_new)):
     save_data[:, i+1] = yvals_new[i]
 with open(data_path+masterfile_name, 'w') as f:
-    f.write(f'# {save_data[:,0].size} X {save_data[0,:].size}\n')
+    f.write(f'# {save_data[0,:].size} X {save_data[:,0].size}\n')
 with open(data_path+masterfile_name, 'ab') as f:
     f.write(b'\n')
     np.savetxt(f, save_data)
@@ -170,9 +187,9 @@ for i in range(0, len(bjdtdb)):
 writelist.extend(
     [
         '\n',
-        f'{period_abC} {period_err_abC}\t{t_periastron_passage_abC} {t_periastron_passage_err_abC}\t'
-        f'{periastron_longitude_abC} {periastron_longitude_err_abC}\t{asini_ab_in_abC} {asini_ab_err_in_abC}\t'
-        f'{asini_c_in_abC} {asini_c_err_in_abC}\n'
+        f'{period_abC} {period_err_abC}\t{t_periastron_passage_abC} {t_periastron_passage_err_abC}\t{eccentricity_abC} '
+        f'{eccentricity_err_abC}\t{periastron_longitude_abC} {periastron_longitude_err_abC}\t{asini_ab_in_abC} '
+        f'{asini_ab_err_in_abC}\t{asini_c_in_abC} {asini_c_err_in_abC}\n'
     ]
 )
 

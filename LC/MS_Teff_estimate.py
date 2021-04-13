@@ -33,14 +33,14 @@ def tess_spectral_response(wl):
     :param wl: numpy array containing sampling wavelengths [Å]
     :return: interpolated spectral response values for the TESS bandpass
     """
-    data = np.loadtxt("datafiles/TESS_TESS.Red.dat")
+    data = np.loadtxt("Data/tables/TESS_TESS.Red.dat")
     intp = interp1d(data[:, 0], data[:, 1], kind='cubic')
     spectral_response = intp(wl)
     return spectral_response
 
 
 def kepler_spectral_response(wl):
-    data = np.loadtxt("datafiles/Kepler_Kepler.K.dat")
+    data = np.loadtxt("Data/tables/Kepler_Kepler.K.dat")
     intp = interp1d(data[:, 0], data[:, 1], kind='cubic')
     spectral_response = intp(wl)
     return spectral_response
@@ -48,9 +48,9 @@ def kepler_spectral_response(wl):
 
 def spectral_response_limits(spectral_response):
     if spectral_response==tess_spectral_response:
-        data = np.loadtxt("datafiles/TESS_TESS.Red.dat")
+        data = np.loadtxt("Data/tables/TESS_TESS.Red.dat")
     elif spectral_response==kepler_spectral_response:
-        data = np.loadtxt("datafiles/Kepler_Kepler.K.dat")
+        data = np.loadtxt("Data/tables/Kepler_Kepler.K.dat")
     else:
         raise AttributeError("Unknown spectral_response")
     wl_a, wl_b = data[0, 0], data[-1, 0]
@@ -125,7 +125,7 @@ def find_T2(R1, R2, T1, L_ratio, spectral_response):
         return optimize_result.message
 
 
-def read_jktebop_output(identifiers, loc='jktebop_tess/param.out'):
+def read_jktebop_output(identifiers, loc='JKTEBOP/tess/param.out'):
     """
     Convenience function to read results from JKTEBOP output parameter file using string identifiers.
     Will only return the last occurrence of each value in the file.
@@ -155,7 +155,7 @@ def read_jktebop_output(identifiers, loc='jktebop_tess/param.out'):
 
 
 def read_limb_darkening_parameters(logg_range=np.array([1, 5]), Trange=np.array([2000, 9000]), MH_range=-0.5,
-                                   mTurb_range=2.0, loc='datafiles/tess_ldquad_table25.dat'):
+                                   mTurb_range=2.0, loc='Data/tables/tess_ldquad_table25.dat'):
     """
     Convenience function. Reads limb-darkening parameters from grid file for varying temperature and logg and outputs.
     :param logg_range:        log g range or requirement. Must be a numpy array for range, or float for requirement
@@ -166,7 +166,7 @@ def read_limb_darkening_parameters(logg_range=np.array([1, 5]), Trange=np.array(
     :return:                  array of logg and temperature combinations, and their corresponding
                               limb-darkening parameters.
     """
-    if loc == 'datafiles/tess_ldquad_table25.dat':
+    if loc == 'Data/tables/tess_ldquad_table25.dat':
         data = np.loadtxt(loc, usecols=(0, 1, 2, 3, 4, 5))
         logg = data[:, 0]
         Teff = data[:, 1]
@@ -194,7 +194,7 @@ def read_limb_darkening_parameters(logg_range=np.array([1, 5]), Trange=np.array(
             data = np.delete(data, 0, 1)
         mask = lg_mask & T_mask & MH_mask & mT_mask
 
-    elif loc == 'datafiles/kepler_sing_table.dat':
+    elif loc == 'Data/tables/kepler_sing_table.dat':
         data = np.loadtxt(loc, usecols=(0, 1, 2, 4, 5))
         Teff = data[:, 0]
         logg = data[:, 1]
@@ -223,7 +223,7 @@ def read_limb_darkening_parameters(logg_range=np.array([1, 5]), Trange=np.array(
 
 
 def interpolated_LD_param(logg, Teff, MH, mTurb, logg_range=np.array([0, 7]), Trange=np.array([2000, 9000]),
-                          MH_range=-0.5, mTurb_range=2.0, loc='datafiles/tess_ldquad_table25.dat'):
+                          MH_range=-0.5, mTurb_range=2.0, loc='Data/tables/tess_ldquad_table25.dat'):
     """
     Interpolates limb-darkening parameters from grid data and evaluates in points given
     :param logg:        evaluation point
@@ -242,7 +242,7 @@ def interpolated_LD_param(logg, Teff, MH, mTurb, logg_range=np.array([0, 7]), Tr
     points = data[:, 0:-2]
     eval_points = np.array([])
     # # Flexibility depending on size of parameter space (how many have grid points) and table structure used
-    if loc=='datafiles/tess_ldquad_table25.dat':
+    if loc=='Data/tables/tess_ldquad_table25.dat':
         if isinstance(logg_range, np.ndarray):
             eval_points = np.append(eval_points, logg)
         if isinstance(Trange, np.ndarray):
@@ -251,7 +251,7 @@ def interpolated_LD_param(logg, Teff, MH, mTurb, logg_range=np.array([0, 7]), Tr
             eval_points = np.append(eval_points, MH)
         if isinstance(mTurb_range, np.ndarray):
             eval_points = np.append(eval_points, mTurb)
-    elif loc == 'datafiles/kepler_sing_table.dat':
+    elif loc == 'Data/tables/kepler_sing_table.dat':
         if isinstance(Trange, np.ndarray):
             eval_points = np.append(eval_points, Teff)
         if isinstance(logg_range, np.ndarray):
@@ -267,7 +267,7 @@ def interpolated_LD_param(logg, Teff, MH, mTurb, logg_range=np.array([0, 7]), Tr
     return res[0, :]
 
 
-def save_LD_to_infile(LD_param_MS=None, LD_param_RG=None, loc_infile='jktebop/infile.TESS'):
+def save_LD_to_infile(LD_param_MS=None, LD_param_RG=None, loc_infile='JKTEBOP/tess/infile.TESS'):
     """
     Convenience function to use for updating limb-darkening parameters directly in the JKTEBOP input file.
     One or both components can be filled at a time.
@@ -302,8 +302,8 @@ def save_LD_to_infile(LD_param_MS=None, LD_param_RG=None, loc_infile='jktebop/in
         f.writelines(list_of_lines)
 
 
-def jktebop_iterator(n_iter=4, loc_infile='jktebop_tess/infile.TESS', loc_jktebop='jktebop_tess/',
-                     loc_ld_table='datafiles/tess_ldquad_table25.dat'):
+def jktebop_iterator(n_iter=4, loc_infile='JKTEBOP/tess/infile.TESS', loc_jktebop='JKTEBOP/tess/',
+                     loc_ld_table='Data/tables/tess_ldquad_table25.dat'):
     """
     Calls JKTEBOP to perform fit, extracts key parameters, calculates MS effective temperature,
     finds Limb-darkening parameters, and repeats iteratively.
@@ -331,10 +331,10 @@ def jktebop_iterator(n_iter=4, loc_infile='jktebop_tess/infile.TESS', loc_jktebo
         print("Radius MS        ", R_MS)
         print("Radius RG        ", R_RG)
         print("L_ratio          ", L_ratio)
-        if loc_jktebop=='jktebop_tess/' or loc_jktebop=='jktebop_tess':
+        if loc_jktebop=='JKTEBOP/tess/' or loc_jktebop=='JKTEBOP/tess_ltf':
             spectral_response=tess_spectral_response
-        elif loc_jktebop=='jktebop_kepler/' or loc_jktebop=='jktebop_kepler_kasfit/' \
-                or loc_jktebop=='jktebop_kepler_kasoc/' or loc_jktebop=='jktebop_kepler_LTF/':
+        elif loc_jktebop=='JKTEBOP/kepler_kasfit/' \
+                or loc_jktebop=='JKTEBOP/kepler_kasoc/' or loc_jktebop=='JKTEBOP/kepler_LTF/':
             spectral_response=kepler_spectral_response
         else:
             raise AttributeError("Unknown spectral response")
@@ -350,12 +350,12 @@ def jktebop_iterator(n_iter=4, loc_infile='jktebop_tess/infile.TESS', loc_jktebo
 def main():
     # T2 = find_T2(7.513, 0.727, 5042, 61.16, kepler_spectral_response)
     # print(T2)
-    # print(interpolated_LD_param(4.62640, T2, -0.5, 2.0, loc='datafiles/kepler_sing_table.dat'))
-    # print(interpolated_LD_param(2.80835, 5042, -0.5, 2.0, loc='datafiles/kepler_sing_table.dat'))
-    # jktebop_iterator(n_iter=1, loc_infile='jktebop_tess/infile.TESS', loc_jktebop='jktebop_tess/',
-    #                  loc_ld_table='datafiles/tess_ldquad_table25.dat')
-    jktebop_iterator(n_iter=2, loc_infile='jktebop_kepler_LTF/infile.KEPLER', loc_jktebop='jktebop_kepler_LTF/',
-                     loc_ld_table='datafiles/kepler_sing_table.dat')
+    # print(interpolated_LD_param(4.62640, T2, -0.5, 2.0, loc='Data/tables/kepler_sing_table.dat'))
+    # print(interpolated_LD_param(2.80835, 5042, -0.5, 2.0, loc='Data/tables/kepler_sing_table.dat'))
+    # jktebop_iterator(n_iter=1, loc_infile='JKTEBOP/tess/infile.TESS', loc_jktebop='JKTEBOP/tess/',
+    #                  loc_ld_table='Data/tables/tess_ldquad_table25.dat')
+    jktebop_iterator(n_iter=2, loc_infile='JKTEBOP/kepler_LTF/infile.KEPLER', loc_jktebop='JKTEBOP/kepler_LTF/',
+                     loc_ld_table='Data/tables/kepler_sing_table.dat')
 
 
 if __name__ == "__main__":

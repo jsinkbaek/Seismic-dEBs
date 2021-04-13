@@ -1,8 +1,0 @@
-set term svg font ",13" background rgb "white" size 1000,1000
-set title "Light curve with JKTEBOP fit"
-set xlabel "BJD - 2400000 days"
-set ylabel "Light curve"
-set out "Plot.lc.svg"
-
-plot "lc.out" u 4:2 with points pt 1 ps 1 title "TESS light curve"\
-	, "model.out" u 1:2 with lines lw 3 lt 3 dt 3 title "JKTEBOP model"

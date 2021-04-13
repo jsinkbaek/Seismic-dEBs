@@ -40,5 +40,5 @@ data_2[:, 0] = kjd_2 + time_correct
 data_2[:, 1] = rv_2
 data_2[:, 2] = err_2
 
-np.savetxt('rv1.txt', data_1, fmt=('%.4f', '%.2f', '%.2f'), header='Time\tRV\tError', delimiter='\t')
-np.savetxt('rv2.txt', data_2, fmt=('%.4f', '%.2f', '%.2f'), header='Time\tRV\tError', delimiter='\t')
+np.savetxt('../Data/unprocessed/rv1.txt', data_1, fmt=('%.4f', '%.2f', '%.2f'), header='Time\tRV\tError', delimiter='\t')
+np.savetxt('../Data/unprocessed/rv2.txt', data_2, fmt=('%.4f', '%.2f', '%.2f'), header='Time\tRV\tError', delimiter='\t')

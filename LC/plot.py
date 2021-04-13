@@ -1,8 +1,7 @@
-import importlib
 import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
-import MS_Teff_estimate as Tlib
+from LC import MS_Teff_estimate as Tlib
 from scipy.interpolate import interp1d
 
 
@@ -612,26 +611,26 @@ def plot_many_lc(loc, period, phaselim1, phaselim2, subplot_text, figname):
 # temperature_profile(5616, 5042, 0.727, 7.513)
 # jktebop_model('jktebop_kepler/model.out', 'lcmag_kepler_full.txt', 'lcmag_kepler.txt', 'jktebop_kepler/rvA.dat',
 #              'jktebop_kepler/rvB.dat', 63.32713, 54976.6351499878)
-# jktebop_model(loc_model='jktebop_tess/model.out', loc_lc='lcmag_tess.txt', loc_rvA='jktebop_tess/rvA.dat',
-#              loc_rvB='jktebop_tess/rvB.dat', period=63.32713, initial_t=58712.9377353396)
-# lc(loc='lcmag_tess_tot.txt', period=63.32713, model_loc='jktebop_tess/model.out', phase_xlim=[-0.05, 0.4])
+# jktebop_model(loc_model='tess/model.out', loc_lc='lcmag_tess.txt', loc_rvA='tess/rvA.dat',
+#              loc_rvB='tess/rvB.dat', period=63.32713, initial_t=58712.9377353396)
+# lc(loc='lcmag_tess_tot.txt', period=63.32713, model_loc='tess/model.out', phase_xlim=[-0.05, 0.4])
 # psd(loc="datafiles/kasoc/8430105_psd.txt")
 
-# lc_plot2('lcmag_kepler_reduced.txt', 'jktebop_kepler_LTF/lc.KEPLER',
+# lc_plot2('lcmag_kepler_reduced.txt', 'kepler_LTF/lc.KEPLER',
 #         legend=['KASOC filtered Light Curve', 'LTF light curve'], ylim=[0.0225, -0.0025])
 
-# obs_v_cal('jktebop_kepler_kasfit/lc.KEPLER', 'jktebop_kepler_kasfit/model.out')
+# obs_v_cal('kepler_kasfit/lc.KEPLER', 'kepler_kasfit/model.out')
 if False:
-    obs_v_cal_folded('jktebop_kepler_LTF/lc.KEPLER', 'jktebop_kepler_LTF/model.out', 'jktebop_kepler_kasfit/lc.KEPLER',
-                     'jktebop_kepler_kasfit/model.out', legend=['JKTEBOP model LTF','JKTEBOP model KASOC',
+    obs_v_cal_folded('JKTEBOP/kepler_LTF/lc.KEPLER', 'JKTEBOP/kepler_LTF/model.out', 'JKTEBOP/kepler_kasfit/lc.KEPLER',
+                     'JKTEBOP/kepler_kasfit/model.out', legend=['JKTEBOP model LTF','JKTEBOP model KASOC',
                                                                 'Kepler LTF LC', 'Kepler KASOC LC'],
                      o_c_ylim=[0.003, -0.003], marker1='y.', marker2='c.', line1='k--', line2='m-.', errorbar=True,
                      color1='k', color2='m', plot_std='both')
 if False:
-    obs_v_cal_folded('jktebop_kepler_LTF/lc.KEPLER', 'jktebop_kepler_LTF/model.out',
+    obs_v_cal_folded('JKTEBOP/kepler_LTF/lc.KEPLER', 'JKTEBOP/kepler_LTF/model.out',
                      legend=['Kepler LTF LC', 'JKTEBOP model LTF'],
                      o_c_ylim=[0.003, -0.003], marker1='r.', marker2='c.', line1='k--', line2='m-.', errorbar=True)
 
 if True:
-    plot_many_lc('datafiles/kasoc/8430105_unfiltered.txt', 63.32713, [0.1, 0.17], [0.445, 0.51], ' + 2400000',
-                 'figures/report/kepler/unfiltered_lc')
+    plot_many_lc('Data/unprocessed/kic8430105_kepler_unfiltered.txt', 63.32713, [0.1, 0.17], [0.445, 0.51], ' + 2400000',
+                 '../figures/report/kepler/unfiltered_lc')
