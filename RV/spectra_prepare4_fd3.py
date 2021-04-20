@@ -86,7 +86,7 @@ for filename in os.listdir(data_path):
             dec = hdr['OBJDEC']
 
         wl = np.linspace(wl0, wl0+delta_wl*data.size, data.size)
-        selection_mask = (wl > 4400) & (wl < 9400)
+        selection_mask = (wl > 4200) & (wl < 9600)
         wl = wl[selection_mask]
         data = data[selection_mask]
 
@@ -97,10 +97,30 @@ for filename in os.listdir(data_path):
         wl_start = np.append(wl_start, np.log(wl0))
         dates = np.append(dates, date)
 
+        """
         plt.figure()
+        mf_data = spf.moving_median_filter(data, window=301)
+        variance = data-mf_data
+        mask = variance < 1.5*np.std(variance)
+        print('mf_data.shape', mf_data.shape)
+        print('data.shape', data.shape)
+        print(3*np.std(variance))
         plt.plot(np.exp(wl), data, 'r')
-        plt.plot(np.exp(wl), spf.moving_median_filter(data, window=20001))
+        plt.plot(np.exp(wl), mf_data)
+        plt.xlabel('Wavelength [Å]')
+        plt.show(block=False)
+        plt.figure()
+        plt.plot(np.exp(wl), variance)
+        plt.plot(np.exp(wl[mask]), variance[mask], '--', linewidth=0.8)
+        plt.xlabel('Wavelength [Å]')
+        plt.show(block=False)
+        plt.figure()
+        plt.plot(np.exp(wl), data, linewidth=1)
+        plt.plot(np.exp(wl[mask]), data[mask], '--', linewidth=0.8)
         plt.show()
+        """
+
+        spf.AFS_algorithm(wl, data, lr_frac=0.2)
 
 # # Set unified wavelength grid # #
 
