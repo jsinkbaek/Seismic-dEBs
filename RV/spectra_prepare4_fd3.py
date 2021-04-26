@@ -16,11 +16,13 @@ to use with the data as well, so input variables can be manually typed in this s
 
 # # Set variables for script # #
 data_path = 'RV/Data/unprocessed/NOT/KIC8430105/'
+data_out_path = 'RV/Data/processed/NOT/KIC8430105/'
 masterfile_name = 'not_kic8430105.master.obs'
 observatory_location = EarthLocation.of_site("lapalma")
 observatory_name = "lapalma"
 stellar_target = "kic8430105"
 timebase = 2400000
+load_data = True       # Defines if normalized spectrum should be loaded from earlier, or done with AFS_algorithm
 
 # #  fd3 input variables # #
 ln_range = (8.0, 10.0)
@@ -71,6 +73,8 @@ wl_end = np.array([])
 wl_start = np.array([])
 delta_wl_array = np.array([])
 dates = np.array([])
+RA = np.array([])
+DEC = np.array([])
 
 # # Load fits files, collect and prepare data # #
 for filename in os.listdir(data_path):
@@ -85,42 +89,40 @@ for filename in os.listdir(data_path):
             ra = hdr['OBJRA']*15.0      # degrees originally
             dec = hdr['OBJDEC']
 
+        # Prepare before continuum fit
+        filebulk = filename[:filename.rfind(".fits")]
         wl = np.linspace(wl0, wl0+delta_wl*data.size, data.size)
         selection_mask = (wl > 4200) & (wl < 9600)
         wl = wl[selection_mask]
         data = data[selection_mask]
-
+        # Convert wl to ln(wl)
         wl = np.log(wl)
+        # Do continuum fit to normalize data or load from file
+        if load_data:
+            load_res = np.loadtxt('RV/Data/processed/AFS_algorithm/Normalized_Spectrum/'+filebulk+'_reduced_set.dat')
+            wl = load_res[:, 0]
+            data = load_res[:, 1]
+        else:
+            wl, data, _ = spf.AFS_algorithm(wl, data, lr_frac=0.2, save_string=filebulk)
+        # Cut data set down to smaller wavelength range
+        selection_mask = (wl > np.log(5300)) & (wl < np.log(5700))
+        wl, data = wl[selection_mask], data[selection_mask]
+        # Append wavelength
         wl_list.append(wl)
         yvals_list.append(data)
         wl_end = np.append(wl_end, wl[-1])
-        wl_start = np.append(wl_start, np.log(wl0))
+        wl_start = np.append(wl_start, wl[0])
         dates = np.append(dates, date)
+        RA = np.append(RA, ra)
+        DEC = np.append(DEC, dec)
 
-        """
-        plt.figure()
-        mf_data = spf.moving_median_filter(data, window=301)
-        variance = data-mf_data
-        mask = variance < 1.5*np.std(variance)
-        print('mf_data.shape', mf_data.shape)
-        print('data.shape', data.shape)
-        print(3*np.std(variance))
-        plt.plot(np.exp(wl), data, 'r')
-        plt.plot(np.exp(wl), mf_data)
-        plt.xlabel('Wavelength [Å]')
-        plt.show(block=False)
-        plt.figure()
-        plt.plot(np.exp(wl), variance)
-        plt.plot(np.exp(wl[mask]), variance[mask], '--', linewidth=0.8)
-        plt.xlabel('Wavelength [Å]')
-        plt.show(block=False)
-        plt.figure()
-        plt.plot(np.exp(wl), data, linewidth=1)
-        plt.plot(np.exp(wl[mask]), data[mask], '--', linewidth=0.8)
-        plt.show()
-        """
-
-        spf.AFS_algorithm(wl, data, lr_frac=0.2)
+# # Plot # #
+if False:
+    plt.figure(figsize=(17.78, 10))
+    for i in range(0, len(wl_list)):
+        plt.plot(np.exp(wl_list[i]), yvals_list[i], linewidth=0.5)
+    plt.xlabel('Wavelength [Å]')
+    plt.show()
 
 # # Set unified wavelength grid # #
 
@@ -129,7 +131,6 @@ wl1_unified = np.min(wl_end)
 wl_sizes = np.array([x.size for x in wl_list])
 delta_wl_unified = (wl1_unified - wl0_unified) / np.average(wl_sizes)
 wl_unified = np.arange(wl0_unified, wl1_unified, delta_wl_unified)
-print('wl_unified.size', wl_unified.size)
 
 # # Interpolate data to wavelength grid # #
 yvals_new = []
@@ -143,9 +144,9 @@ save_data[:, 0] = wl_unified
 
 for i in range(0, len(yvals_new)):
     save_data[:, i+1] = yvals_new[i]
-with open(data_path+masterfile_name, 'w') as f:
+with open(data_out_path+masterfile_name, 'w') as f:
     f.write(f'# {save_data[0,:].size} X {save_data[:,0].size}\n')
-with open(data_path+masterfile_name, 'ab') as f:
+with open(data_out_path+masterfile_name, 'ab') as f:
     f.write(b'\n')
     np.savetxt(f, save_data)
 
@@ -158,7 +159,8 @@ times = Time(dates, scale='utc', location=observatory_location)  # Note: this do
 times.format = 'jd'
 times.out_subfmt = 'long'
 # print(get_stellar_data(stellar_target))    # TODO: Verify that SIMBAD results are okay
-bc_rv_cor, warning, flag = get_BC_vel(times, starname=stellar_target, ephemeris='de432s', obsname=observatory_name)
+bc_rv_cor, warning, flag = get_BC_vel(times, ra=np.mean(RA), dec=np.mean(DEC), starname=stellar_target,
+                                      ephemeris='de432s', obsname=observatory_name)
 print()
 print("RV correction")
 print(bc_rv_cor)
@@ -169,7 +171,8 @@ print(flag)
 # # # Calculate JDUTC to BJDTDB correction # # #
 print()
 print("Time conversion to BJDTDB")
-bjdtdb, warning, flag = utc_tdb.JDUTC_to_BJDTDB(times, starname=stellar_target, obsname=observatory_name)
+bjdtdb, warning, flag = utc_tdb.JDUTC_to_BJDTDB(times, ra=np.mean(RA), dec=np.mean(DEC), starname=stellar_target,
+                                                obsname=observatory_name)
 print(bjdtdb)
 print(warning)
 print(flag)
@@ -231,6 +234,6 @@ writelist.extend(
 )
 print(writelist)
 
-with open(data_path+out_name+'.in', 'w') as f:
+with open(data_out_path+out_name+'.in', 'w') as f:
     for element in writelist:
         f.write(element)

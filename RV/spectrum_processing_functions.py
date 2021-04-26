@@ -128,7 +128,34 @@ def select_areas(fig, ax):
     return selected_areas
 
 
-def AFS_algorithm(wavelength, flux, alpha=None, mf_window=5001, emline_factor=1, lr_frac=0.2):
+def save2col(column1, column2, filename):
+    save_data = np.empty((column1.size, 2))
+    save_data[:, 0] = column1
+    save_data[:, 1] = column2
+    np.savetxt(filename, save_data)
+
+
+def savefig(filename, xs, ys, xlabel, ylabel, title=None, xlim=None, ylim=None, legend=None, legend_loc='upper left',
+            figsize=(17.78, 10), dpi=400):
+    fig = plt.figure(figsize=figsize)
+    for i in range(0, len(xs)):
+        plt.plot(xs[i], ys[i], linewidth=0.5)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    if xlim is not None:
+        plt.xlim(xlim)
+    if ylim is not None:
+        plt.ylim(ylim)
+    if title is not None:
+        plt.title(title)
+    if legend is not None:
+        plt.legend(legend, loc=legend_loc)
+    plt.tight_layout()
+    plt.savefig(filename, dpi=dpi)
+    plt.close(fig)
+
+
+def AFS_algorithm(wavelength, flux, alpha=None, mf_window=5001, emline_factor=1, lr_frac=0.2, save_string=None):
     """
     https://arxiv.org/pdf/1904.10065v1.pdf
     https://iopscience.iop.org/article/10.3847/1538-3881/ab1b47/pdf
@@ -145,12 +172,17 @@ def AFS_algorithm(wavelength, flux, alpha=None, mf_window=5001, emline_factor=1,
     :param emline_factor:   float, cutoff factor multipler to variance standard dev when reducing emission lines.
     :param lr_frac:         float, specifies fraction of all datapoints to include in width of kernel (varying kernel
                             width). Overrides lr_width if not None.
+    :param save_string:     string. If not None, data is saved using "save_string" as the beginning name in the folder
+                            RV/Data/processed/AFS_algorithm/
     :return:
     """
+    # Set processed data and figure path
+    data_out_path = 'RV/Data/processed/AFS_algorithm/'
+    fig_path = 'figures/report/RV/Continuum_Normalization/'
     # Reduce emission lines in data set used for alpha shape
     wavelength_uncorrected, flux_uncorrected = np.copy(wavelength), np.copy(flux)
     wavelength, flux = reduce_emission_lines(wavelength, flux, mf_window, emline_factor, plot=False)
-    # Select alpha
+    # Select alpha (assumes wavelength in ln units)
     if alpha is None:
         alpha = (np.exp(np.max(wavelength)) - np.exp(np.min(wavelength)))/(6*50)
         print(alpha)
@@ -169,15 +201,18 @@ def AFS_algorithm(wavelength, flux, alpha=None, mf_window=5001, emline_factor=1,
     upper_boundary = np.delete(upper_boundary, range(0, 5), axis=0)
     upper_boundary = np.delete(upper_boundary, range(upper_boundary[:, 0].size-5, upper_boundary[:, 0].size), axis=0)
     # Do local polynomial regression
-    flux_localreg = localreg(upper_boundary[:, 0], upper_boundary[:, 1], degree=3, kernel=rbf.tricube,
+    flux_localreg = localreg(upper_boundary[:, 0], upper_boundary[:, 1], wavelength, degree=3, kernel=rbf.tricube,
                              frac=lr_frac)
+    flux_lrec_uncorr = localreg(upper_boundary[:, 0], upper_boundary[:, 1], wavelength_uncorrected, degree=3,
+                                kernel=rbf.tricube, frac=lr_frac)       # interpolated to match wavelength_uncorrected
 
-    fig, ax = plt.subplots()
+    # Plot result
+    fig, ax = plt.subplots(figsize=(15, 8))
     ax.scatter(wavelength_uncorrected, flux_uncorrected, s=1, c='b')
     ax.scatter(*zip(*points), s=1)
     ax.add_patch(PolygonPatch(alpha_shape, alpha=0.2))
     ax.plot(upper_boundary[:, 0], upper_boundary[:, 1], 'g')
-    ax.plot(upper_boundary[:, 0], flux_localreg, 'k--')
+    ax.plot(wavelength, flux_localreg, 'k--')
     ax.plot(lower_boundary[:, 0], lower_boundary[:, 1], 'r')
 
     # Call ginput to manually exclude areas (space to add point, backspace to remove, enter to return)
@@ -189,7 +224,7 @@ def AFS_algorithm(wavelength, flux, alpha=None, mf_window=5001, emline_factor=1,
         if np.floor(len(exclude_lims)/2) != np.ceil(len(exclude_lims)/2):
             warnings.warn("Uneven amount of ginput points selected. Ignoring last point.")
             equal_len = False
-        for i in range(0, int(np.floor(len(exclude_lims)/2)), 2):
+        for i in range(0, len(exclude_lims), 2):
             if not equal_len and i==np.floor(len(exclude_lims))-1:
                 break
             x1 = exclude_lims[i][0]
@@ -203,24 +238,65 @@ def AFS_algorithm(wavelength, flux, alpha=None, mf_window=5001, emline_factor=1,
         alpha_shape = alphashape.alphashape(points_reduced, alpha)
         upper_boundary, lower_boundary = separate_polygon_boundary(alpha_shape)
         upper_boundary = np.delete(upper_boundary, range(0, 5), axis=0)
-        upper_boundary = np.delete(upper_boundary, range(upper_boundary[:, 0].size - 5, upper_boundary[:, 0].size),
-                                   axis=0)
-        flux_localreg = localreg(upper_boundary[:, 0], upper_boundary[:, 1], degree=3, kernel=rbf.tricube, frac=lr_frac)
+        upper_boundary = np.delete(upper_boundary, range(upper_boundary[:, 0].size-5, upper_boundary[:, 0].size),axis=0)
+        flux_localreg = localreg(upper_boundary[:, 0], upper_boundary[:, 1], wavelength_reduced, degree=3,
+                                 kernel=rbf.tricube, frac=lr_frac)
+        flux_lrec_uncorr = localreg(upper_boundary[:, 0], upper_boundary[:, 1], wavelength_uncorrected, degree=3,
+                                    kernel=rbf.tricube, frac=lr_frac)  # interpolated to match wavelength_uncorrected
 
-        fig, ax = plt.subplots()
+        # Plot result
+        fig, ax = plt.subplots(figsize=(15, 8))
         ax.scatter(*zip(*points), s=1)
         ax.scatter(*zip(*points_reduced), s=1)
         ax.add_patch(PolygonPatch(alpha_shape, alpha=0.2))
         ax.plot(upper_boundary[:, 0], upper_boundary[:, 1], 'g')
         ax.plot(lower_boundary[:, 0], lower_boundary[:, 1], 'r')
-        ax.plot(upper_boundary[:, 0], flux_localreg, 'k--')
+        ax.plot(wavelength_reduced, flux_localreg, 'k--')
         plt.legend(['Full set with reduced emission lines', 'Reduced set by additional manual selection', 'Polygon',
-                    'Upper boundary', 'Lower boundary', 'Local Polynomial Regression fit'])
+                    'Upper boundary', 'Lower boundary', 'Local Polynomial Regression fit'], loc='upper left')
         plt.show()
 
-    # TODO: Make manual selection
-    # TODO: Make data save
-    # TODO: Remove negative values
+    # Correct spectrum using local regression fit as continuum
+    if exclude_lims:
+        flux_normalized = flux_reduced / flux_localreg
+        wavelength_normalized = wavelength_reduced
+    else:
+        flux_normalized = flux / flux_localreg
+        wavelength_normalized = wavelength
+
+    flux_normalized_full_set = flux_uncorrected / flux_lrec_uncorr
+    wavelength_full_set = wavelength_uncorrected
+
+    # Remove negative values
+    mask_negative_values = flux_normalized < 0
+    mask_negative_values_full_set = flux_normalized_full_set < 0
+
+    flux_normalized = flux_normalized[~mask_negative_values]
+    wavelength_normalized = wavelength_normalized[~mask_negative_values]
+    flux_localreg = flux_localreg[~mask_negative_values]
+
+    flux_normalized_full_set = flux_normalized_full_set[~mask_negative_values_full_set]
+    wavelength_full_set = wavelength_full_set[~mask_negative_values_full_set]
+
+    # Save data
+    save2col(wavelength_normalized, flux_normalized,data_out_path+'Normalized_Spectrum/'+save_string+'_reduced_set.dat')
+    save2col(wavelength_full_set, flux_normalized_full_set, data_out_path+'Normalized_Spectrum/'+save_string
+                      +'_full_set.dat')
+    save2col(wavelength_uncorrected, flux_uncorrected,data_out_path+'Uncorrected_Spectrum/'+save_string+'_full_set.dat')
+    if exclude_lims:
+        save2col(wavelength_reduced, flux_reduced, data_out_path+'Uncorrected_Spectrum/'+save_string+'_reduced_set.dat')
+    else:
+        save2col(wavelength, flux, data_out_path + 'Uncorrected_Spectrum/'+save_string+'_reduced_set.dat')
+    save2col(wavelength_normalized, flux_localreg, data_out_path+'Continuum_Fit/'+ save_string+'.fit')
+    save2col(upper_boundary[:,0], upper_boundary[:,1], data_out_path+'Polygon_Boundary/'+save_string+'.upper')
+    save2col(lower_boundary[:,0], lower_boundary[:,1], data_out_path+'Polygon_Boundary/'+save_string+'.lower')
+
+    plot_xs = [wavelength_uncorrected, wavelength_reduced, wavelength_normalized]
+    plot_ys = [flux_uncorrected, flux_reduced, flux_localreg]
+    savefig(fig_path+save_string, plot_xs, plot_ys, xlabel=r'ln($\lambda$)', ylabel='', legend=['Full set',
+            'Set with reduced and removed emission lines', 'Local Polyinomial Regression Fit'])
+
+    return wavelength_normalized, flux_normalized, flux_localreg
 
 
 
