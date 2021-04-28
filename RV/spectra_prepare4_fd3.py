@@ -4,9 +4,9 @@ from astropy.time import Time
 from astropy.coordinates import EarthLocation
 import os
 from scipy.interpolate import interp1d
-from barycorrpy import get_BC_vel, get_stellar_data, utc_tdb
-from matplotlib import pyplot as plt
-import RV.spectrum_processing_functions as spf
+from barycorrpy import get_BC_vel, utc_tdb
+import RV.library.spectrum_processing_functions as spf
+import scipy.constants as scc
 
 """
 This script is used to prepare observed (reduced) spectra from NOT in the form of .fits files into a format that can be
@@ -23,6 +23,8 @@ observatory_name = "lapalma"
 stellar_target = "kic8430105"
 timebase = 2400000
 load_data = True       # Defines if normalized spectrum should be loaded from earlier, or done with AFS_algorithm
+delta_v = 1.0          # interpolation resolution for spectrum in km/s
+speed_of_light = scc.c / 1000    # in km/s
 
 # #  fd3 input variables # #
 ln_range = (8.0, 10.0)
@@ -95,8 +97,7 @@ for filename in os.listdir(data_path):
         selection_mask = (wl > 4200) & (wl < 9600)
         wl = wl[selection_mask]
         data = data[selection_mask]
-        # Convert wl to ln(wl)
-        wl = np.log(wl)
+
         # Do continuum fit to normalize data or load from file
         if load_data:
             load_res = np.loadtxt('RV/Data/processed/AFS_algorithm/Normalized_Spectrum/'+filebulk+'_reduced_set.dat')
@@ -104,8 +105,10 @@ for filename in os.listdir(data_path):
             data = load_res[:, 1]
         else:
             wl, data, _ = spf.AFS_algorithm(wl, data, lr_frac=0.2, save_string=filebulk)
+        # Convert wl to log10(wl)
+        wl = np.log10(wl)
         # Cut data set down to smaller wavelength range
-        selection_mask = (wl > np.log(5300)) & (wl < np.log(5700))
+        selection_mask = (wl > np.log10(5300)) & (wl < np.log10(5700))
         wl, data = wl[selection_mask], data[selection_mask]
         # Append wavelength
         wl_list.append(wl)
@@ -125,12 +128,10 @@ if False:
     plt.show()
 
 # # Set unified wavelength grid # #
-
 wl0_unified = np.max(wl_start)
 wl1_unified = np.min(wl_end)
-wl_sizes = np.array([x.size for x in wl_list])
-delta_wl_unified = (wl1_unified - wl0_unified) / np.average(wl_sizes)
-wl_unified = np.arange(wl0_unified, wl1_unified, delta_wl_unified)
+step_amnt = np.log10(wl1_unified/wl0_unified) / np.log10(1.0 * delta_v/speed_of_light)
+wl_unified = wl0_unified * (1.0 + delta_v/speed_of_light)**(np.linspace(1, step_amnt, step_amnt))
 
 # # Interpolate data to wavelength grid # #
 yvals_new = []

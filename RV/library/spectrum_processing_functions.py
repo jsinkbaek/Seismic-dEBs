@@ -8,6 +8,86 @@ from matplotlib.widgets import Cursor
 import alphashape
 from localreg import *
 import warnings
+import scipy.constants as scc
+from scipy.interpolate import interp1d
+
+
+def resample_to_equal_velocity_steps(wavelength, delta_v, flux=None, wavelength_resampled=None, wavelength_a=None,
+                                     wavelength_b=None, resampled_len_even=True):
+    """
+    Over-engineered, multi-use function that can be used to either: Create a new wavelength grid equi-distant in vel
+    (without interpolation), create grid and resample flux to it, create mutual grid and resample flux for multiple
+    spectra simultanously. It can also resample one (or more) spectra to a provided wavelength grid.
+    :param wavelength:              either a list of np.ndarray's, or a np.ndarray
+    :param delta_v:                 desired spectrum resolution in velocity space
+    :param flux:                    either a list of np.ndarray's, or a np.ndarray. Set to None if not used
+    :param wavelength_resampled:    a np.ndarray with a provided resampled grid. Set to None if one should be calculated
+    :param wavelength_a:            float, start of desired grid. If None, calculates from provided spectra
+    :param wavelength_b:            float, end of desired grid. If None, calculates from provided spectra.
+    :param resampled_len_even:      bool switch, sets if resampled grid should be kept on an even length
+    :return:    either wavelength_resampled, (wavelength_resampled, flux_resampled_collection),
+                or (wavelength_resampled, flux_resampled)
+    """
+    speed_of_light = scc.c / 1000  # in km/s
+    if isinstance(wavelength, list):
+        if wavelength_a is None and wavelength_resampled is None:
+            wavelength_a = np.max([x[0] for x in wavelength])
+        if wavelength_b is None and wavelength_resampled is None:
+            wavelength_b = np.min([x[-1] for x in wavelength])
+    elif isinstance(wavelength, np.ndarray):
+        if wavelength_a is None and wavelength_resampled is None:
+            wavelength_a = wavelength[0]
+        if wavelength_b is None and wavelength_resampled is None:
+            wavelength_b = wavelength[-1]
+    else:
+        raise ValueError("wavelength is neither a list (of arrays) or an array")
+
+    if wavelength_resampled is None:
+        step_amnt = np.log10(wavelength_b / wavelength_a) / np.log10(1.0 + delta_v / speed_of_light) + 1
+        wavelength_resampled = wavelength_a * (1.0 + delta_v / speed_of_light) ** (np.linspace(1, step_amnt, step_amnt))
+        if resampled_len_even and np.mod(wavelength_resampled.size, 2) != 0.0:
+            wavelength_resampled = wavelength_resampled[:-1]    # all but last element
+
+    if flux is not None:
+        if isinstance(flux, list):
+            flux_resampled_collection = np.empty(shape=(wavelength_resampled.size, len(flux)))
+            for i in range(0, len(flux)):
+                flux_interpolator = interp1d(wavelength[i], flux[i], kind='cubic')
+                flux_resampled_collection[:, i] = flux_interpolator(wavelength_resampled)
+            return wavelength_resampled, flux_resampled_collection
+        elif isinstance(flux, np.ndarray):
+            flux_interpolator = interp1d(wavelength, flux, kind='cubic')
+            flux_resampled = flux_interpolator(wavelength_resampled)
+            return wavelength_resampled, flux_resampled
+        else:
+            raise ValueError("flux is neither a list (of arrays), an array, or None.")
+    else:
+        return wavelength_resampled
+
+
+def interpolate_to_equal_velocity_steps(wavelength_collector_list, flux_collector_list, delta_v):
+    """
+    Resamples a set of spectra to the same wavelength grid equi-spaced in velocity map.
+    :param wavelength_collector_list:   list of arrays, one array for each spectrum
+    :param flux_collector_list:         list of arrays, one array for each spectrum
+    :param delta_v:                     interpolation resolution for spectrum in km/s
+    :return: wavelength, flux_collector_array
+    """
+    speed_of_light = scc.c / 1000       # in km/s
+
+    # # Create unified wavelength grid equispaced in velocity # #
+    wavelength_a = np.max([x[0] for x in wavelength_collector_list])
+    wavelength_b = np.min([x[-1] for x in wavelength_collector_list])
+    step_amnt = np.log10(wavelength_b / wavelength_a) / np.log10(1.0 + delta_v / speed_of_light) + 1
+    wavelength = wavelength_a * (1.0 + delta_v / speed_of_light) ** (np.linspace(1, step_amnt, step_amnt))
+
+    # # Interpolate to unified wavelength grid # #
+    flux_collector_array = np.empty(shape=(wavelength.size, len(flux_collector_list)))
+    for i in range(0, len(flux_collector_list)):
+        flux_interpolator = interp1d(wavelength_collector_list[i], flux_collector_list[i], kind='cubic')
+        flux_collector_array[:, i] = flux_interpolator(wavelength)
+
+    return wavelength, flux_collector_array
 
 
 def moving_median_filter(flux, window=51):
@@ -162,6 +242,8 @@ def AFS_algorithm(wavelength, flux, alpha=None, mf_window=5001, emline_factor=1,
     https://ui.adsabs.harvard.edu/abs/2019AJ....157..243X/abstract
     Modeling the Echelle Spectra Continuum with Alpha Shapes and Local Regression Fitting
 
+    This is a continuum normalization algorithm for use with a merged spectrum (even though the articles mention the
+    algorithm for use with unmerged spectra where blaze can be removed).
     Create alpha shape of spectrum. Then make local regression fit to upper boundary of alpha shape to estimate blaze.
     Divide spectrum with it. Then something more.
 
@@ -179,6 +261,9 @@ def AFS_algorithm(wavelength, flux, alpha=None, mf_window=5001, emline_factor=1,
     # Set processed data and figure path
     data_out_path = 'RV/Data/processed/AFS_algorithm/'
     fig_path = 'figures/report/RV/Continuum_Normalization/'
+    # Convert wavelength to ln(wl)
+    wavelength = np.log(wavelength)
+
     # Reduce emission lines in data set used for alpha shape
     wavelength_uncorrected, flux_uncorrected = np.copy(wavelength), np.copy(flux)
     wavelength, flux = reduce_emission_lines(wavelength, flux, mf_window, emline_factor, plot=False)
@@ -278,6 +363,11 @@ def AFS_algorithm(wavelength, flux, alpha=None, mf_window=5001, emline_factor=1,
     flux_normalized_full_set = flux_normalized_full_set[~mask_negative_values_full_set]
     wavelength_full_set = wavelength_full_set[~mask_negative_values_full_set]
 
+    # Convert wavelength back to Ångstrom units
+    wavelength, wavelength_reduced, = np.exp(wavelength), np.exp(wavelength_reduced)
+    wavelength_normalized, wavelength_uncorrected = np.exp(wavelength_normalized), np.exp(wavelength_uncorrected)
+    wavelength_full_set = np.exp(wavelength_full_set)
+
     # Save data
     save2col(wavelength_normalized, flux_normalized,data_out_path+'Normalized_Spectrum/'+save_string+'_reduced_set.dat')
     save2col(wavelength_full_set, flux_normalized_full_set, data_out_path+'Normalized_Spectrum/'+save_string
@@ -297,6 +387,5 @@ def AFS_algorithm(wavelength, flux, alpha=None, mf_window=5001, emline_factor=1,
             'Set with reduced and removed emission lines', 'Local Polyinomial Regression Fit'])
 
     return wavelength_normalized, flux_normalized, flux_localreg
-
 
 
