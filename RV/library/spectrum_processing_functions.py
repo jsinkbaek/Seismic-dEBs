@@ -2,6 +2,7 @@
 This collection of functions is used for general work on wavelength reduced échelle spectra.
 """
 import numpy as np
+from astropy.io import fits
 from descartes import PolygonPatch
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Cursor
@@ -12,12 +13,33 @@ import scipy.constants as scc
 from scipy.interpolate import interp1d
 
 
+def load_template_spectrum(template_spectrum_path):
+    with fits.open(template_spectrum_path) as hdul:
+        hdr = hdul[0].header
+        flux = hdul[0].data
+        wl0, delta_wl = hdr['CRVAL1'], hdr['CDELT1']
+    wavelength = np.linspace(wl0, wl0+delta_wl*flux.size, flux.size)
+    return wavelength, flux
+
+
+def load_program_spectrum(program_spectrum_path):
+    with fits.open(program_spectrum_path) as hdul:
+        hdr = hdul[0].header
+        flux = hdul[0].data
+        wl0, delta_wl = hdr['CRVAL1'], hdr['CDELT1']
+        RA, DEC = hdr['OBJRA'], hdr['OBJDEC']
+        date = hdr['DATE-AVG']
+    wavelength = np.linspace(wl0, wl0 + delta_wl * flux.size, flux.size)
+    return wavelength, flux, date, RA, DEC
+
+
 def resample_to_equal_velocity_steps(wavelength, delta_v, flux=None, wavelength_resampled=None, wavelength_a=None,
                                      wavelength_b=None, resampled_len_even=True):
     """
     Over-engineered, multi-use function that can be used to either: Create a new wavelength grid equi-distant in vel
     (without interpolation), create grid and resample flux to it, create mutual grid and resample flux for multiple
     spectra simultanously. It can also resample one (or more) spectra to a provided wavelength grid.
+    See interpolate_to_equal_velocity_steps() for simpler illustration of what this function does.
     :param wavelength:              either a list of np.ndarray's, or a np.ndarray
     :param delta_v:                 desired spectrum resolution in velocity space
     :param flux:                    either a list of np.ndarray's, or a np.ndarray. Set to None if not used
