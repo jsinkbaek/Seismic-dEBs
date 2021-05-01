@@ -1,6 +1,7 @@
 """
 First edition on May 01, 2021.
-@author Jeppe Sinkbæk Thomsen.
+@author Jeppe Sinkbæk Thomsen, Master's student in astronomy at Aarhus University.
+Supervisor: Assistant Professor Karsten Frank Brogaard.
 
 Purpose of this file is broadening function calculation using a Singular Value Decomposition of a template spectrum.
 Code is primarily adapted from http://www.astro.utoronto.ca/~rucinski/SVDcookbook.html and

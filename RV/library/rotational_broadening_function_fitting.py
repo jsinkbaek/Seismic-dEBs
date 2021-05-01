@@ -1,6 +1,7 @@
 """
 First edition on May 01 2021.
-@author Jeppe Sinkbæk Thomsen
+@author Jeppe Sinkbæk Thomsen, Master's student in astronomy at Aarhus University.
+Supervisor: Assistant Professor Karsten Frank Brogaard.
 
 A rotational broadening function fitting routine, with the model profile used, and all the relevant steps until the
 lmfit minimizer method is called. Code is adapted from the shazam.py library for the SONG telescope (written by Emil)

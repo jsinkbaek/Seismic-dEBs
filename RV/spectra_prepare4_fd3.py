@@ -7,6 +7,7 @@ from scipy.interpolate import interp1d
 from barycorrpy import get_BC_vel, utc_tdb
 import RV.library.spectrum_processing_functions as spf
 import scipy.constants as scc
+import RV.library.AFS_algorithm as afs
 
 """
 This script is used to prepare observed (reduced) spectra from NOT in the form of .fits files into a format that can be
@@ -104,7 +105,7 @@ for filename in os.listdir(data_path):
             wl = load_res[:, 0]
             data = load_res[:, 1]
         else:
-            wl, data, _ = spf.AFS_algorithm(wl, data, lr_frac=0.2, save_string=filebulk)
+            wl, data, _ = afs.AFS_merged_spectrum(wl, data, lr_frac=0.2, save_string=filebulk)
         # Convert wl to log10(wl)
         wl = np.log10(wl)
         # Cut data set down to smaller wavelength range

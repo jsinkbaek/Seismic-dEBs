@@ -9,6 +9,8 @@ import RV.library.spectrum_processing_functions as spf
 import warnings
 import scipy.constants as scc
 from RV.library.broadening_function_svd import *
+import RV.library.AFS_algorithm as afs
+
 
 # # # # Set variables for script # # # #
 data_path = 'RV/Data/unprocessed/NOT/KIC8430105/'
@@ -53,7 +55,7 @@ for filename in os.listdir(data_path):
                                  '_reduced_set.dat')
             wavelength, flux = data_in[:, 0], data_in[:, 1]
         else:
-            wavelength, flux, _ = spf.AFS_algorithm(wavelength, flux, lr_frac=0.2, save_string=file_bulk_name)
+            wavelength, flux, _ = afs.AFS_merged_spectrum(wavelength, flux, lr_frac=0.2, save_string=file_bulk_name)
 
         # Limit normalized data set to smaller wavelength range for RV analysis, and append to collector
         selection_mask = (wavelength > wavelength_RV_limit[0]) & (wavelength < wavelength_RV_limit[1])
