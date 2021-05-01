@@ -1,5 +1,5 @@
 """
-First edition on April 30, 2021.
+First edition on May 01, 2021.
 @author Jeppe Sinkbæk Thomsen.
 
 Purpose of this file is broadening function calculation using a Singular Value Decomposition of a template spectrum.
@@ -7,101 +7,12 @@ Code is primarily adapted from http://www.astro.utoronto.ca/~rucinski/SVDcookboo
 functions in the shazam.py library for the SONG telescope (written by Emil) TODO: find last name
 The primary class to create objects from for broadening function calculation is BroadeningFunction. The rest are
 convenience classes for that one.
+Some of the import statements lacking below are imported from rotational_broadening_function_fitting.py.
 """
 
-import numpy as np
 import scipy.linalg as lg
-from scipy.signal import fftconvolve
 import warnings
-import lmfit
-import scipy.constants as scc
-
-
-def rotational_broadening_function_profile(velocities, amplitude, radial_velocity_cm, vsini, gaussian_width,
-                                           continuum_constant, limbd_coef):
-    """
-    Calculates a theoretical broadening function profile based on the one described in
-    Kaluzny 2006: Eclipsing Binaries in the Open Cluster NGC 2243 II. Absolute Properties of NV CMa.
-    Convolves it with a gaussian function to create a rotational broadening function profile.
-    :param velocities:          np.ndarray, velocities to calculate profile for.
-    :param amplitude:           float, normalization constant
-    :param radial_velocity_cm:  float, radial velocity of the centre of mass of the star
-    :param vsini:               float, linear velocity of the equator of the rotating star times sin(inclination)
-    :param gaussian_width:      float, width of the gaussian broadening function that the profile will be folded with
-    :param continuum_constant:  float, the continuum level
-    :param limbd_coef:          float, linear limb darkening coefficient of the star.
-    :return rot_bf_profile:     np.ndarray, the profile at the given velocities
-    """
-    n = velocities.size
-    broadening_function_values = np.ones(n) * continuum_constant
-
-    # The "a" coefficient of the profile
-    a = (velocities - radial_velocity_cm) / vsini
-
-    # Create bf function values
-    mask = (np.abs(a) < 1.0)        # Is this to sort out bad values or down-weigh them in some way?
-    broadening_function_values[mask] += amplitude*((1-limbd_coef)*np.sqrt(1.0-a[mask]**2) + 0.25*np.pi*(1-a[mask]**2))
-
-    # Create gs function values
-    scaled_width = np.sqrt(2*np.pi) * gaussian_width
-    gaussian_function_values = np.exp(-0.5* (velocities/gaussian_width)**2) / scaled_width
-
-    # Convolve to get rotationally broadened broadening function
-    rot_bf_profile = fftconvolve(broadening_function_values, gaussian_function_values, mode='same')
-    return rot_bf_profile
-
-
-def weight_function(velocities, broadening_function_values, velocity_fit_width):
-    peak_idx = np.argmax(broadening_function_values)
-    mask = (velocities > velocities[peak_idx] - velocity_fit_width) & \
-           (velocities < velocities[peak_idx] + velocity_fit_width + 1)
-
-    weight_function_values = np.zeros(broadening_function_values.size)
-    weight_function_values[mask] = 1.0
-    return weight_function_values
-
-
-def get_fit_parameter_values(parameters):
-    amplitude = parameters['amplitude'].value
-    radial_velocity_cm = parameters['radial_velocity_cm'].value
-    vsini = parameters['vsini'].value
-    gaussian_width = parameters['gaussian_width'].value
-    continuum_constant = parameters['continuum_constant'].value
-    limbd_coef = parameters['limbd_coef'].value
-
-    return amplitude, radial_velocity_cm, vsini, gaussian_width, continuum_constant, limbd_coef
-
-
-def compare_broadening_function_with_profile(parameters, velocities, broadening_function_values,
-                                             weight_function_values):
-    parameter_vals = get_fit_parameter_values(parameters)
-
-    comparison = broadening_function_values - rotational_broadening_function_profile(velocities, *parameter_vals)
-    return weight_function_values * np.abs(comparison)  # TODO: Ask if absolute value comparison is needed
-
-
-def fiting_routine_rotational_broadening_profile(velocities, broadening_function_values, vsini, gaussian_width,
-                                                 limbd_coef, velocity_fit_width, print_report=False,
-                                                 compare_func=compare_broadening_function_with_profile):
-    params = lmfit.Parameters()
-    peak_idx = np.argmax(broadening_function_values)
-    params.add('amplitude', value=broadening_function_values[peak_idx])
-    params.add('radial_velocity_cm', value=velocities[peak_idx])
-    params.add('vsini', value=vsini)
-    params.add('gaussian_width', value=gaussian_width, vary=False)
-    params.add('continuum_constant', value=0.0)
-    params.add('limbd_coef', value=limbd_coef, vary=False)
-
-    weight_function_values = weight_function(velocities, broadening_function_values, velocity_fit_width)
-    fit = lmfit.minimize(compare_func, params, args=(velocities, broadening_function_values, weight_function_values),
-                         xtol=1E-8, ftol=1E-8, max_nfev=500)
-    if print_report:
-        print(lmfit.fit_report(fit, show_correl=False))
-
-    parameter_vals = get_fit_parameter_values(fit.params)
-    model = rotational_broadening_function_profile(velocities, broadening_function_values, *parameter_vals)
-
-    return fit, model
+from RV.library.rotational_broadening_function_fitting import *
 
 
 class DesignMatrix:
@@ -200,13 +111,26 @@ class BroadeningFunction:
         self.bf_smooth = None
         self.smooth_sigma = 5.0
         self.velocity = -np.arange(-span/2, span/2+1)*dv
+        self.dv = dv
+        self.fit = None
+        self.model_values = None
 
     @staticmethod
     def truncate(spectrum, design_matrix):
+        """
+        Truncates a program spectrum, which is essential before solving the linear equations.
+        :param spectrum:        np.ndarray, the input spectrum
+        :param design_matrix:   np.ndarray, the design matrix which is to be used
+        """
         m = design_matrix.m
         return spectrum[m/2:-m/2]
 
     def solve(self):
+        """
+        Solves the system involving the Singular Value Decomposition of the template spectrum, and the program spectrum,
+        to provide the broadening function of the program spectrum.
+        :return: np.ndarray, broadening function of the program spectrum
+        """
         spectrum_truncated = self.truncate(self.spectrum, self.svd.design_matrix)
         u, w, vH = self.svd.u, self.svd.w, self.svd.vH
 
@@ -225,6 +149,9 @@ class BroadeningFunction:
         return self.bf
 
     def smooth(self):
+        """
+        Smoothes a calculated broadening function by convolving with a gaussian function.
+        """
         if self.bf is None:
             raise TypeError('self.bf is None. self.solve() must be run prior to smoothing the broadening function.')
         gaussian = np.exp(-0.5 * (self.velocity/self.smooth_sigma)**2)
@@ -232,19 +159,30 @@ class BroadeningFunction:
         self.bf_smooth = fftconvolve(self.bf, gaussian, mode='same')
         return self.bf_smooth
 
-    def fit_rotational_profile(self, vsini_guess, limbd_coef, velocity_fit_width, spectral_resolution=60000,
-                               profile=rotational_broadening_function_profile,
+    def fit_rotational_profile(self, vsini_guess, limbd_coef, velocity_fit_width, spectral_resolution,
                                fitting_routine=fiting_routine_rotational_broadening_profile):
+        """
+        Fits the broadening function with a rotational broadening profile by calling a fitting routine provided.
+        The routine must include all essential parts of the fitting procedure.
+        :param vsini_guess:         float, guess for the v sin(i) parameter
+        :param limbd_coef:          float, a calculated limb darkening coefficient for the star.
+                                    Default routine will not fit this parameter.
+        :param velocity_fit_width:  float, how far out the fitting routine should include data-points for the fit.
+        :param spectral_resolution: float/int, the resolution of the spectrograph used for the program spectrum.
+        :param fitting_routine:     function, the fitting routine used. Default routine fits 1 rotational broadening
+                                    profile to the data following the model provided by Kaluzny 2006: "Eclipsing
+                                    Binaries in the Open Cluster NGC 2243 II. Absolute Properties of NV CMa".
+        :return (fit, model):       fit: lmfit.MinimizerResult of the performed fit.
+                                    model: np.ndarray, model values of the broadening function according to the fit.
+        """
         if self.bf_smooth is None:
             raise TypeError('self.bf_smooth. self.smooth() must be run prior to fitting')
 
-        speed_of_light = scc.c / 1000       # in km/s
-        gaussian_width = np.sqrt(((speed_of_light/spectral_resolution)/(2.354*1.))**2 + (self.smooth_sigma)**2)
-        # TODO: Ask Karsten about this gaussian width
-        fit, model = fitting_routine(self.velocity, self.bf_smooth, vsini_guess, gaussian_width, limbd_coef,
-                                     velocity_fit_width)
+        self.fit, self.model_values = fitting_routine(self.velocity, self.bf_smooth, vsini_guess, limbd_coef,
+                                                      velocity_fit_width, spectral_resolution, self.smooth_sigma,
+                                                      self.dv)
         # TODO: figure out why vsini_guess needs to be provided
-
+        return self.fit, self.model_values
 
 
 
