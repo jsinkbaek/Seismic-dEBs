@@ -78,7 +78,7 @@ class SingularValueDecomposition:
 
 
 class BroadeningFunction:
-    def __init__(self, program_spectrum, template_spectrum, span, dv):
+    def __init__(self, program_spectrum, template_spectrum, span, dv, copy=False):
         """
         Creates a broadening function object storing all the necessary variables for it.
         Using BroadeningFunction.solve(), the broadening function is found by solving the Singular Value
@@ -88,6 +88,8 @@ class BroadeningFunction:
         :param template_spectrum: np.ndarray, inverted flux of the template spectrum equi-spaced in velocity space
         :param span:              int, span or width (number of elements) of the broadening function design matrix.
         :param dv:                float, the velocity spectrum resolution in km/s
+        :param copy:              bool, controls if initial calculations should not be done (in case the result is to be
+                                  copied from another object)
 
         :var self.spectrum:  same as program_spectrum
         :var self.svd:       a created SingularValueDecomposition of the template spectrum.
@@ -107,14 +109,33 @@ class BroadeningFunction:
             template_spectrum = template_spectrum[:-1]
             program_spectrum = program_spectrum[:-1]
         self.spectrum = program_spectrum
-        self.svd = SingularValueDecomposition(template_spectrum, span)
+        self.template_spectrum = template_spectrum
+        self.span = span
+        self.dv = dv
+        if ~copy:
+            self.svd = SingularValueDecomposition(template_spectrum, span)
+        else:
+            self.svd = None
         self.bf = None
         self.bf_smooth = None
         self.smooth_sigma = 5.0
-        self.velocity = -np.arange(-span/2, span/2+1)*dv
-        self.dv = dv
+        if ~copy:
+            self.velocity = -np.arange(-span/2, span/2+1)*dv
+        else:
+            self.velocity = None
         self.fit = None
         self.model_values = None
+
+    def __copy__(self):
+        new_copy = type(self)(self.spectrum, self.template_spectrum, self.span, self.dv, copy=True)
+        new_copy.svd = self.svd
+        new_copy.bf = self.bf
+        new_copy.bf_smooth = self.bf_smooth
+        new_copy.smooth_sigma = self.smooth_sigma
+        new_copy.velocity = self.velocity
+        new_copy.fit = self.fit
+        new_copy.model_values = self.model_values
+        return new_copy
 
     @staticmethod
     def truncate(spectrum, design_matrix):

@@ -36,7 +36,7 @@ def rotational_broadening_function_profile(velocities, amplitude, radial_velocit
     a = (velocities - radial_velocity_cm) / vsini
 
     # Create bf function values
-    mask = (np.abs(a) < 1.0)        # Is this to sort out bad values or down-weigh them in some way?
+    mask = (np.abs(a) < 1.0)        # TODO: Is this to sort out bad values or down-weigh them in some way?
     broadening_function_values[mask] += amplitude*((1-limbd_coef)*np.sqrt(1.0-a[mask]**2) + 0.25*np.pi*(1-a[mask]**2))
 
     # Create gs function values
