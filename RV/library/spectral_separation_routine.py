@@ -84,7 +84,6 @@ def __process_input(i, broadening_function_svd_giant:BroadeningFunction, broaden
     The process to be run in parallel in spectral_separation_stepper(). See the docstring in that function for details
     about the intended purpose and parameter explanations.
     """
-    # TODO: Implement radial velocity guessing in fitting routine so it can be input from here
     # Make copy of objects for this loop iteration
     BFsvd_G, BFsvd_MS = copy(broadening_function_svd_giant), copy(broadening_function_svd_ms)
 
@@ -116,6 +115,48 @@ def __process_input(i, broadening_function_svd_giant:BroadeningFunction, broaden
                                                              spectral_resolution_ms)
 
     return [fit_bf_G, model_bf_G, fit_bf_MS, model_bf_MS]
+
+
+def spectral_separation_stepper_2(BFsvd_giant:BroadeningFunction, BFsvd_ms:BroadeningFunction, model_values_ms,
+                                  vsini_guess_giant, vsini_guess_ms, spectral_resolution_giant,
+                                  spectral_resolution_ms, velocity_fit_width_giant, velocity_fit_width_ms,
+                                  limbd_coef_giant, limbd_coef_ms=None):
+    """
+
+    :param BFsvd_giant:
+    :param BFsvd_ms:
+    :param model_values_ms:
+    :param vsini_guess_giant:
+    :param vsini_guess_ms:
+    :param spectral_resolution_giant:
+    :param spectral_resolution_ms:
+    :param velocity_fit_width_giant:
+    :param velocity_fit_width_ms:
+    :param limbd_coef_giant:
+    :param limbd_coef_ms:
+    :return:
+    """
+    # TODO: Implement radial velocity guessing in fitting routine so it can be input from here
+    # Create Broadening Function for Giant Star
+    BFsvd_giant.solve()
+    BFsvd_giant.bf = BFsvd_giant.bf - model_values_ms       # remove last iteration MS broadening function
+    BFsvd_giant.smooth()
+
+    # Fit rotational broadening function profile to Giant broadening function peak
+    fit_bf_giant, model_values_giant = BFsvd_giant.fit_rotational_profile(vsini_guess_giant, limbd_coef_giant,
+                                                                          velocity_fit_width_giant,
+                                                                          spectral_resolution_giant)
+
+    # Create Broadening Function for Main Sequence Star
+    BFsvd_ms.bf = BFsvd_giant.bf - model_values_giant
+    BFsvd_ms.smooth()
+
+    # Fit rotational broadening function profile to MS broadening function peak
+    if limbd_coef_ms is None:
+        limbd_coef_ms = limbd_coef_giant
+    fit_bf_ms, model_values_ms = BFsvd_ms.fit_rotational_profile(vsini_guess_ms, limbd_coef_ms, velocity_fit_width_ms,
+                                                                 spectral_resolution_ms)
+    return fit_bf_giant, model_values_giant, fit_bf_ms, model_values_ms
 
 
 def spectral_separation_driver(flux_collection_inverted, flux_template_inverted, delta_v,
@@ -204,3 +245,81 @@ def spectral_separation_driver(flux_collection_inverted, flux_template_inverted,
                           'Returning last RV results.')
             break
     return RV_giant, RV_ms
+
+
+def spectral_separation_driver_2(flux_inverted, flux_template_inverted, delta_v, vsini_guess_giant, vsini_guess_ms,
+                                 spectral_resolution_giant, spectral_resolution_ms, velocity_fit_width_giant,
+                                 velocity_fit_width_ms, limbd_coef_giant, limbd_coef_ms=None,
+                                 broadening_function_smooth_sigma=4.0, broadening_function_span=381,
+                                 convergence_limit=1E-5, iteration_limit=10, spectrum_name=None):
+    span = broadening_function_span
+    BFsvd_template_giant = BroadeningFunction(flux_inverted, flux_template_inverted, span, delta_v)
+    BFsvd_template_giant.smooth_sigma = broadening_function_smooth_sigma
+    BFsvd_template_ms = copy(BFsvd_template_giant)
+
+    # Set initial main sequence broadening function model to 0
+    model_values_ms = np.zeros((BFsvd_template_ms.velocity.size, flux_inverted.size))
+
+    RV_giant = 0
+    RV_ms = 0
+    vsini_giant = vsini_guess_giant
+    vsini_ms = vsini_guess_ms
+    iteration_counter = 0
+
+    while True:
+        RMS_giant = -RV_giant
+        RMS_ms    = -RV_ms
+        iteration_counter += 1
+
+        iteration_result = spectral_separation_stepper_2(BFsvd_template_giant, BFsvd_template_ms, model_values_ms,
+                                                         vsini_giant, vsini_ms, spectral_resolution_giant,
+                                                         spectral_resolution_ms, velocity_fit_width_giant,
+                                                         velocity_fit_width_ms, limbd_coef_giant, limbd_coef_ms)
+
+        fit_giant, model_values_giant, fit_ms, model_values_ms = iteration_result
+        _, RV_giant, vsini_giant, _, _, _ = get_fit_parameter_values(fit_giant)
+        _, RV_ms, vsini_ms, _, _, _ = get_fit_parameter_values(fit_ms)
+
+        RMS_giant = (RMS_giant + RV_giant)**2
+        RMS_ms    = (RMS_ms + RV_ms)**2
+        if RMS_giant <= convergence_limit:
+            if spectrum_name is not None:
+                print(f'Spectrum name: {spectrum_name}')
+            print(f'Separation Driver: Convergence limit of {convergence_limit} successfully reached in '
+                  f'{iteration_counter} iterations. \nReturning last RV result.')
+            break
+        elif iteration_counter >= iteration_limit:
+            if spectrum_name is not None:
+                print(f'Spectrum name: {spectrum_name}')
+            warnings.warn(f'Warning: Iteration limit of {iteration_limit} reached without reaching convergence limit'
+                          f' of {convergence_limit}. \nCurrent RMS: {RMS_giant}. \n'
+                          'Returning last RV results.')
+            break
+    return RV_giant, RV_ms
+
+
+def multiple_spectra(flux_collection_inverted, flux_template_inverted, delta_v, vsini_guess_giant, vsini_guess_ms,
+                     spectral_resolution_giant, spectral_resolution_ms, velocity_fit_width_giant, velocity_fit_width_ms,
+                     limbd_coef_giant, limbd_coef_ms=None, broadening_function_smooth_sigma=4.0,
+                     number_of_parallel_jobs=4, broadening_function_span=381, convergence_limit=1E-5,
+                     iteration_limit=10, spectrum_names=None):
+
+    arguments = (flux_template_inverted, delta_v, vsini_guess_giant, vsini_guess_ms,
+                 spectral_resolution_giant, spectral_resolution_ms, velocity_fit_width_giant, velocity_fit_width_ms,
+                 limbd_coef_giant, limbd_coef_ms, broadening_function_smooth_sigma, broadening_function_span,
+                 convergence_limit, iteration_limit)
+
+    # Create parallel calls to the separation driver
+    result_parallel_process = Parallel(n_jobs=number_of_parallel_jobs) \
+            (delayed(spectral_separation_driver_2)(i, flux_collection_inverted[:, i], *arguments, spectrum_names[i])
+             for i in range(0, flux_collection_inverted[0, :].size))
+
+    RV_collection_giant = np.empty((len(result_parallel_process), ))
+    RV_collection_ms    = np.empty((len(result_parallel_process), ))
+
+    # Collect results
+    for i in range(0, len(result_parallel_process)):
+        RV_collection_giant[i] = result_parallel_process[i][0]
+        RV_collection_ms[i]    = result_parallel_process[i][1]
+
+    return RV_collection_giant, RV_collection_ms
