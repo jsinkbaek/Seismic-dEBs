@@ -1,11 +1,13 @@
 """
-First edition on May 01, 2021.
+First tested edition on May 04, 2021.
 @author Jeppe Sinkbæk Thomsen, Master's student in astronomy at Aarhus University.
 Supervisor: Assistant Professor Karsten Frank Brogaard.
 
 Purpose of this file is broadening function calculation using a Singular Value Decomposition of a template spectrum.
 Code is primarily adapted from http://www.astro.utoronto.ca/~rucinski/SVDcookbook.html and
-functions in the shazam.py library for the SONG telescope (written by Emil) TODO: find last name
+functions in the shazam.py library for the SONG telescope (written by Emil Knudstrup), which also has a long history
+of adaptations from previous work by eg. J. Jessen-Hansen, and modifications by various authors including Frank Grundahl
+and Karsten Frank Brogaard.
 The primary class to create objects from for broadening function calculation is BroadeningFunction. The rest are
 convenience classes for that one.
 Some of the import statements lacking below are imported from rotational_broadening_function_fitting.py.
