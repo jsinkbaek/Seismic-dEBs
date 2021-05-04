@@ -11,15 +11,20 @@ def test_design_matrix():
     design_matrix = DesignMatrix(template_spectrum, span)
     reference_matrix = shazam_design_matrix(template_spectrum, span)
     print('design matrix')
-    print(design_matrix)
+    print(design_matrix.mat)
     print()
     print('shazam design matrix')
-    print(reference_matrix)
+    print(reference_matrix.T)
 
 
 def shazam_design_matrix(template_spectrum, span):
+    bn = span
     nn = len(template_spectrum) - span + 1
-    return np.matrix(-int(span/2), int(span/2+1))
+    des = np.matrix(np.zeros(shape=(bn, nn)))
+    for ii in range(bn):
+        des[ii,::] = template_spectrum[ii:ii+nn]
+
+    return des
 
 
 def main():

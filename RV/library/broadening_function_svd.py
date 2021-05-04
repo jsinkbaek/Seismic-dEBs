@@ -48,14 +48,10 @@ class DesignMatrix:
         if np.mod(n, 2) != 0.0:
             raise ValueError('Number of values must be even.')
 
-        self.n = n
-        self.m = m
-
-        mat = np.zeros(shape=(m, n-m))
-        for i in range(0, m+1):
-            print('test')
-            mat[i, :] = self.vals[m-i:n-i+1]
-        return mat
+        mat = np.zeros(shape=(m, n-m+1))
+        for i in range(0, m):
+            mat[i, :] = self.vals[i:i+n-m+1]
+        return mat.T
 
 
 class SingularValueDecomposition:
@@ -202,8 +198,7 @@ class BroadeningFunction:
         if self.bf_smooth is None:
             raise TypeError('self.bf_smooth. self.smooth() must be run prior to fitting')
 
-        self.fit, self.model_values = fitting_routine(self.velocity, self.bf_smooth, vsini_guess, limbd_coef,
-                                                      velocity_fit_width, spectral_resolution, self.smooth_sigma,
+        self.fit, self.model_values = fitting_routine(self.velocity, self.bf_smooth, ifitparams, self.smooth_sigma,
                                                       self.dv)
         # TODO: figure out why vsini_guess needs to be provided
         return self.fit, self.model_values
