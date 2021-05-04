@@ -71,7 +71,7 @@ class SingularValueDecomposition:
                                  Shape (span, template_spectrum.size)
         """
         self.design_matrix = DesignMatrix(template_spectrum, span)
-        self.u, self.w, self.vH = lg.svd(self.design_matrix, compute_uv=True, full_matrices=False)
+        self.u, self.w, self.vH = lg.svd(self.design_matrix.mat, compute_uv=True, full_matrices=False)
 
 
 class BroadeningFunction:
@@ -117,7 +117,7 @@ class BroadeningFunction:
         self.bf_smooth = None
         self.smooth_sigma = 5.0
         if ~copy:
-            self.velocity = -np.arange(-span/2, span/2+1)*dv
+            self.velocity = -np.arange(-int(span/2), int(span/2+1))*dv
         else:
             self.velocity = None
         self.fit = None
@@ -142,7 +142,7 @@ class BroadeningFunction:
         :param design_matrix:   np.ndarray, the design matrix which is to be used
         """
         m = design_matrix.m
-        return spectrum[m/2:-m/2]
+        return spectrum[int(m/2):-int(m/2)]
 
     def solve(self):
         """

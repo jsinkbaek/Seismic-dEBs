@@ -141,6 +141,6 @@ def fiting_routine_rotational_broadening_profile(velocities, broadening_function
         print(lmfit.fit_report(fit, show_correl=False))
 
     parameter_vals = get_fit_parameter_values(fit.params)
-    model = rotational_broadening_function_profile(velocities, broadening_function_values, *parameter_vals)
+    model = rotational_broadening_function_profile(velocities, *parameter_vals)
 
     return fit, model
