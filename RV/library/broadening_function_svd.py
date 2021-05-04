@@ -31,9 +31,9 @@ class DesignMatrix:
         """
         self.vals = template_spectrum
         self.span = span
-        self.mat = self.map()
         self.n = self.vals.size
         self.m = self.span
+        self.mat = self.map()
 
     def map(self):
         """
@@ -53,6 +53,7 @@ class DesignMatrix:
 
         mat = np.zeros(shape=(m, n-m))
         for i in range(0, m+1):
+            print('test')
             mat[i, :] = self.vals[m-i:n-i+1]
         return mat
 
@@ -181,16 +182,17 @@ class BroadeningFunction:
         self.bf_smooth = fftconvolve(self.bf, gaussian, mode='same')
         return self.bf_smooth
 
-    def fit_rotational_profile(self, vsini_guess, limbd_coef, velocity_fit_width, spectral_resolution,
+    def fit_rotational_profile(self, ifitparams:InitialFitParameters,
                                fitting_routine=fiting_routine_rotational_broadening_profile):
         """
         Fits the broadening function with a rotational broadening profile by calling a fitting routine provided.
         The routine must include all essential parts of the fitting procedure.
-        :param vsini_guess:         float, guess for the v sin(i) parameter
-        :param limbd_coef:          float, a calculated limb darkening coefficient for the star.
-                                    Default routine will not fit this parameter.
-        :param velocity_fit_width:  float, how far out the fitting routine should include data-points for the fit.
-        :param spectral_resolution: float/int, the resolution of the spectrograph used for the program spectrum.
+        :param ifitparams:          an object holding the initial fit parameters:
+               vsini:               float, guess for the v sin(i) parameter
+               limbd_coef:          float, a calculated limb darkening coefficient for the star.
+                                         Default routine will not fit this parameter.
+               velocity_fit_width:  float, how far out the fitting routine should include data-points for the fit.
+               spectral_resolution: float/int, the resolution of the spectrograph used for the program spectrum.
         :param fitting_routine:     function, the fitting routine used. Default routine fits 1 rotational broadening
                                     profile to the data following the model provided by Kaluzny 2006: "Eclipsing
                                     Binaries in the Open Cluster NGC 2243 II. Absolute Properties of NV CMa".

@@ -12,6 +12,7 @@ import numpy as np
 from scipy.signal import fftconvolve
 import lmfit
 import scipy.constants as scc
+from RV.library.initial_fit_parameters import InitialFitParameters
 
 
 def rotational_broadening_function_profile(velocities, amplitude, radial_velocity_cm, vsini, gaussian_width,
@@ -96,9 +97,8 @@ def compare_broadening_function_with_profile(parameters, velocities, broadening_
     return weight_function_values * comparison  # TODO: Ask if absolute value comparison is needed
 
 
-def fiting_routine_rotational_broadening_profile(velocities, broadening_function_values, vsini_guess, limbd_coef,
-                                                 velocity_fit_width, spectral_resolution, smooth_sigma, dv,
-                                                 print_report=False,
+def fiting_routine_rotational_broadening_profile(velocities, broadening_function_values,
+                                                 ifitparams:InitialFitParameters, smooth_sigma, dv, print_report=False,
                                                  compare_func=compare_broadening_function_with_profile):
     """
     The fitting routine utilizing lmfit. Sets up the initial guesses to the fit, adds parameters, creates weight
@@ -106,11 +106,12 @@ def fiting_routine_rotational_broadening_profile(velocities, broadening_function
     broadening function.
     :param velocities:                  np.ndarray, velocity values of the broadening function.
     :param broadening_function_values:  np.ndarray, observed broadening function values.
-    :param vsini_guess:                 float, guess for the v sin(i) fit parameter for the model.
-    :param limbd_coef:                  float, a linear limb darkening coefficient for the profile. This routine will
+    :param ifitparams:                  an object holding the initial fit parameters:
+            vsini_guess:                float, guess for the v sin(i) fit parameter for the model.
+            limbd_coef:                 float, a linear limb darkening coefficient for the profile. This routine will
                                         not fit this parameter.
-    :param velocity_fit_width:          float, how far out the fitting routine should include data points for the fit.
-    :param spectral_resolution:         float, the resolution of the spectrograph used for the program spectrum.
+            velocity_fit_width:         float, how far out the fitting routine should include data points for the fit.
+            spectral_resolution:        float, the resolution of the spectrograph used for the program spectrum.
     :param smooth_sigma:                float, the sigma value used for smoothing the broadening function values using a
                                         gaussian function.
     :param dv:                          float, the dv resolution of the interpolated spectrum in velocity space.
@@ -122,18 +123,18 @@ def fiting_routine_rotational_broadening_profile(velocities, broadening_function
                                         model: np.ndarray, model values of the broadening function according to the fit.
     """
     speed_of_light = scc.c / 1000  # in km/s
-    gaussian_width = np.sqrt(((speed_of_light / spectral_resolution) / (2.354 * dv)) ** 2 + (smooth_sigma / dv) ** 2)
+    gaussian_width = np.sqrt(((speed_of_light/ifitparams.spectral_resolution)/(2.354 * dv)) ** 2 +(smooth_sigma/dv)**2)
     # TODO: Ask Karsten about this gaussian width
     params = lmfit.Parameters()
     peak_idx = np.argmax(broadening_function_values)
     params.add('amplitude', value=broadening_function_values[peak_idx])
     params.add('radial_velocity_cm', value=velocities[peak_idx])
-    params.add('vsini', value=vsini_guess)
+    params.add('vsini', value=ifitparams.vsini)
     params.add('gaussian_width', value=gaussian_width, vary=False)
     params.add('continuum_constant', value=0.0)
-    params.add('limbd_coef', value=limbd_coef, vary=False)
+    params.add('limbd_coef', value=ifitparams.limbd_coef, vary=False)
 
-    weight_function_values = weight_function(velocities, broadening_function_values, velocity_fit_width)
+    weight_function_values = weight_function(velocities, broadening_function_values, ifitparams.velocity_fit_width)
     fit = lmfit.minimize(compare_func, params, args=(velocities, broadening_function_values, weight_function_values),
                          xtol=1E-8, ftol=1E-8, max_nfev=500)
     if print_report:
