@@ -16,6 +16,7 @@ Some of the import statements lacking below are imported from rotational_broaden
 import scipy.linalg as lg
 import warnings
 from RV.library.rotational_broadening_function_fitting import *
+import matplotlib.pyplot as plt
 
 
 class DesignMatrix:
@@ -75,9 +76,15 @@ class SingularValueDecomposition:
         self.design_matrix = DesignMatrix(template_spectrum, span)
         self.u, self.w, self.vH = lg.svd(self.design_matrix.mat, compute_uv=True, full_matrices=False)
 
+    def plot_w(self):
+        plt.figure()
+        plt.plot(self.w)
+        plt.yscale('log')
+        plt.show()
+
 
 class BroadeningFunction:
-    def __init__(self, program_spectrum, template_spectrum, span, dv, copy=False):
+    def __init__(self, program_spectrum, template_spectrum, velocity_span, dv, span=None, copy=False, plot_w=False):
         """
         Creates a broadening function object storing all the necessary variables for it.
         Using BroadeningFunction.solve(), the broadening function is found by solving the Singular Value
@@ -85,8 +92,10 @@ class BroadeningFunction:
 
         :param program_spectrum:  np.ndarray, inverted flux of the program spectrum equi-spaced in velocity space
         :param template_spectrum: np.ndarray, inverted flux of the template spectrum equi-spaced in velocity space
-        :param span:              int, span or width (number of elements) of the broadening function design matrix.
+        :param velocity_span:     float, span or width (number of elements) of the broadening function design matrix.
+                                    in velocity units
         :param dv:                float, the velocity spectrum resolution in km/s
+        :param span:              int, span of design matrix in index units. Overrides velocity_span if not None.
         :param copy:              bool, controls if initial calculations should not be done (in case the result is to be
                                   copied from another object)
 
@@ -96,10 +105,14 @@ class BroadeningFunction:
         :var self.bf_smooth: None (before self.smooth() is run). After, np.ndarray, smoothed broadening function.
         :var self.velocity:  np.ndarray, velocity values of the broadening function in km/s.
         """
-        # TODO: Ask about rvr (instead of span/bn)
+        if span is None:
+            span = int(velocity_span/dv)
+            self.velocity_span = velocity_span
+        else:
+            self.velocity_span = span*dv
         if np.mod(span, 2) != 1.0:
-            warnings.warn('Warning: Design Matrix span must be odd. Lengthening by 1.')
-            span += 1
+            warnings.warn('Warning: Design Matrix span must be odd. Shortening by 1.')
+            span -= 1
         if template_spectrum.size != program_spectrum.size:
             raise ValueError(f'template_spectrum.size does not match program_spectrum.size. Size '
                              f'{template_spectrum.size} vs Size {program_spectrum.size}')
@@ -124,6 +137,9 @@ class BroadeningFunction:
             self.velocity = None
         self.fit = None
         self.model_values = None
+
+        if plot_w and ~copy:
+            self.svd.plot_w()
 
     def __copy__(self):
         new_copy = type(self)(self.spectrum, self.template_spectrum, self.span, self.dv, copy=True)

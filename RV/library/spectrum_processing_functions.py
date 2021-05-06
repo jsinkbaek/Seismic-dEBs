@@ -48,20 +48,21 @@ def resample_to_equal_velocity_steps(wavelength, delta_v, flux=None, wavelength_
     speed_of_light = scc.c / 1000  # in km/s
     if isinstance(wavelength, list):
         if wavelength_a is None and wavelength_resampled is None:
-            wavelength_a = np.max([x[0] for x in wavelength])
+            wavelength_a = np.max([np.min(x) for x in wavelength])
         if wavelength_b is None and wavelength_resampled is None:
-            wavelength_b = np.min([x[-1] for x in wavelength])
+            wavelength_b = np.min([np.max(x) for x in wavelength])
     elif isinstance(wavelength, np.ndarray):
         if wavelength_a is None and wavelength_resampled is None:
-            wavelength_a = wavelength[0]
+            wavelength_a = np.min(wavelength)
         if wavelength_b is None and wavelength_resampled is None:
-            wavelength_b = wavelength[-1]
+            wavelength_b = np.max(wavelength)
     else:
         raise ValueError("wavelength is neither a list (of arrays) or an array")
 
     if wavelength_resampled is None:
-        step_amnt = np.log10(wavelength_b / wavelength_a) / np.log10(1.0 + delta_v / speed_of_light) + 1
+        step_amnt = int(np.log10(wavelength_b / wavelength_a) / np.log10(1.0 + delta_v / speed_of_light))
         wavelength_resampled = wavelength_a * (1.0 + delta_v / speed_of_light) ** (np.linspace(1, step_amnt, step_amnt))
+
         if resampled_len_even and np.mod(wavelength_resampled.size, 2) != 0.0:
             wavelength_resampled = wavelength_resampled[:-1]    # all but last element
 

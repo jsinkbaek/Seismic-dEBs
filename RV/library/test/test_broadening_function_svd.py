@@ -1,5 +1,5 @@
 from RV.library.broadening_function_svd import *
-import RV.library.test.shazam as shazam
+import RV.library.test.test_library.shazam as shazam
 """
 Compares broadening function implementation with already tested shazam.py
 """

@@ -15,29 +15,29 @@ def radial_velocity_from_broadening_function(flux_inverted, broadening_function_
     BFsvd.smooth()
 
     # Fit rotational broadening function profile to Giant peak
-    fit_giant, model_values_giant = BFsvd.fit_rotational_profile(ifitparamsA)
+    fit_A, model_values_A = BFsvd.fit_rotational_profile(ifitparamsA)
 
     # Create Broadening Function for Main Sequence star
-    BFsvd.bf = BFsvd.bf - model_values_giant        # subtract model for giant
+    BFsvd.bf = BFsvd.bf - model_values_A        # subtract model for giant
     BFsvd.smooth()
 
     # Fit rotational broadening function profile for MS peak
     if ifitparamsB.limbd_coef is None:
         ifitparamsB.limbd_coef = ifitparamsA.limbd_coef
-    fit_ms, model_values_ms = BFsvd.fit_rotational_profile(ifitparamsB)
+    fit_B, model_values_B = BFsvd.fit_rotational_profile(ifitparamsB)
 
-    _, RV_giant, _, _, _, _ = get_fit_parameter_values(fit_giant)
-    _, RV_ms, _, _, _, _ = get_fit_parameter_values(fit_ms)
-    return (RV_giant, RV_ms), (model_values_giant, fit_ms, model_values_ms)
+    _, RV_A, _, _, _, _ = get_fit_parameter_values(fit_A.params)
+    _, RV_B, _, _, _, _ = get_fit_parameter_values(fit_B.params)
+    return (RV_A, RV_B), (model_values_A, fit_A, model_values_B, fit_B)
 
 
 def radial_velocities_of_multiple_spectra(flux_collection_inverted, flux_template_inverted, delta_v,
                                           ifitparamsA:InitialFitParameters, ifitparamsB:InitialFitParameters,
                                           broadening_function_smooth_sigma=4.0, number_of_parallel_jobs=4,
-                                          broadening_function_span=381):
+                                          bf_velocity_span=381):
 
     broadening_function_template = BroadeningFunction(flux_collection_inverted[:, 0], flux_template_inverted,
-                                                      broadening_function_span, delta_v)
+                                                      bf_velocity_span, delta_v)
     broadening_function_template.smooth_sigma = broadening_function_smooth_sigma
 
     # Arguments for parallel job

@@ -6,16 +6,14 @@ Supervisor: Karsten Frank Brogaard.
 This is a collection of functions that form a routine to perform spectral separation of detached eclipsing binaries
 with a giant component and a main sequence component. The routine is adapted from multiple scripts, an IDL script by
 Karsten Frank Brogaard named "dis_real_merged_8430105_2021.pro", and a similar python script "spec_8430105_bf.py" by the
-same author. Both follows the formula layout from the article:
+same author. Both follows the formula layout of the article:
 'Separation of composite spectra: the spectroscopic detecton of an eclipsing binary star'
         by J.F. Gonzalez and H. Levato ( A&A 448, 283-292(2006) )
 
-Other module files which are part of this code are also adapted from other sources, including the shazam library for the
-SONG telescope (written by Emil Knudstrup who has not stated their full name in their library).
+Other module files which this code uses are also adapted from other sources, including the shazam library for the
+SONG telescope (written by Emil Knudstrup).
 However, multiple people have been over shazam.py, including Karsten Frank Brogaard and Frank Grundahl, and it itself is
-based on previous implementations by
-
-TODO: implement spectral separation (IDL code)
+based on previous implementations by J. Jessen Hansen and others.
 """
 
 from RV.library.calculate_radial_velocities import *
@@ -59,7 +57,8 @@ def separate_component_spectra(flux_collection, radial_velocity_collection_A, ra
 
     iteration_counter = 0
     while True:
-        RMS_values = -separated_flux_A
+        RMS_values_A = -separated_flux_A
+        RMS_values_B = -separated_flux_B
         iteration_counter += 1
         separated_flux_A = np.zeros((flux_collection[:, 0].size,))
         for i in range(0, n_spectra):
@@ -77,13 +76,16 @@ def separate_component_spectra(flux_collection, radial_velocity_collection_A, ra
             separated_flux_B += shifted_flux_B - shift_spectrum(separated_flux_A, rvA - rvB, delta_v)
         separated_flux_B = separated_flux_B / n_spectra
 
-        RMS_values += separated_flux_A
-        if np.sum(RMS_values**2)/RMS_values.size < convergence_limit:
+        RMS_values_A += separated_flux_A
+        RMS_values_B += separated_flux_B
+        RMS_A = np.sum(RMS_values_A**2)/RMS_values_A.size
+        RMS_B = np.sum(RMS_values_B**2)/RMS_values_B.size
+        if RMS_A < convergence_limit and RMS_B < convergence_limit:
             print(f'Separate Component Spectra: Convergence limit of {convergence_limit} successfully reached in '
                   f'{iteration_counter} iterations. \nReturning last separated spectra.')
         elif iteration_counter >= max_iterations:
             warnings.warn(f'Warning: Iteration limit of {max_iterations} reached without reaching convergence limit'
-                          f' of {convergence_limit}. \nCurrent RMS: {np.sum(RMS_values**2)/RMS_values.size}. \n'
+                          f' of {convergence_limit}. \nCurrent RMS_A: {RMS_A}. RMS_B: {RMS_B} \n'
                           'Returning last separated spectra.')
 
     return separated_flux_A, separated_flux_B
@@ -92,11 +94,11 @@ def separate_component_spectra(flux_collection, radial_velocity_collection_A, ra
 def recalculate_RVs(flux_collection_inverted, separated_flux_A, separated_flux_B, RV_collection_A,
                                   RV_collection_B, flux_templateA_inverted, flux_templateB_inverted, delta_v,
                                   ifitparamsA:InitialFitParameters, ifitparamsB:InitialFitParameters,
-                                  broadening_function_smooth_sigma=4.0, broadening_function_span=381):
+                                  broadening_function_smooth_sigma=4.0, bf_velocity_span=381):
     n_spectra = flux_collection_inverted[0, :].size
-    span = broadening_function_span
-    BRsvd_template_A = BroadeningFunction(flux_collection_inverted[:, 0], flux_templateA_inverted, span, delta_v)
-    BRsvd_template_B = BroadeningFunction(flux_collection_inverted[:, 0], flux_templateB_inverted, span, delta_v)
+    v_span = bf_velocity_span
+    BRsvd_template_A = BroadeningFunction(flux_collection_inverted[:, 0], flux_templateA_inverted, v_span, delta_v)
+    BRsvd_template_B = BroadeningFunction(flux_collection_inverted[:, 0], flux_templateB_inverted, v_span, delta_v)
     BRsvd_template_A.smooth_sigma = broadening_function_smooth_sigma
     BRsvd_template_B.smooth_sigma = broadening_function_smooth_sigma
 
@@ -112,14 +114,14 @@ def recalculate_RVs(flux_collection_inverted, separated_flux_A, separated_flux_B
 def spectral_separation_routine(flux_collection_inverted, flux_templateA_inverted, flux_templateB_inverted, delta_v,
                                 ifitparamsA:InitialFitParameters, ifitparamsB:InitialFitParameters,
                                 broadening_function_smooth_sigma=4.0, number_of_parallel_jobs=4,
-                                broadening_function_span=381, convergence_limit=1E-5, iteration_limit=10):
+                                bf_velocity_span=381, convergence_limit=1E-5, iteration_limit=10):
     # Calculate initial guesses for radial velocity values
     RVs = radial_velocities_of_multiple_spectra(flux_collection_inverted, flux_templateA_inverted, delta_v,
                                                 ifitparamsA, ifitparamsB, broadening_function_smooth_sigma,
-                                                number_of_parallel_jobs, broadening_function_span)
+                                                number_of_parallel_jobs, bf_velocity_span)
     RV_collection_A, RV_collection_B = RVs[0], RVs[1]
 
-    # Iterative loop that repeatedly separates the spectra from each other in order to calculate new RVs
+    # Iterative loop that repeatedly separates the spectra from each other in order to calculate new RVs (Gonzales 2005)
     iterations = 0
     while True:
         separated_flux_A, separated_flux_B = separate_component_spectra(flux_collection_inverted, RV_collection_A,
@@ -128,7 +130,7 @@ def spectral_separation_routine(flux_collection_inverted, flux_templateA_inverte
         RV_collection_A, RV_collection_B \
             = recalculate_RVs(flux_collection_inverted, separated_flux_A, separated_flux_B, RV_collection_A,
                               RV_collection_B, flux_templateA_inverted, flux_templateB_inverted, delta_v, ifitparamsA,
-                              ifitparamsB, broadening_function_smooth_sigma, broadening_function_span)
+                              ifitparamsB, broadening_function_smooth_sigma, bf_velocity_span)
         iterations += 1
         if iterations >= iteration_limit:
             break
