@@ -8,15 +8,16 @@ from barycorrpy import get_BC_vel, utc_tdb
 import RV.library.spectrum_processing_functions as spf
 import warnings
 import scipy.constants as scc
-from RV.library.broadening_function_svd import *
 import RV.library.AFS_algorithm as afs
-import copy
+import RV.library.calculate_radial_velocities as cRV
+from RV.library.initial_fit_parameters import InitialFitParameters
+import RV.library.spectral_separation_routine as ssr
+from RV.library.linear_limbd_coeff_estimate import estimate_linear_limbd
 
 
 # # # # Set variables for script # # # #
 data_path = 'RV/Data/unprocessed/NOT/KIC8430105/'
 data_out_path = 'RV/Data/processed/NOT/KIC8430105/'
-template_spectrum_path = ''
 
 observatory_location = EarthLocation.of_site("lapalma")
 observatory_name = "lapalma"
@@ -26,6 +27,27 @@ wavelength_RV_limit = (5300, 5700)
 load_data = True       # Defines if normalized spectrum should be loaded from earlier, or done with AFS_algorithm
 delta_v = 1.0          # interpolation resolution for spectrum in km/s
 speed_of_light = scc.c / 1000    # in km/s
+
+# # Stellar parameter estimates (important for limbd) # #
+Teff_A, Teff_B = 5042, 5621
+logg_A, logg_B = 2.78, 4.58
+MH_A  , MH_B   = -0.49, -0.49
+mTur_A, mTur_B = 2.0, 2.0
+
+# # Initial fit parameters for rotational broadening function fit # #
+limbd_A = estimate_linear_limbd(wavelength_RV_limit, logg_A, Teff_A, MH_A, mTur_A)
+limbd_B = estimate_linear_limbd(wavelength_RV_limit, logg_B, Teff_B, MH_B, mTur_B)
+ifitpar_A = InitialFitParameters(vsini_guess=1.0, spectral_resolution=60000, velocity_fit_width=200, limbd_coef=limbd_A)
+ifitpar_B = InitialFitParameters(vsini_guess=1.0, spectral_resolution=60000, velocity_fit_width=350, limbd_coef=limbd_B)
+
+# # Template Spectra # #
+template_spectrum_path_A = '../Data/template_spectra/5000_20_m05p00.ms.fits'
+template_spectrum_path_B = '../Data/template_spectra/5500_20_m05p00.ms.fits'
+
+# # Broadening function and radial velocity parameters # #
+bf_smooth_sigma = 4.0
+number_of_parallel_jobs = 8     # for initial RV guess fits
+bf_velocity_span = 381
 
 # # Prepare collection lists and arrays # #
 flux_collection_list = []
@@ -64,50 +86,39 @@ for filename in os.listdir(data_path):
         flux_collection_list = flux_collection_list.append(flux[selection_mask])
 
 # # Load template spectrum # #
-wavelength_template, flux_template = spf.load_template_spectrum(template_spectrum_path)
+wavelength_template_A, flux_template_A = spf.load_template_spectrum(template_spectrum_path_A)
+flux_template_A = flux_template_A[0, :]     # continuum normalized spectrum only
+wavelength_template_B, flux_template_B = spf.load_template_spectrum(template_spectrum_path_B)
+flux_template_B = flux_template_B[0, :]
 
 # # Resample to same wavelength grid, equi-spaced in velocity space # #
 wavelength, flux_collection_array = spf.resample_to_equal_velocity_steps(wavelength_collection_list,
                                                                          flux_collection_list,
                                                                          delta_v)
-_, flux_template = spf.resample_to_equal_velocity_steps(wavelength_template, delta_v, flux_template,
-                                                        wavelength_resampled=wavelength)
+_, flux_template_A = spf.resample_to_equal_velocity_steps(wavelength_template_A, delta_v, flux_template_A,
+                                                          wavelength_resampled=wavelength)
+_, flux_template_B = spf.resample_to_equal_velocity_steps(wavelength_template_B, delta_v, flux_template_B,
+                                                          wavelength_resampled=wavelength)
 
 # # Invert fluxes # #
 flux_collection_inverted = 1 - flux_collection_array
-flux_template_inverted  = 1 - flux_template
+flux_template_A_inverted = 1 - flux_template_A
+flux_template_B_inverted = 1 - flux_template_B
 
-# # Make broadening function singular value decomposition, solve, smooth and fit # #
-span = 381
-broadening_function_G_rv  = np.empty((span, flux_collection_inverted[0, :].size))
-broadening_function_G     = np.empty((span, flux_collection_inverted[0, :].size))
-model_bf_G                = np.empty((span, flux_collection_inverted[0, :].size))
-model_bf_MS               = np.empty((span, flux_collection_inverted[0, :].size))
-fits_bf_G = np.empty((flux_collection_inverted[0, :].size, ), dtype=type(lmfit.minimizer.MinimizerResult))
-fits_bf_MS = np.empty((flux_collection_inverted[0, :].size, ), dtype=type(lmfit.minimizer.MinimizerResult))
+# # Calculate broadening function RVs to use as initial guesses # #
+RV_guesses_A, RV_guesses_B, _ = \
+    cRV.radial_velocities_of_multiple_spectra(flux_collection_inverted, flux_template_A_inverted, delta_v, ifitpar_A,
+                                              ifitpar_B, bf_smooth_sigma, number_of_parallel_jobs, bf_velocity_span,
+                                              plot=True)
+RV_guess_collection = np.empty((RV_guesses_A.size, 2))
+RV_guess_collection[:, 0] = RV_guesses_A
+RV_guess_collection[:, 1] = RV_guesses_B
 
-BFsvd_G = BroadeningFunction(flux_collection_inverted[:, 0], flux_template_inverted, span, delta_v)
-BFsvd_G.smooth_sigma = 4.0
-BFsvd_MS = copy.copy(BFsvd_G)
-for i in range(0, flux_collection_inverted[0, :].size):
-    BFsvd_G.spectrum = flux_collection_inverted[:, i]
-    BFsvd_MS.spectrum = BFsvd_G.spectrum
-    BFsvd_G.solve()
-    BFsvd_G.smooth()
-    broadening_function_G_rv[:, i] = BFsvd_G.velocity
-    broadening_function_G[:, i] = BFsvd_G.bf_smooth
-
-    # # Perform first fit to largest broadening function peak for Giant # #
-    fits_bf_G[i], model_bf_G[:, i] = BFsvd_G.fit_rotational_profile(vsini_guess=5.0, limbd_coef=0.68,
-                                                                    velocity_fit_width=200, spectral_resolution=67000)
-
-    # # Perform second fit to expected smaller broadening function peak for MS # #
-    BFsvd_MS.bf = BFsvd_G.bf - BFsvd_G.model_values
-    BFsvd_MS.smooth()
-    fits_bf_MS[i], model_bf_MS[:, i] = BFsvd_MS.fit_rotational_profile(vsini_guess=5.0, limbd_coef=0.68,
-                                                                       velocity_fit_width=30,
-                                                                       spectral_resolution=30000)  # TODO: Why lower?
-
+# # Separate component spectra and calculate RVs iteratively # #
+RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B = \
+    ssr.spectral_separation_routine(flux_collection_inverted, flux_template_A_inverted, flux_template_B_inverted,
+                                    delta_v, ifitpar_A, ifitpar_B, bf_smooth_sigma,  bf_velocity_span=bf_velocity_span,
+                                    RV_guess_collection=RV_guess_collection)
 
 
 # # Verify RA and DEC # #

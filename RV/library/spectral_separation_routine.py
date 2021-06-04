@@ -16,26 +16,15 @@ However, multiple people have been over shazam.py, including Karsten Frank Broga
 based on previous implementations by J. Jessen Hansen and others.
 """
 
-from RV.library.calculate_radial_velocities import *
+from RV.library.calculate_radial_velocities import radial_velocities_of_multiple_spectra, \
+    radial_velocity_single_component
 from RV.library.broadening_function_svd import *
-from RV.library.rotational_broadening_function_fitting import get_fit_parameter_values
-from copy import copy
-from joblib import Parallel, delayed
 from RV.library.initial_fit_parameters import InitialFitParameters
 
 
 def shift_spectrum(flux, radial_velocity_shift, delta_v):
     shift = int(radial_velocity_shift * delta_v)
     return np.roll(flux, shift)
-
-
-def shifted_mean_spectrum(flux_collection, radial_velocity_shift_collection, delta_v):
-    n_spectra = flux_collection[0, :].size
-    mean_flux = np.zeros((flux_collection[:, 0].size, ))
-    for i in range(0, n_spectra):
-        mean_flux += shift_spectrum(flux_collection[:, i], radial_velocity_shift_collection[i], delta_v)
-    mean_flux = mean_flux / n_spectra
-    return mean_flux
 
 
 def separate_component_spectra(flux_collection, radial_velocity_collection_A, radial_velocity_collection_B, delta_v,
@@ -114,12 +103,17 @@ def recalculate_RVs(flux_collection_inverted, separated_flux_A, separated_flux_B
 def spectral_separation_routine(flux_collection_inverted, flux_templateA_inverted, flux_templateB_inverted, delta_v,
                                 ifitparamsA:InitialFitParameters, ifitparamsB:InitialFitParameters,
                                 broadening_function_smooth_sigma=4.0, number_of_parallel_jobs=4,
-                                bf_velocity_span=381, convergence_limit=1E-5, iteration_limit=10):
+                                bf_velocity_span=381, convergence_limit=1E-5, iteration_limit=10,
+                                RV_guess_collection=None):
+    # TODO: Implement that they can have separate smoothing parameters
     # Calculate initial guesses for radial velocity values
-    RVs = radial_velocities_of_multiple_spectra(flux_collection_inverted, flux_templateA_inverted, delta_v,
-                                                ifitparamsA, ifitparamsB, broadening_function_smooth_sigma,
-                                                number_of_parallel_jobs, bf_velocity_span)
-    RV_collection_A, RV_collection_B = RVs[0], RVs[1]
+    if RV_guess_collection is None:
+        RVs = radial_velocities_of_multiple_spectra(flux_collection_inverted, flux_templateA_inverted, delta_v,
+                                                    ifitparamsA, ifitparamsB, broadening_function_smooth_sigma,
+                                                    number_of_parallel_jobs, bf_velocity_span)
+        RV_collection_A, RV_collection_B = RVs[0], RVs[1]
+    else:
+        RV_collection_A, RV_collection_B = RV_guess_collection[:, 0], RV_guess_collection[:, 1]
 
     # Iterative loop that repeatedly separates the spectra from each other in order to calculate new RVs (Gonzales 2005)
     iterations = 0

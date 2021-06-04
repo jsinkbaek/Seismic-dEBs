@@ -352,10 +352,10 @@ def main():
     # print(T2)
     # print(interpolated_LD_param(4.62640, T2, -0.5, 2.0, loc='Data/tables/kepler_sing_table.dat'))
     # print(interpolated_LD_param(2.80835, 5042, -0.5, 2.0, loc='Data/tables/kepler_sing_table.dat'))
-    # jktebop_iterator(n_iter=1, loc_infile='JKTEBOP/tess/infile.TESS', loc_jktebop='JKTEBOP/tess/',
-    #                  loc_ld_table='Data/tables/tess_ldquad_table25.dat')
-    jktebop_iterator(n_iter=2, loc_infile='JKTEBOP/kepler_LTF/infile.KEPLER', loc_jktebop='JKTEBOP/kepler_LTF/',
-                     loc_ld_table='Data/tables/kepler_sing_table.dat')
+    jktebop_iterator(n_iter=1, loc_infile='JKTEBOP/tess/infile.TESS', loc_jktebop='JKTEBOP/tess/',
+                     loc_ld_table='Data/tables/tess_ldquad_table25.dat')
+    # jktebop_iterator(n_iter=1, loc_infile='JKTEBOP/kepler_LTF/infile.KEPLER', loc_jktebop='JKTEBOP/kepler_LTF/',
+    #                  loc_ld_table='Data/tables/kepler_sing_table.dat')
 
 
 if __name__ == "__main__":

@@ -5,8 +5,8 @@
  0.0  0.0         Gravity darkening (star A) Grav darkening (star B) 
  0.6014  0.0029667      Surface brightness ratio   Amount of third light   
  quad  quad       LD law type for star A     LD law type for star B  
- 0.36903103554002176 0.4763347308542004    LD star A (linear coeff)   LD star B (linear coeff)
- 0.2780217223658703 0.21105570160564202    LD star A (nonlin coeff)   LD star B (nonlin coeff)
+ 0.3690316127181351 0.4763346833376144    LD star A (linear coeff)   LD star B (linear coeff)
+ 0.27802136313581255 0.21105572653108595    LD star A (nonlin coeff)   LD star B (nonlin coeff)
  0.0  0.0         Reflection effect star A   Reflection effect star B
  0.0  0.0         Phase of primary eclipse   Light scale factor (mag)
  63.32713         Orbital period of eclipsing binary system (days) 

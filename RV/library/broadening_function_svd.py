@@ -111,13 +111,13 @@ class BroadeningFunction:
         else:
             self.velocity_span = span*dv
         if np.mod(span, 2) != 1.0:
-            warnings.warn('Warning: Design Matrix span must be odd. Shortening by 1.')
+            warnings.warn('Design Matrix span must be odd. Shortening by 1.')
             span -= 1
         if template_spectrum.size != program_spectrum.size:
             raise ValueError(f'template_spectrum.size does not match program_spectrum.size. Size '
                              f'{template_spectrum.size} vs Size {program_spectrum.size}')
         if np.mod(template_spectrum.size, 2) != 0.0:
-            warnings.warn('Warning: template_spectrum length must be even. Shortening by 1.')
+            warnings.warn('template_spectrum length must be even. Shortening by 1.')
             template_spectrum = template_spectrum[:-1]
             program_spectrum = program_spectrum[:-1]
         self.spectrum = program_spectrum
@@ -171,6 +171,7 @@ class BroadeningFunction:
         spectrum_truncated = self.truncate(self.spectrum, self.svd.design_matrix)
         u, w, vH = self.svd.u, self.svd.w, self.svd.vH
 
+        # Safety check
         limit_w = 0.0
         w_inverse = 1.0/w
         limit_mask = (w < limit_w)
@@ -188,6 +189,7 @@ class BroadeningFunction:
     def smooth(self):
         """
         Smoothes a calculated broadening function by convolving with a gaussian function.
+        TODO: Set so that the smoothing sigma can be calculated from spectrum resolution (2.354 * FWHM)
         """
         if self.bf is None:
             raise TypeError('self.bf is None. self.solve() must be run prior to smoothing the broadening function.')
@@ -197,7 +199,7 @@ class BroadeningFunction:
         return self.bf_smooth
 
     def fit_rotational_profile(self, ifitparams:InitialFitParameters,
-                               fitting_routine=fiting_routine_rotational_broadening_profile):
+                               fitting_routine=fitting_routine_rotational_broadening_profile):
         """
         Fits the broadening function with a rotational broadening profile by calling a fitting routine provided.
         The routine must include all essential parts of the fitting procedure.
@@ -218,7 +220,6 @@ class BroadeningFunction:
 
         self.fit, self.model_values = fitting_routine(self.velocity, self.bf_smooth, ifitparams, self.smooth_sigma,
                                                       self.dv)
-        # TODO: figure out why vsini_guess needs to be provided
         return self.fit, self.model_values
 
 
