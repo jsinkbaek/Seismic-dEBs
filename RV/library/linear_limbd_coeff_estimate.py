@@ -27,7 +27,7 @@ def estimate_photometric_system(wavelength_range):
 
 def read_linear_limbd_param(logg_range=np.array([0, 7]), Trange=np.array([2000, 9000]), MH_range=-0.5, mTurb_range=2.0,
                             loc='../Data/tables/atlasco.dat', band='V'):
-    if loc == '../Data/tables/atlasco.dat':
+    if 'atlasco.dat' in loc:
         if band=='u': band_col=5
         elif band=='v': band_col=6
         elif band=='b': band_col=7
@@ -85,7 +85,7 @@ def interpolate_linear_limbd(logg, Teff, MH, mTurb, logg_range=np.array([0, 7]),
     points = data[:, 0:-1]
     eval_points = np.array([])
     # # Flexibility depending on size of parameter space (how many have grid points) and table structure used
-    if loc=='../Data/tables/atlasco.dat':
+    if 'atlasco.dat' in loc:
         if isinstance(mTurb_range, np.ndarray):
             eval_points = np.append(eval_points, mTurb)
         if isinstance(logg_range, np.ndarray):

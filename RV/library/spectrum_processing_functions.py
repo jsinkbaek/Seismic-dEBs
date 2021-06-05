@@ -12,8 +12,8 @@ def load_template_spectrum(template_spectrum_path):
     with fits.open(template_spectrum_path) as hdul:
         hdr = hdul[0].header
         flux = hdul[0].data
-        wl0, delta_wl = hdr['CRVAL1'], hdr['CDELT1']
-    wavelength = np.linspace(wl0, wl0+delta_wl*flux.size, flux.size)
+        wl0, delta_wl, naxis = hdr['CRVAL1'], hdr['CDELT1'], hdr['NAXIS1']
+    wavelength = np.linspace(wl0, wl0+delta_wl*naxis, naxis)
     return wavelength, flux
 
 

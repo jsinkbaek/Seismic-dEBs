@@ -89,6 +89,6 @@ def radial_velocity_single_component(flux_inverted, broadening_function_template
     # Fit rotational broadening function profile
     fit, model_values = BFsvd.fit_rotational_profile(ifitparams)
 
-    _, RV, _, _, _, _ = get_fit_parameter_values(fit)
+    _, RV, _, _, _, _ = get_fit_parameter_values(fit.params)
 
     return RV, (fit, model_values, BFsvd.velocity, BFsvd.bf, BFsvd.bf_smooth)

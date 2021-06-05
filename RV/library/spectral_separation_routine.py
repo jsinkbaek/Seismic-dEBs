@@ -28,7 +28,7 @@ def shift_spectrum(flux, radial_velocity_shift, delta_v):
 
 
 def separate_component_spectra(flux_collection, radial_velocity_collection_A, radial_velocity_collection_B, delta_v,
-                               convergence_limit, max_iterations=10):
+                               convergence_limit, max_iterations=20):
     """
     Assumes that component A is the dominant component in the spectrum.
     :param flux_collection:               np.ndarray shape (datasize, nspectra) of all the observed spectra
@@ -72,10 +72,12 @@ def separate_component_spectra(flux_collection, radial_velocity_collection_A, ra
         if RMS_A < convergence_limit and RMS_B < convergence_limit:
             print(f'Separate Component Spectra: Convergence limit of {convergence_limit} successfully reached in '
                   f'{iteration_counter} iterations. \nReturning last separated spectra.')
+            break
         elif iteration_counter >= max_iterations:
             warnings.warn(f'Warning: Iteration limit of {max_iterations} reached without reaching convergence limit'
                           f' of {convergence_limit}. \nCurrent RMS_A: {RMS_A}. RMS_B: {RMS_B} \n'
                           'Returning last separated spectra.')
+            break
 
     return separated_flux_A, separated_flux_B
 
