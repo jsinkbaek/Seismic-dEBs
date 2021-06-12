@@ -7,4 +7,5 @@ class InitialFitParameters:
         self.velocity_fit_width=velocity_fit_width
         self.limbd_coef = limbd_coef
         self.vary_limbd_coef = False
+        self.RV = None
 

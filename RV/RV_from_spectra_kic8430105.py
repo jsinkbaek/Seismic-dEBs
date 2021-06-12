@@ -15,6 +15,8 @@ import matplotlib.pyplot as plt
 
 
 # # # # Set variables for script # # # #
+# matplotlib.use('Qt5Agg')
+plt.ion()
 data_path = 'Data/unprocessed/NOT/KIC8430105/'
 data_out_path = 'Data/processed/NOT/KIC8430105/'
 
@@ -22,14 +24,18 @@ observatory_location = EarthLocation.of_site("lapalma")
 observatory_name = "lapalma"
 stellar_target = "kic8430105"
 wavelength_normalization_limit = (4200, 9600)
-wavelength_RV_limit = (5300, 5700)
-load_data = True       # Defines if normalized spectrum should be loaded from earlier, or done with AFS_algorithm
+wavelength_RV_limit = (5000, 6000)
+load_data = True      # Defines if normalized spectrum should be loaded from earlier, or done with AFS_algorithm
+#  afs_exclude_list = ['FIBj010048_step011_merge.fits', 'FIDi130112_step011_merge.fits', 'FIDh160100_step011_merge.fits', 'FIBi240080_step011_merge.fits', 'FIBi300038_step011_merge.fits', 'FIBi230047_step011_merge.fits', 'FIBk030043_step011_merge.fits', 'FIDi080098_step011_merge.fits', 'FIBj030100_step011_merge.fits', 'FIBk050063_step011_merge.fits', 'FIBl060068_step011_merge.fits', 'FIBj150080_step011_merge.fits', 'FIDi090065_step011_merge.fits', 'FIBj040099_step011_merge.fits', 'FIBl010114_step011_merge.fits', 'FIBk060011_step011_merge.fits', 'FIBk140069_step011_merge.fits', 'FIBi290054_step011_merge.fits', 'FIBk230070_step011_merge.fits']
+afs_exclude_list = ['FIBl060068_step011_merge']
 delta_v = 1.0          # interpolation resolution for spectrum in km/s
 speed_of_light = scc.c / 1000    # in km/s
 estimate_RVb_from_RVa = True        # defines if a guess on RVb should be made in case it cannot be picked up during
                                     # initial fitting
 mass_A_estimate = 1.31
 mass_B_estimate = 0.83
+system_RV_estimate = 16.053
+orbital_period_estimate = 63.33  # only for plotting
 
 # # Stellar parameter estimates (important for limbd) # #
 Teff_A, Teff_B = 5042, 5621
@@ -40,8 +46,8 @@ mTur_A, mTur_B = 2.0, 2.0
 # # Initial fit parameters for rotational broadening function fit # #
 limbd_A = estimate_linear_limbd(wavelength_RV_limit, logg_A, Teff_A, MH_A, mTur_A, loc='Data/tables/atlasco.dat')
 limbd_B = estimate_linear_limbd(wavelength_RV_limit, logg_B, Teff_B, MH_B, mTur_B, loc='Data/tables/atlasco.dat')
-ifitpar_A = InitialFitParameters(vsini_guess=1.0, spectral_resolution=60000, velocity_fit_width=200, limbd_coef=limbd_A)
-ifitpar_B = InitialFitParameters(vsini_guess=1.0, spectral_resolution=60000, velocity_fit_width=250, limbd_coef=limbd_B)
+ifitpar_A = InitialFitParameters(vsini_guess=1.0, spectral_resolution=60000, velocity_fit_width=100, limbd_coef=limbd_A)
+ifitpar_B = InitialFitParameters(vsini_guess=1.0, spectral_resolution=60000, velocity_fit_width=10, limbd_coef=limbd_B)
 
 # # Template Spectra # #
 template_spectrum_path_A = 'Data/template_spectra/5000_20_m05p00.ms.fits'
@@ -49,8 +55,8 @@ template_spectrum_path_B = 'Data/template_spectra/5500_45_m05p00.ms.fits'
 
 # # Broadening function and radial velocity parameters # #
 bf_smooth_sigma = 4.0
-number_of_parallel_jobs = 8     # for initial RV guess fits
-bf_velocity_span = 450          # km/s
+number_of_parallel_jobs = 4     # for initial RV guess fits
+bf_velocity_span = 250          # km/s
 
 # # Prepare collection lists and arrays # #
 flux_collection_list = []
@@ -61,7 +67,7 @@ DEC_array = np.array([])
 
 # # # Load fits files, collect and normalize data # # #
 for filename in os.listdir(data_path):
-    if 'merge.fits' in filename and '.lowSN' not in filename:
+    if 'merge.fits' in filename and '.lowSN' not in filename and filename not in afs_exclude_list:
         # Load observation
         wavelength, flux, date, ra, dec = spf.load_program_spectrum(data_path+filename)
         date_array = np.append(date_array, date)
@@ -81,12 +87,18 @@ for filename in os.listdir(data_path):
                                  '_reduced_set.dat')
             wavelength, flux = data_in[:, 0], data_in[:, 1]
         else:
-            wavelength, flux, _ = afs.AFS_merged_spectrum(wavelength, flux, lr_frac=0.2, save_string=file_bulk_name)
+            print('Current file: ', filename)
+            wavelength, flux, _ = afs.AFS_merged_spectrum(wavelength, flux, lr_frac=0.2, save_string=file_bulk_name,
+                                                          em_line_limit=1.1)
 
-        # Limit normalized data set to smaller wavelength range for RV analysis, and append to collection
-        selection_mask = (wavelength > wavelength_RV_limit[0]) & (wavelength < wavelength_RV_limit[1])
-        wavelength_collection_list.append(wavelength[selection_mask])
-        flux_collection_list.append(flux[selection_mask])
+        # Remove values over 1.05 and under 0
+        selection_mask = (flux > 1.1) | (flux < 0.0)
+        flux = flux[~selection_mask]
+        wavelength = wavelength[~selection_mask]
+
+        # Append to collection
+        wavelength_collection_list.append(wavelength)
+        flux_collection_list.append(flux)
 
 # # Verify RA and DEC # #
 RA, DEC = RA_array[0], DEC_array[0]
@@ -110,6 +122,7 @@ print()
 print("RV correction")
 bc_rv_cor, warning, _ = get_BC_vel(times, ra=RA, dec=DEC, starname=stellar_target, ephemeris='de432s',
                                    obsname=observatory_name)
+bc_rv_cor = bc_rv_cor/1000      # from m/s to km/s
 print(bc_rv_cor)
 print(warning)
 
@@ -120,12 +133,24 @@ bjdtdb, warning, _ = utc_tdb.JDUTC_to_BJDTDB(times, ra=RA, dec=DEC, starname=ste
 print(bjdtdb)
 print(warning)
 
+# # Plot # #
+plt.figure(figsize=(16, 9))
+for i in range(0, len(wavelength_collection_list)):
+    # plt.plot(wavelength, 1-0.05*i -(flux_collection_inverted[:, i]*0.025))
+    plt.plot(wavelength_collection_list[i], 1-0.05*i - 0.025 + flux_collection_list[i]*0.025)
+    plt.plot(wavelength_collection_list[i], np.ones(shape=wavelength_collection_list[i].shape)-0.05*i, '--',
+             color='grey', linewidth=0.7)
+plt.xlim([4600, 6400])
+plt.xlabel('Wavelength [Å]')
+plt.show(block=False)
+
 
 # # Load template spectrum # #
 wavelength_template_A, flux_template_A = spf.load_template_spectrum(template_spectrum_path_A)
 flux_template_A = flux_template_A[0, :]     # continuum normalized spectrum only
 wavelength_template_B, flux_template_B = spf.load_template_spectrum(template_spectrum_path_B)
 flux_template_B = flux_template_B[0, :]
+
 
 # # Resample to same wavelength grid, equi-spaced in velocity space # #
 wavelength, flux_collection_array = spf.resample_to_equal_velocity_steps(wavelength_collection_list, delta_v,
@@ -140,32 +165,60 @@ flux_collection_inverted = 1 - flux_collection_array
 flux_template_A_inverted = 1 - flux_template_A
 flux_template_B_inverted = 1 - flux_template_B
 
+
+# # Perform barycentric corrections # #
+for i in range(0, flux_collection_inverted[0, :].size):
+    flux_collection_inverted[:, i] = ssr.shift_spectrum(flux_collection_inverted[:, i],
+                                                        -bc_rv_cor[i]-system_RV_estimate, delta_v)
+
+
+# # Limit data-set to specified area (wavelength_RV_limit) # #
+selection_mask = (wavelength > wavelength_RV_limit[0]) & (wavelength < wavelength_RV_limit[1])
+wavelength = wavelength[selection_mask]
+flux_collection_inverted = flux_collection_inverted[selection_mask, :]
+flux_template_A_inverted = flux_template_A_inverted[selection_mask]
+flux_template_B_inverted = flux_template_B_inverted[selection_mask]
+
+
+# # Shorten spectra if uneven # #
+if np.mod(wavelength.size, 2) != 0.0:
+    wavelength = wavelength[:-1]
+    flux_collection_inverted = flux_collection_inverted[:-1, :]
+    flux_template_A_inverted = flux_template_A_inverted[:-1]
+    flux_template_B_inverted = flux_template_B_inverted[:-1]
+
+# # Plot all spectra # #
+plt.figure(figsize=(16, 9))
+for i in range(0, flux_collection_inverted[0, :].size):
+    plt.plot(wavelength, 1-0.05*i -(flux_collection_inverted[:, i]*0.025))
+    plt.plot(wavelength, np.ones(shape=wavelength.shape)-0.05*i, '--', color='grey', linewidth=0.5)
+plt.xlabel('Wavelength [Å]')
+plt.show(block=True)
+
 # # Calculate broadening function RVs to use as initial guesses # #
 RV_guesses_A, RV_guesses_B, _ = \
     cRV.radial_velocities_of_multiple_spectra(flux_collection_inverted, flux_template_A_inverted, delta_v, ifitpar_A,
                                               ifitpar_B, bf_smooth_sigma, number_of_parallel_jobs, bf_velocity_span,
-                                              plot=True)
+                                              plot=False)
 RV_guess_collection = np.empty((RV_guesses_A.size, 2))
 RV_guess_collection[:, 0] = RV_guesses_A
 if estimate_RVb_from_RVa:
-    RV_guesses_B = -(RV_guesses_A - bc_rv_cor) * (mass_A_estimate/(mass_A_estimate+mass_B_estimate)**(2/3)) + bc_rv_cor
+    RV_guesses_B = -RV_guesses_A * (mass_A_estimate/mass_B_estimate)
 
 RV_guess_collection[:, 1] = RV_guesses_B
+
 
 # # Separate component spectra and calculate RVs iteratively # #
 RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B = \
     ssr.spectral_separation_routine(flux_collection_inverted, flux_template_A_inverted, flux_template_B_inverted,
-                                    delta_v, ifitpar_A, ifitpar_B, bf_smooth_sigma,  bf_velocity_span=bf_velocity_span,
+                                    delta_v, ifitpar_A, ifitpar_B, wavelength, bjdtdb, bf_smooth_sigma,
+                                    period=orbital_period_estimate, bf_velocity_span=bf_velocity_span,
                                     RV_guess_collection=RV_guess_collection)
-
-
-# # # Correct results # # #
-RV_collection_A = RV_collection_A - bc_rv_cor
-RV_collection_B = RV_collection_B - bc_rv_cor
+plt.show(block=True)
 
 # # Plot results # #
 plt.figure()
 plt.plot(bjdtdb-245000, RV_collection_A, 'r*')
 plt.plot(bjdtdb-245000, RV_collection_B, 'b*')
-plt.show()
+plt.show(block=True)
 

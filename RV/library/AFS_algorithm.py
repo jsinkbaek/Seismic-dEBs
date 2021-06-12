@@ -15,6 +15,8 @@ import warnings
 from localreg import *
 from matplotlib.widgets import Cursor
 from RV.library.spectrum_processing_functions import *
+from matplotlib.ticker import FuncFormatter
+
 
 
 def separate_polygon_boundary(polygon):
@@ -82,7 +84,8 @@ def select_areas(fig, ax):
     return selected_areas
 
 
-def AFS_merged_spectrum(wavelength, flux, alpha=None, mf_window=5001, emline_factor=1, lr_frac=0.2, save_string=None):
+def AFS_merged_spectrum(wavelength, flux, alpha=None, mf_window=5001, emline_factor=1, lr_frac=0.2, save_string=None,
+                        em_line_limit=None):
     """
     https://arxiv.org/pdf/1904.10065v1.pdf
     https://iopscience.iop.org/article/10.3847/1538-3881/ab1b47/pdf
@@ -103,17 +106,20 @@ def AFS_merged_spectrum(wavelength, flux, alpha=None, mf_window=5001, emline_fac
                             width). Overrides lr_width if not None.
     :param save_string:     string. If not None, data is saved using "save_string" as the beginning name in the folder
                             RV/Data/processed/AFS_algorithm/
+    :param em_line_limit:   float, max distance from variance allowed. Default is None (overrides emline_factor if
+                            this results in a lower boundary.)
     :return:
     """
     # Set processed data and figure path
-    data_out_path = 'RV/Data/processed/AFS_algorithm/'
-    fig_path = 'figures/report/RV/Continuum_Normalization/'
+    data_out_path = 'Data/processed/AFS_algorithm/'
+    fig_path = '../figures/report/RV/Continuum_Normalization/'
     # Convert wavelength to ln(wl)
     wavelength = np.log(wavelength)
 
     # Reduce emission lines in data set used for alpha shape
     wavelength_uncorrected, flux_uncorrected = np.copy(wavelength), np.copy(flux)
-    wavelength, flux = reduce_emission_lines(wavelength, flux, mf_window, emline_factor, plot=False)
+    wavelength, flux = reduce_emission_lines(wavelength, flux, mf_window, emline_factor, plot=False,
+                                             limit=em_line_limit)
     # Select alpha (assumes wavelength in ln units)
     if alpha is None:
         alpha = (np.exp(np.max(wavelength)) - np.exp(np.min(wavelength)))/(6*50)
@@ -146,6 +152,8 @@ def AFS_merged_spectrum(wavelength, flux, alpha=None, mf_window=5001, emline_fac
     ax.plot(upper_boundary[:, 0], upper_boundary[:, 1], 'g')
     ax.plot(wavelength, flux_localreg, 'k--')
     ax.plot(lower_boundary[:, 0], lower_boundary[:, 1], 'r')
+    plt.gca().xaxis.set_major_formatter(FuncFormatter(lambda x, y: '{}'.format(np.exp(x))))
+    plt.xlabel('Wavelength [Å]')
 
     # Call ginput to manually exclude areas (space to add point, backspace to remove, enter to return)
     wavelength_reduced = wavelength
@@ -186,6 +194,8 @@ def AFS_merged_spectrum(wavelength, flux, alpha=None, mf_window=5001, emline_fac
         ax.plot(wavelength_reduced, flux_localreg, 'k--')
         plt.legend(['Full set with reduced emission lines', 'Reduced set by additional manual selection', 'Polygon',
                     'Upper boundary', 'Lower boundary', 'Local Polynomial Regression fit'], loc='upper left')
+        plt.gca().xaxis.set_major_formatter(FuncFormatter(lambda x, y: '{}'.format(np.exp(x))))
+        plt.xlabel('Wavelength [Å]')
         plt.show()
 
     # Correct spectrum using local regression fit as continuum

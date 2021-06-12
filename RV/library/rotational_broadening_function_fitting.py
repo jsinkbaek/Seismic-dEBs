@@ -4,8 +4,8 @@ First edition on May 01 2021.
 Supervisor: Assistant Professor Karsten Frank Brogaard.
 
 A rotational broadening function fitting routine, with the model profile used, and all the relevant steps until the
-lmfit minimizer method is called. Code is adapted from the shazam.py library for the SONG telescope (written by Emil)
-TODO: find full author name
+lmfit minimizer method is called. Code is adapted from the shazam.py library for the SONG telescope
+(written by Emil Knudstrup and others)
 """
 
 import numpy as np
@@ -49,18 +49,23 @@ def rotational_broadening_function_profile(velocities, amplitude, radial_velocit
     return rot_bf_profile
 
 
-def weight_function(velocities, broadening_function_values, velocity_fit_half_width):
+def weight_function(velocities, broadening_function_values, velocity_fit_half_width, radial_velocity_guess):
     """
     Weight function for the fit. Finds the peak value, and limits the data set to velocities within a certain distance
     of it.
     :param velocities:                  np.ndarray, the velocities of the broadening function
     :param broadening_function_values:  np.ndarray, the broadening function values
     :param velocity_fit_half_width:     float, the distance to each side within to include data for fit.
+    :param radial_velocity_guess:       float, guess for the radial velocity. Used to limit weight function
     :return weight_function_values:     np.ndarray, set of 1s and 0s to weigh each data point with
     """
-    peak_idx = np.argmax(broadening_function_values)
-    mask = (velocities > velocities[peak_idx] - velocity_fit_half_width) & \
-           (velocities < velocities[peak_idx] + velocity_fit_half_width + 1)
+    if radial_velocity_guess is None:
+        peak_idx = np.argmax(broadening_function_values)
+        mask = (velocities > velocities[peak_idx] - velocity_fit_half_width) & \
+               (velocities < velocities[peak_idx] + velocity_fit_half_width + 1)
+    else:
+        mask = (velocities > radial_velocity_guess - velocity_fit_half_width) & \
+               (velocities < radial_velocity_guess + velocity_fit_half_width)
 
     weight_function_values = np.zeros(broadening_function_values.size)
     weight_function_values[mask] = 1.0
@@ -94,7 +99,7 @@ def compare_broadening_function_with_profile(parameters, velocities, broadening_
     parameter_vals = get_fit_parameter_values(parameters)
 
     comparison = broadening_function_values - rotational_broadening_function_profile(velocities, *parameter_vals)
-    return weight_function_values * comparison  # TODO: Ask if absolute value comparison is needed
+    return weight_function_values * comparison
 
 
 def fitting_routine_rotational_broadening_profile(velocities, broadening_function_values,
@@ -125,15 +130,20 @@ def fitting_routine_rotational_broadening_profile(velocities, broadening_functio
     speed_of_light = scc.c / 1000  # in km/s
     gaussian_width = np.sqrt(((speed_of_light/ifitparams.spectral_resolution)/(2.354 * dv)) ** 2 +(smooth_sigma/dv)**2)
     params = lmfit.Parameters()
-    peak_idx = np.argmax(broadening_function_values)
+
+    weight_function_values = weight_function(velocities, broadening_function_values, ifitparams.velocity_fit_width,
+                                             ifitparams.RV)
+    peak_idx = np.argmax(broadening_function_values*weight_function_values)
     params.add('amplitude', value=broadening_function_values[peak_idx])
-    params.add('radial_velocity_cm', value=velocities[peak_idx])
+    if ifitparams.RV is None:
+        params.add('radial_velocity_cm', value=velocities[peak_idx])
+    else:
+        params.add('radial_velocity_cm', value=ifitparams.RV)
     params.add('vsini', value=ifitparams.vsini, vary=ifitparams.vary_vsini)
     params.add('gaussian_width', value=gaussian_width, vary=False)
     params.add('continuum_constant', value=0.0)
     params.add('limbd_coef', value=ifitparams.limbd_coef, vary=ifitparams.vary_limbd_coef)
 
-    weight_function_values = weight_function(velocities, broadening_function_values, ifitparams.velocity_fit_width)
     fit = lmfit.minimize(compare_func, params, args=(velocities, broadening_function_values, weight_function_values),
                          xtol=1E-8, ftol=1E-8, max_nfev=500)
     if print_report:

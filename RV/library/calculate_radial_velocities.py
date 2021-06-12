@@ -71,7 +71,7 @@ def radial_velocities_of_multiple_spectra(flux_collection_inverted, flux_templat
             plt.show(block=False)
         RVs_A[i], RVs_B[i] = RV_values[0], RV_values[1]
     if plot:
-        plt.show()
+        plt.show(block=True)
     extra_results = (broadening_function_template.velocity, broadening_function_vals, broadening_function_vals_smoothed,
                      model_values_A, model_values_B)
     return RVs_A, RVs_B, extra_results

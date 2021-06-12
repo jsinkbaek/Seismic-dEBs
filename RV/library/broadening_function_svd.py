@@ -113,14 +113,14 @@ class BroadeningFunction:
         if np.mod(span, 2) != 1.0:
             warnings.warn('Design Matrix span must be odd. Shortening by 1.')
             span -= 1
-        if template_spectrum.size != program_spectrum.size:
-            raise ValueError(f'template_spectrum.size does not match program_spectrum.size. Size '
-                             f'{template_spectrum.size} vs Size {program_spectrum.size}')
         if np.mod(template_spectrum.size, 2) != 0.0:
             warnings.warn('template_spectrum length must be even. Shortening by 1.')
             template_spectrum = template_spectrum[:-1]
             program_spectrum = program_spectrum[:-1]
-        self.spectrum = program_spectrum
+        if template_spectrum.size != program_spectrum.size:
+            raise ValueError(f'template_spectrum.size does not match program_spectrum.size. Size '
+                             f'{template_spectrum.size} vs Size {program_spectrum.size}')
+        self.__spectrum = program_spectrum
         self.template_spectrum = template_spectrum
         self.span = span
         self.dv = dv
@@ -141,6 +141,17 @@ class BroadeningFunction:
         if plot_w and ~copy:
             self.svd.plot_w()
 
+    @property
+    def spectrum(self):
+        return self.__spectrum
+
+    @spectrum.setter
+    def spectrum(self, new_value):
+        if np.mod(new_value.size, 2) != 0.0:
+            warnings.warn('new_value for BroadeningFunction.spectrum size must be even. Shortening by 1.')
+            new_value = new_value[:-1]
+        self.__spectrum = new_value
+
     def __copy__(self):
         new_copy = type(self)(self.spectrum, self.template_spectrum, self.span, self.dv, copy=True)
         new_copy.svd = self.svd
@@ -160,7 +171,11 @@ class BroadeningFunction:
         :param design_matrix:   np.ndarray, the design matrix which is to be used
         """
         m = design_matrix.m
-        return spectrum[int(m/2):-int(m/2)]
+        truncated_spectrum = spectrum[int((m-1)/2):-int((m+1)/2)+1]
+        if truncated_spectrum.size != spectrum.size - m + 1:
+            print(truncated_spectrum.size)
+            raise ValueError('bf truncate spectrum: Wrong length')
+        return truncated_spectrum      # Found error in some cases with length. Should be fixed now
 
     def solve(self):
         """
