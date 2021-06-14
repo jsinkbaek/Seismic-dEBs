@@ -20,10 +20,11 @@ from RV.library.calculate_radial_velocities import radial_velocities_of_multiple
     radial_velocity_single_component
 from RV.library.broadening_function_svd import *
 from RV.library.initial_fit_parameters import InitialFitParameters
+from lmfit.minimizer import MinimizerResult
 
 
 def shift_spectrum(flux, radial_velocity_shift, delta_v):
-    shift = int(radial_velocity_shift * delta_v)
+    shift = int(radial_velocity_shift / delta_v)
     return np.roll(flux, shift)
 
 
@@ -97,14 +98,13 @@ def update_bf_plot(plot_ax, model, index):
 
 def recalculate_RVs(flux_collection_inverted, separated_flux_A, separated_flux_B, RV_collection_A, RV_collection_B,
                     flux_templateA_inverted, flux_templateB_inverted, delta_v, ifitparamsA:InitialFitParameters,
-                    ifitparamsB:InitialFitParameters, broadening_function_smooth_sigma=4.0, bf_velocity_span=381,
-                    plot_ax_A=None, plot_ax_B=None):
+                    ifitparamsB:InitialFitParameters, bf_velocity_span=381, plot_ax_A=None, plot_ax_B=None):
     n_spectra = flux_collection_inverted[0, :].size
     v_span = bf_velocity_span
     BRsvd_template_A = BroadeningFunction(flux_collection_inverted[:, 0], flux_templateA_inverted, v_span, delta_v)
     BRsvd_template_B = BroadeningFunction(flux_collection_inverted[:, 0], flux_templateB_inverted, v_span, delta_v)
-    BRsvd_template_A.smooth_sigma = broadening_function_smooth_sigma
-    BRsvd_template_B.smooth_sigma = broadening_function_smooth_sigma
+    BRsvd_template_A.smooth_sigma = ifitparamsA.bf_smooth_sigma
+    BRsvd_template_B.smooth_sigma = ifitparamsB.bf_smooth_sigma
 
     if plot_ax_A is not None:
         plot_ax_A.clear()
@@ -114,6 +114,9 @@ def recalculate_RVs(flux_collection_inverted, separated_flux_A, separated_flux_B
         plot_ax_B.clear()
         plot_ax_B.set_xlim([-bf_velocity_span/2, +bf_velocity_span/2])
         plot_ax_B.set_xlabel('Velocity shift [km/s]')
+
+    fits_A = np.empty(shape=(n_spectra,), dtype=MinimizerResult)
+    fits_B = np.empty(shape=(n_spectra,), dtype=MinimizerResult)
 
     for i in range(0, n_spectra):
         corrected_flux_A = flux_collection_inverted[:, i] -shift_spectrum(separated_flux_B, RV_collection_B[i], delta_v)
@@ -125,11 +128,13 @@ def recalculate_RVs(flux_collection_inverted, separated_flux_A, separated_flux_B
         RV_collection_A[i], model_A = radial_velocity_single_component(corrected_flux_A, BRsvd_template_A, ifitparamsA)
         RV_collection_B[i], model_B = radial_velocity_single_component(corrected_flux_b, BRsvd_template_B, ifitparamsB)
 
-        if plot_ax_A is not None and i < 5:
+        fits_A[i], fits_B[i] = model_A[0], model_B[0]
+
+        if plot_ax_A is not None and i < 10:
             update_bf_plot(plot_ax_A, model_A, i)
-        if plot_ax_B is not None and i < 5:
+        if plot_ax_B is not None and i < 10:
             update_bf_plot(plot_ax_B, model_B, i)
-    return RV_collection_A, RV_collection_B
+    return RV_collection_A, RV_collection_B, (fits_A, fits_B)
 
 
 def initialize_ssr_plots():
@@ -197,8 +202,8 @@ def plot_ssr_iteration(f1_ax1, f1_ax2, f1_ax3, f2_ax1, f3_ax1, f3_ax2, separated
         f3_ax2.plot(wavelength, 1-0.15*i-0.1*shift_spectrum(flux_collection[:, i], -RV_B[i], delta_v=1.0))
     f3_ax1.set_xlabel('Wavelength [Å]')
     f3_ax2.set_xlabel('Wavelength [Å]')
-    f3_ax1.set_xlim([5885, 5905])
-    f3_ax2.set_xlim([5885, 5905])
+    f3_ax1.set_xlim([5385, 5405])
+    f3_ax2.set_xlim([5385, 5405])
 
     plt.draw_all()
     plt.pause(3)
@@ -207,15 +212,12 @@ def plot_ssr_iteration(f1_ax1, f1_ax2, f1_ax3, f2_ax1, f3_ax1, f3_ax2, separated
 
 def spectral_separation_routine(flux_collection_inverted, flux_templateA_inverted, flux_templateB_inverted, delta_v,
                                 ifitparamsA:InitialFitParameters, ifitparamsB:InitialFitParameters, wavelength, times,
-                                broadening_function_smooth_sigma=4.0, number_of_parallel_jobs=4,
-                                bf_velocity_span=381, convergence_limit=1E-5, iteration_limit=10,
-                                RV_guess_collection=None, plot=True, period=None):
-    # TODO: Implement that they can have separate smoothing parameters
+                                number_of_parallel_jobs=4, bf_velocity_span=381, convergence_limit=1E-5,
+                                iteration_limit=10, RV_guess_collection=None, plot=True, period=None):
     # Calculate initial guesses for radial velocity values
     if RV_guess_collection is None:
         RVs = radial_velocities_of_multiple_spectra(flux_collection_inverted, flux_templateA_inverted, delta_v,
-                                                    ifitparamsA, ifitparamsB, broadening_function_smooth_sigma,
-                                                    number_of_parallel_jobs, bf_velocity_span)
+                                                    ifitparamsA, ifitparamsB, number_of_parallel_jobs, bf_velocity_span)
         RV_collection_A, RV_collection_B = RVs[0], RVs[1]
     else:
         RV_collection_A, RV_collection_B = RV_guess_collection[:, 0], RV_guess_collection[:, 1]
@@ -229,21 +231,39 @@ def spectral_separation_routine(flux_collection_inverted, flux_templateA_inverte
     # Iterative loop that repeatedly separates the spectra from each other in order to calculate new RVs (Gonzales 2005)
     iterations = 0
     while True:
+        RMS_A, RMS_B = -RV_collection_A, -RV_collection_B
+
         separated_flux_A, separated_flux_B = separate_component_spectra(flux_collection_inverted, RV_collection_A,
                                                                         RV_collection_B, delta_v, convergence_limit)
 
-        RV_collection_A, RV_collection_B \
+        RV_collection_A, RV_collection_B, (fits_A, fits_B) \
             = recalculate_RVs(flux_collection_inverted, separated_flux_A, separated_flux_B, RV_collection_A,
                               RV_collection_B, flux_templateA_inverted, flux_templateB_inverted, delta_v, ifitparamsA,
-                              ifitparamsB, broadening_function_smooth_sigma, bf_velocity_span, f4_ax1, f5_ax1)
+                              ifitparamsB, bf_velocity_span, f4_ax1, f5_ax1)
 
         if plot:
             plot_ssr_iteration(f1_ax1, f1_ax2, f1_ax3, f2_ax1, f3_ax1, f3_ax2, separated_flux_A, separated_flux_B,
                                wavelength, flux_templateA_inverted, flux_templateB_inverted, RV_collection_A,
                                RV_collection_B, times, period, flux_collection_inverted)
 
+        # Average vsini values for future fit guess and limit allowed fit area
+        vsini_A, vsini_B = np.empty(shape=fits_A.shape), np.empty(shape=fits_B.shape)
+        for i in range(0, vsini_A.size):
+            _, _, vsini_A[i], _, _, _ = get_fit_parameter_values(fits_A[i].params)
+            _, _, vsini_B[i], _, _, _ = get_fit_parameter_values(fits_B[i].params)
+        ifitparamsA.vsini = np.mean(vsini_A)
+        ifitparamsB.vsini = np.mean(vsini_B)
+        ifitparamsA.vsini_vary_limit = 0.3
+        ifitparamsB.vsini_vary_limit = 0.3
+
         iterations += 1
+        RMS_A += RV_collection_A
+        RMS_B += RV_collection_B
+        if np.sum(RMS_A**2) < convergence_limit and np.sum(RMS_B**2) < convergence_limit:
+            print('Spectral separation routine terminates.')
+            break
         if iterations >= iteration_limit:
+            warnings.warn(f'RV convergence limit of {convergence_limit} not reached in {iterations} iterations.')
             print('Spectral separation routine terminates.')
             break
     return RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B

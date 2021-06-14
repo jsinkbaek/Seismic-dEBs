@@ -134,14 +134,23 @@ def fitting_routine_rotational_broadening_profile(velocities, broadening_functio
     weight_function_values = weight_function(velocities, broadening_function_values, ifitparams.velocity_fit_width,
                                              ifitparams.RV)
     peak_idx = np.argmax(broadening_function_values*weight_function_values)
-    params.add('amplitude', value=broadening_function_values[peak_idx])
+    params.add('amplitude', value=broadening_function_values[peak_idx], min=0.0)
     if ifitparams.RV is None:
-        params.add('radial_velocity_cm', value=velocities[peak_idx])
+        params.add('radial_velocity_cm', value=velocities[peak_idx],
+                   min=velocities[peak_idx]-ifitparams.velocity_fit_width,
+                   max=velocities[peak_idx]+ifitparams.velocity_fit_width)
     else:
-        params.add('radial_velocity_cm', value=ifitparams.RV)
-    params.add('vsini', value=ifitparams.vsini, vary=ifitparams.vary_vsini)
+        params.add('radial_velocity_cm', value=ifitparams.RV, min=ifitparams.RV-ifitparams.velocity_fit_width,
+                   max=ifitparams.RV+ifitparams.velocity_fit_width)
+    if ifitparams.vsini_vary_limit is not None:
+        params.add('vsini', value=ifitparams.vsini, vary=ifitparams.vary_vsini,
+                   min=ifitparams.vsini - ifitparams.vsini*ifitparams.vsini_vary_limit,
+                   max=ifitparams.vsini + ifitparams.vsini*ifitparams.vsini_vary_limit)
+    else:
+        params.add('vsini', value=ifitparams.vsini, vary=ifitparams.vary_vsini)
     params.add('gaussian_width', value=gaussian_width, vary=False)
-    params.add('continuum_constant', value=0.0)
+    params.add('continuum_constant', value=0.0, min=np.min(broadening_function_values),
+               max=np.max(broadening_function_values))
     params.add('limbd_coef', value=ifitparams.limbd_coef, vary=ifitparams.vary_limbd_coef)
 
     fit = lmfit.minimize(compare_func, params, args=(velocities, broadening_function_values, weight_function_values),

@@ -1,4 +1,5 @@
 15162 is star ID in the photometry described in Brogaard et al. (2012) which can be found online.
+V56
 
 The 13 txt files contain spectra from FLAMES/GIRAFFE in two-coloumn format giving wavelength and normalised flux. 
 The table below gives the BJC and barycentric RV correction corresponding to each of these spectra.

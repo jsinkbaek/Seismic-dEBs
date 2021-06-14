@@ -72,10 +72,12 @@ def resample_to_equal_velocity_steps(wavelength, delta_v, flux=None, wavelength_
             for i in range(0, len(flux)):
                 flux_interpolator = interp1d(wavelength[i], flux[i], kind='linear')
                 flux_resampled_collection[:, i] = flux_interpolator(wavelength_resampled)
+                # flux_resampled_collection[:, i] = np.interp(wavelength_resampled, wavelength[i], flux[i])
             return wavelength_resampled, flux_resampled_collection
         elif isinstance(flux, np.ndarray):
             flux_interpolator = interp1d(wavelength, flux, kind='linear')
             flux_resampled = flux_interpolator(wavelength_resampled)
+            # flux_resampled = np.interp(wavelength_resampled, wavelength, flux)
             return wavelength_resampled, flux_resampled
         else:
             raise ValueError("flux is neither a list (of arrays), an array, or None.")

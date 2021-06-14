@@ -24,10 +24,10 @@ observatory_location = EarthLocation.of_site("lapalma")
 observatory_name = "lapalma"
 stellar_target = "kic8430105"
 wavelength_normalization_limit = (4200, 9600)
-wavelength_RV_limit = (5000, 6000)
+wavelength_RV_limit = (5200, 5700)
 load_data = True      # Defines if normalized spectrum should be loaded from earlier, or done with AFS_algorithm
 #  afs_exclude_list = ['FIBj010048_step011_merge.fits', 'FIDi130112_step011_merge.fits', 'FIDh160100_step011_merge.fits', 'FIBi240080_step011_merge.fits', 'FIBi300038_step011_merge.fits', 'FIBi230047_step011_merge.fits', 'FIBk030043_step011_merge.fits', 'FIDi080098_step011_merge.fits', 'FIBj030100_step011_merge.fits', 'FIBk050063_step011_merge.fits', 'FIBl060068_step011_merge.fits', 'FIBj150080_step011_merge.fits', 'FIDi090065_step011_merge.fits', 'FIBj040099_step011_merge.fits', 'FIBl010114_step011_merge.fits', 'FIBk060011_step011_merge.fits', 'FIBk140069_step011_merge.fits', 'FIBi290054_step011_merge.fits', 'FIBk230070_step011_merge.fits']
-afs_exclude_list = ['FIBl060068_step011_merge']
+afs_exclude_list = ['FIBl060068_step011_merge.fits']
 delta_v = 1.0          # interpolation resolution for spectrum in km/s
 speed_of_light = scc.c / 1000    # in km/s
 estimate_RVb_from_RVa = True        # defines if a guess on RVb should be made in case it cannot be picked up during
@@ -37,7 +37,7 @@ mass_B_estimate = 0.83
 system_RV_estimate = 16.053
 orbital_period_estimate = 63.33  # only for plotting
 
-# # Stellar parameter estimates (important for limbd) # #
+# # Stellar parameter estimates (important for limb darkening calculation) # #
 Teff_A, Teff_B = 5042, 5621
 logg_A, logg_B = 2.78, 4.58
 MH_A  , MH_B   = -0.49, -0.49
@@ -46,17 +46,19 @@ mTur_A, mTur_B = 2.0, 2.0
 # # Initial fit parameters for rotational broadening function fit # #
 limbd_A = estimate_linear_limbd(wavelength_RV_limit, logg_A, Teff_A, MH_A, mTur_A, loc='Data/tables/atlasco.dat')
 limbd_B = estimate_linear_limbd(wavelength_RV_limit, logg_B, Teff_B, MH_B, mTur_B, loc='Data/tables/atlasco.dat')
-ifitpar_A = InitialFitParameters(vsini_guess=1.0, spectral_resolution=60000, velocity_fit_width=100, limbd_coef=limbd_A)
-ifitpar_B = InitialFitParameters(vsini_guess=1.0, spectral_resolution=60000, velocity_fit_width=10, limbd_coef=limbd_B)
+ifitpar_A = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=100, limbd_coef=limbd_A,
+                                 smooth_sigma=3.0)
+ifitpar_B = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=25, limbd_coef=limbd_B,
+                                 smooth_sigma=4.0)
 
 # # Template Spectra # #
 template_spectrum_path_A = 'Data/template_spectra/5000_20_m05p00.ms.fits'
 template_spectrum_path_B = 'Data/template_spectra/5500_45_m05p00.ms.fits'
 
 # # Broadening function and radial velocity parameters # #
-bf_smooth_sigma = 4.0
 number_of_parallel_jobs = 4     # for initial RV guess fits
 bf_velocity_span = 250          # km/s
+
 
 # # Prepare collection lists and arrays # #
 flux_collection_list = []
@@ -169,7 +171,7 @@ flux_template_B_inverted = 1 - flux_template_B
 # # Perform barycentric corrections # #
 for i in range(0, flux_collection_inverted[0, :].size):
     flux_collection_inverted[:, i] = ssr.shift_spectrum(flux_collection_inverted[:, i],
-                                                        -bc_rv_cor[i]-system_RV_estimate, delta_v)
+                                                        bc_rv_cor[i]-system_RV_estimate, delta_v)
 
 
 # # Limit data-set to specified area (wavelength_RV_limit) # #
@@ -192,14 +194,14 @@ plt.figure(figsize=(16, 9))
 for i in range(0, flux_collection_inverted[0, :].size):
     plt.plot(wavelength, 1-0.05*i -(flux_collection_inverted[:, i]*0.025))
     plt.plot(wavelength, np.ones(shape=wavelength.shape)-0.05*i, '--', color='grey', linewidth=0.5)
+plt.xlim([4600, 6400])
 plt.xlabel('Wavelength [Å]')
 plt.show(block=True)
 
 # # Calculate broadening function RVs to use as initial guesses # #
 RV_guesses_A, RV_guesses_B, _ = \
     cRV.radial_velocities_of_multiple_spectra(flux_collection_inverted, flux_template_A_inverted, delta_v, ifitpar_A,
-                                              ifitpar_B, bf_smooth_sigma, number_of_parallel_jobs, bf_velocity_span,
-                                              plot=False)
+                                              ifitpar_B, number_of_parallel_jobs, bf_velocity_span, plot=False)
 RV_guess_collection = np.empty((RV_guesses_A.size, 2))
 RV_guess_collection[:, 0] = RV_guesses_A
 if estimate_RVb_from_RVa:
@@ -211,9 +213,9 @@ RV_guess_collection[:, 1] = RV_guesses_B
 # # Separate component spectra and calculate RVs iteratively # #
 RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B = \
     ssr.spectral_separation_routine(flux_collection_inverted, flux_template_A_inverted, flux_template_B_inverted,
-                                    delta_v, ifitpar_A, ifitpar_B, wavelength, bjdtdb, bf_smooth_sigma,
-                                    period=orbital_period_estimate, bf_velocity_span=bf_velocity_span,
-                                    RV_guess_collection=RV_guess_collection)
+                                    delta_v, ifitpar_A, ifitpar_B, wavelength, bjdtdb, period=orbital_period_estimate,
+                                    bf_velocity_span=bf_velocity_span, RV_guess_collection=RV_guess_collection,
+                                    convergence_limit=1E-7)
 plt.show(block=True)
 
 # # Plot results # #

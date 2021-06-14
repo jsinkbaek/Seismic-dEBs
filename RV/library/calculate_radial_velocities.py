@@ -9,16 +9,18 @@ def radial_velocity_from_broadening_function(flux_inverted, broadening_function_
                                              ifitparamsA:InitialFitParameters, ifitparamsB:InitialFitParameters):
     BFsvd = copy(broadening_function_template)
     BFsvd.spectrum = flux_inverted
+    BFsvd.smooth_sigma = ifitparamsA.bf_smooth_sigma
 
-    # Create Broadening Function for Giant star
+    # Create Broadening Function for star A
     BFsvd.solve()
     BFsvd.smooth()
 
     # Fit rotational broadening function profile to Giant peak
     fit_A, model_values_A = BFsvd.fit_rotational_profile(ifitparamsA)
 
-    # Create Broadening Function for Main Sequence star
+    # Create Broadening Function for star B
     bf, bf_smooth = BFsvd.bf, BFsvd.bf_smooth
+    BFsvd.smooth_sigma = ifitparamsB.bf_smooth_sigma
     BFsvd.bf = BFsvd.bf - model_values_A        # subtract model for giant
     BFsvd.smooth()
 
@@ -34,12 +36,11 @@ def radial_velocity_from_broadening_function(flux_inverted, broadening_function_
 
 def radial_velocities_of_multiple_spectra(flux_collection_inverted, flux_template_inverted, delta_v,
                                           ifitparamsA:InitialFitParameters, ifitparamsB:InitialFitParameters,
-                                          broadening_function_smooth_sigma=4.0, number_of_parallel_jobs=4,
-                                          bf_velocity_span=381, plot=False):
+                                          number_of_parallel_jobs=4, bf_velocity_span=381, plot=False):
     n_spectra = flux_collection_inverted[0, :].size
     broadening_function_template = BroadeningFunction(flux_collection_inverted[:, 0], flux_template_inverted,
                                                       bf_velocity_span, delta_v)
-    broadening_function_template.smooth_sigma = broadening_function_smooth_sigma
+    broadening_function_template.smooth_sigma = ifitparamsA.bf_smooth_sigma
 
     # Arguments for parallel job
     arguments = (broadening_function_template, ifitparamsA, ifitparamsB)

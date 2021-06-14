@@ -153,7 +153,7 @@ class BroadeningFunction:
         self.__spectrum = new_value
 
     def __copy__(self):
-        new_copy = type(self)(self.spectrum, self.template_spectrum, self.span, self.dv, copy=True)
+        new_copy = type(self)(self.spectrum, self.template_spectrum, self.velocity_span, self.dv, self.span, copy=True)
         new_copy.svd = self.svd
         new_copy.bf = self.bf
         new_copy.bf_smooth = self.bf_smooth
