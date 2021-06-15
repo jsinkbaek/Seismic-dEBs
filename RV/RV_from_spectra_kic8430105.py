@@ -26,8 +26,7 @@ stellar_target = "kic8430105"
 wavelength_normalization_limit = (4200, 9600)
 wavelength_RV_limit = (5300, 5700)
 load_data = True      # Defines if normalized spectrum should be loaded from earlier, or done with AFS_algorithm
-#  afs_exclude_list = ['FIBj010048_step011_merge.fits', 'FIDi130112_step011_merge.fits', 'FIDh160100_step011_merge.fits', 'FIBi240080_step011_merge.fits', 'FIBi300038_step011_merge.fits', 'FIBi230047_step011_merge.fits', 'FIBk030043_step011_merge.fits', 'FIDi080098_step011_merge.fits', 'FIBj030100_step011_merge.fits', 'FIBk050063_step011_merge.fits', 'FIBl060068_step011_merge.fits', 'FIBj150080_step011_merge.fits', 'FIDi090065_step011_merge.fits', 'FIBj040099_step011_merge.fits', 'FIBl010114_step011_merge.fits', 'FIBk060011_step011_merge.fits', 'FIBk140069_step011_merge.fits', 'FIBi290054_step011_merge.fits', 'FIBk230070_step011_merge.fits']
-afs_exclude_list = ['FIBl060068_step011_merge.fits']
+file_exclude_list = ['FIBl060068_step011_merge.fits']
 delta_v = 1.0          # interpolation resolution for spectrum in km/s
 speed_of_light = scc.c / 1000    # in km/s
 estimate_RVb_from_RVa = True        # defines if a guess on RVb should be made in case it cannot be picked up during
@@ -44,7 +43,7 @@ MH_A  , MH_B   = -0.49, -0.49
 mTur_A, mTur_B = 2.0, 2.0
 
 # # Initial fit parameters for rotational broadening function fit # #
-bf_velocity_span=250        # broadening function span in velocity space
+bf_velocity_span=250        # broadening function span in velocity space, should be the same for both components
 limbd_A = estimate_linear_limbd(wavelength_RV_limit, logg_A, Teff_A, MH_A, mTur_A, loc='Data/tables/atlasco.dat')
 limbd_B = estimate_linear_limbd(wavelength_RV_limit, logg_B, Teff_B, MH_B, mTur_B, loc='Data/tables/atlasco.dat')
 ifitpar_A = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=100, limbd_coef=limbd_A,
@@ -69,7 +68,7 @@ DEC_array = np.array([])
 
 # # # Load fits files, collect and normalize data # # #
 for filename in os.listdir(data_path):
-    if 'merge.fits' in filename and '.lowSN' not in filename and filename not in afs_exclude_list:
+    if 'merge.fits' in filename and '.lowSN' not in filename and filename not in file_exclude_list:
         # Load observation
         wavelength, flux, date, ra, dec = spf.load_program_spectrum(data_path+filename)
         date_array = np.append(date_array, date)
