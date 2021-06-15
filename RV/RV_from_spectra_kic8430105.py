@@ -15,7 +15,6 @@ import matplotlib.pyplot as plt
 
 
 # # # # Set variables for script # # # #
-# matplotlib.use('Qt5Agg')
 plt.ion()
 data_path = 'Data/unprocessed/NOT/KIC8430105/'
 data_out_path = 'Data/processed/NOT/KIC8430105/'
@@ -23,8 +22,10 @@ data_out_path = 'Data/processed/NOT/KIC8430105/'
 observatory_location = EarthLocation.of_site("lapalma")
 observatory_name = "lapalma"
 stellar_target = "kic8430105"
-wavelength_normalization_limit = (4200, 9600)
-wavelength_RV_limit = (5300, 5700)
+wavelength_normalization_limit = (4200, 9600)   # Ångström, limit to data before performing continuum normalization
+wavelength_RV_limit = (4700, 5700)              # Ångström, the actual spectrum area used for analysis
+wavelength_buffer_size = 50                     # Ångström, padding included at ends of spectra. Useful when doing
+                                                # wavelength shifts with np.roll()
 load_data = True      # Defines if normalized spectrum should be loaded from earlier, or done with AFS_algorithm
 file_exclude_list = ['FIBl060068_step011_merge.fits']
 delta_v = 1.0          # interpolation resolution for spectrum in km/s
@@ -152,7 +153,6 @@ flux_template_A = flux_template_A[0, :]     # continuum normalized spectrum only
 wavelength_template_B, flux_template_B = spf.load_template_spectrum(template_spectrum_path_B)
 flux_template_B = flux_template_B[0, :]
 
-
 # # Resample to same wavelength grid, equi-spaced in velocity space # #
 wavelength, flux_collection_array = spf.resample_to_equal_velocity_steps(wavelength_collection_list, delta_v,
                                                                          flux_collection_list)
@@ -174,12 +174,18 @@ for i in range(0, flux_collection_inverted[0, :].size):
 
 
 # # Limit data-set to specified area (wavelength_RV_limit) # #
-selection_mask = (wavelength > wavelength_RV_limit[0]) & (wavelength < wavelength_RV_limit[1])
-wavelength = wavelength[selection_mask]
-flux_collection_inverted = flux_collection_inverted[selection_mask, :]
-flux_template_A_inverted = flux_template_A_inverted[selection_mask]
-flux_template_B_inverted = flux_template_B_inverted[selection_mask]
+selection_mask_unbuffered = (wavelength > wavelength_RV_limit[0]) & (wavelength < wavelength_RV_limit[1])
+selection_mask = (wavelength > wavelength_RV_limit[0] - wavelength_buffer_size) & \
+                 (wavelength < wavelength_RV_limit[1] + wavelength_buffer_size)
 
+wavelength_buffered = wavelength[selection_mask]
+flux_collection_inverted_buffered = flux_collection_inverted[selection_mask, :]
+flux_template_A_inverted_buffered = flux_template_A_inverted[selection_mask]
+flux_template_B_inverted_buffered = flux_template_B_inverted[selection_mask]
+flux_collection_inverted = flux_collection_inverted[selection_mask_unbuffered, :]
+flux_template_B_inverted = flux_template_B_inverted[selection_mask_unbuffered]
+flux_template_A_inverted = flux_template_A_inverted[selection_mask_unbuffered]
+wavelength = wavelength[selection_mask_unbuffered]
 
 # # Shorten spectra if uneven # #
 if np.mod(wavelength.size, 2) != 0.0:
@@ -191,6 +197,8 @@ if np.mod(wavelength.size, 2) != 0.0:
 # # Plot all spectra # #
 plt.figure(figsize=(16, 9))
 for i in range(0, flux_collection_inverted[0, :].size):
+    plt.plot(wavelength_buffered, 1-0.05*i -(flux_collection_inverted_buffered[:, i]*0.025), '--', color='grey',
+             linewidth=0.3)
     plt.plot(wavelength, 1-0.05*i -(flux_collection_inverted[:, i]*0.025))
     plt.plot(wavelength, np.ones(shape=wavelength.shape)-0.05*i, '--', color='grey', linewidth=0.5)
 plt.xlim([4600, 6400])
@@ -210,10 +218,12 @@ RV_guess_collection[:, 1] = RV_guesses_B
 
 
 # # Separate component spectra and calculate RVs iteratively # #
-RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B = \
-    ssr.spectral_separation_routine(flux_collection_inverted, flux_template_A_inverted, flux_template_B_inverted,
-                                    delta_v, ifitpar_A, ifitpar_B, wavelength, bjdtdb, period=orbital_period_estimate,
-                                    RV_guess_collection=RV_guess_collection, convergence_limit=1E-7)
+RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B, wavelength = \
+    ssr.spectral_separation_routine(flux_collection_inverted_buffered, flux_template_A_inverted_buffered,
+                                    flux_template_B_inverted_buffered, delta_v, ifitpar_A, ifitpar_B,
+                                    wavelength_buffered,  bjdtdb, period=orbital_period_estimate,
+                                    RV_guess_collection=RV_guess_collection, convergence_limit=1E-7,
+                                    wavelength_buffer_size=wavelength_buffer_size)
 plt.show(block=True)
 
 # # Plot results # #

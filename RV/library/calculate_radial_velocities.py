@@ -1,6 +1,6 @@
 from RV.library.broadening_function_svd import *
 from RV.library.rotational_broadening_function_fitting import get_fit_parameter_values
-from copy import copy, deepcopy
+from copy import copy
 from joblib import Parallel, delayed
 from RV.library.initial_fit_parameters import InitialFitParameters
 
