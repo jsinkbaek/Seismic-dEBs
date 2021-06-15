@@ -24,7 +24,7 @@ observatory_location = EarthLocation.of_site("lapalma")
 observatory_name = "lapalma"
 stellar_target = "kic8430105"
 wavelength_normalization_limit = (4200, 9600)
-wavelength_RV_limit = (5200, 5700)
+wavelength_RV_limit = (5300, 5700)
 load_data = True      # Defines if normalized spectrum should be loaded from earlier, or done with AFS_algorithm
 #  afs_exclude_list = ['FIBj010048_step011_merge.fits', 'FIDi130112_step011_merge.fits', 'FIDh160100_step011_merge.fits', 'FIBi240080_step011_merge.fits', 'FIBi300038_step011_merge.fits', 'FIBi230047_step011_merge.fits', 'FIBk030043_step011_merge.fits', 'FIDi080098_step011_merge.fits', 'FIBj030100_step011_merge.fits', 'FIBk050063_step011_merge.fits', 'FIBl060068_step011_merge.fits', 'FIBj150080_step011_merge.fits', 'FIDi090065_step011_merge.fits', 'FIBj040099_step011_merge.fits', 'FIBl010114_step011_merge.fits', 'FIBk060011_step011_merge.fits', 'FIBk140069_step011_merge.fits', 'FIBi290054_step011_merge.fits', 'FIBk230070_step011_merge.fits']
 afs_exclude_list = ['FIBl060068_step011_merge.fits']
@@ -48,8 +48,8 @@ limbd_A = estimate_linear_limbd(wavelength_RV_limit, logg_A, Teff_A, MH_A, mTur_
 limbd_B = estimate_linear_limbd(wavelength_RV_limit, logg_B, Teff_B, MH_B, mTur_B, loc='Data/tables/atlasco.dat')
 ifitpar_A = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=100, limbd_coef=limbd_A,
                                  smooth_sigma=3.0)
-ifitpar_B = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=25, limbd_coef=limbd_B,
-                                 smooth_sigma=4.0)
+ifitpar_B = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=15, limbd_coef=limbd_B,
+                                 smooth_sigma=5.5)
 
 # # Template Spectra # #
 template_spectrum_path_A = 'Data/template_spectra/5000_20_m05p00.ms.fits'

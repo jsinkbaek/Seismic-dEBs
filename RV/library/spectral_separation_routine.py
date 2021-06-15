@@ -130,9 +130,9 @@ def recalculate_RVs(flux_collection_inverted, separated_flux_A, separated_flux_B
 
         fits_A[i], fits_B[i] = model_A[0], model_B[0]
 
-        if plot_ax_A is not None and i < 10:
+        if plot_ax_A is not None and i < 20:
             update_bf_plot(plot_ax_A, model_A, i)
-        if plot_ax_B is not None and i < 10:
+        if plot_ax_B is not None and i < 20:
             update_bf_plot(plot_ax_B, model_B, i)
     return RV_collection_A, RV_collection_B, (fits_A, fits_B)
 
