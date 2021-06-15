@@ -98,9 +98,9 @@ def update_bf_plot(plot_ax, model, index):
 
 def recalculate_RVs(flux_collection_inverted, separated_flux_A, separated_flux_B, RV_collection_A, RV_collection_B,
                     flux_templateA_inverted, flux_templateB_inverted, delta_v, ifitparamsA:InitialFitParameters,
-                    ifitparamsB:InitialFitParameters, bf_velocity_span=381, plot_ax_A=None, plot_ax_B=None):
+                    ifitparamsB:InitialFitParameters, plot_ax_A=None, plot_ax_B=None):
     n_spectra = flux_collection_inverted[0, :].size
-    v_span = bf_velocity_span
+    v_span = ifitparamsA.bf_velocity_span
     BRsvd_template_A = BroadeningFunction(flux_collection_inverted[:, 0], flux_templateA_inverted, v_span, delta_v)
     BRsvd_template_B = BroadeningFunction(flux_collection_inverted[:, 0], flux_templateB_inverted, v_span, delta_v)
     BRsvd_template_A.smooth_sigma = ifitparamsA.bf_smooth_sigma
@@ -108,11 +108,11 @@ def recalculate_RVs(flux_collection_inverted, separated_flux_A, separated_flux_B
 
     if plot_ax_A is not None:
         plot_ax_A.clear()
-        plot_ax_A.set_xlim([-bf_velocity_span/2, +bf_velocity_span/2])
+        plot_ax_A.set_xlim([-v_span/2, +v_span/2])
         plot_ax_A.set_xlabel('Velocity shift [km/s]')
     if plot_ax_B is not None:
         plot_ax_B.clear()
-        plot_ax_B.set_xlim([-bf_velocity_span/2, +bf_velocity_span/2])
+        plot_ax_B.set_xlim([-v_span/2, +v_span/2])
         plot_ax_B.set_xlabel('Velocity shift [km/s]')
 
     fits_A = np.empty(shape=(n_spectra,), dtype=MinimizerResult)
@@ -211,16 +211,10 @@ def plot_ssr_iteration(f1_ax1, f1_ax2, f1_ax3, f2_ax1, f3_ax1, f3_ax2, separated
 
 
 def spectral_separation_routine(flux_collection_inverted, flux_templateA_inverted, flux_templateB_inverted, delta_v,
-                                ifitparamsA:InitialFitParameters, ifitparamsB:InitialFitParameters, wavelength, times,
-                                number_of_parallel_jobs=4, bf_velocity_span=381, convergence_limit=1E-5,
-                                iteration_limit=10, RV_guess_collection=None, plot=True, period=None):
-    # Calculate initial guesses for radial velocity values
-    if RV_guess_collection is None:
-        RVs = radial_velocities_of_multiple_spectra(flux_collection_inverted, flux_templateA_inverted, delta_v,
-                                                    ifitparamsA, ifitparamsB, number_of_parallel_jobs, bf_velocity_span)
-        RV_collection_A, RV_collection_B = RVs[0], RVs[1]
-    else:
-        RV_collection_A, RV_collection_B = RV_guess_collection[:, 0], RV_guess_collection[:, 1]
+                                ifitparamsA:InitialFitParameters, ifitparamsB:InitialFitParameters, wavelength,
+                                time_values, RV_guess_collection, convergence_limit=1E-5, iteration_limit=10, plot=True,
+                                period=None):
+    RV_collection_A, RV_collection_B = RV_guess_collection[:, 0], RV_guess_collection[:, 1]
 
     # Initialize plot figures
     if plot:
@@ -239,12 +233,12 @@ def spectral_separation_routine(flux_collection_inverted, flux_templateA_inverte
         RV_collection_A, RV_collection_B, (fits_A, fits_B) \
             = recalculate_RVs(flux_collection_inverted, separated_flux_A, separated_flux_B, RV_collection_A,
                               RV_collection_B, flux_templateA_inverted, flux_templateB_inverted, delta_v, ifitparamsA,
-                              ifitparamsB, bf_velocity_span, f4_ax1, f5_ax1)
+                              ifitparamsB, f4_ax1, f5_ax1)
 
         if plot:
             plot_ssr_iteration(f1_ax1, f1_ax2, f1_ax3, f2_ax1, f3_ax1, f3_ax2, separated_flux_A, separated_flux_B,
                                wavelength, flux_templateA_inverted, flux_templateB_inverted, RV_collection_A,
-                               RV_collection_B, times, period, flux_collection_inverted)
+                               RV_collection_B, time_values, period, flux_collection_inverted)
 
         # Average vsini values for future fit guess and limit allowed fit area
         vsini_A, vsini_B = np.empty(shape=fits_A.shape), np.empty(shape=fits_B.shape)

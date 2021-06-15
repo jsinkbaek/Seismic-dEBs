@@ -44,20 +44,20 @@ MH_A  , MH_B   = -0.49, -0.49
 mTur_A, mTur_B = 2.0, 2.0
 
 # # Initial fit parameters for rotational broadening function fit # #
+bf_velocity_span=250        # broadening function span in velocity space
 limbd_A = estimate_linear_limbd(wavelength_RV_limit, logg_A, Teff_A, MH_A, mTur_A, loc='Data/tables/atlasco.dat')
 limbd_B = estimate_linear_limbd(wavelength_RV_limit, logg_B, Teff_B, MH_B, mTur_B, loc='Data/tables/atlasco.dat')
 ifitpar_A = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=100, limbd_coef=limbd_A,
-                                 smooth_sigma=3.0)
+                                 smooth_sigma=3.0, bf_velocity_span=bf_velocity_span)
 ifitpar_B = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=15, limbd_coef=limbd_B,
-                                 smooth_sigma=5.5)
+                                 smooth_sigma=5.5, bf_velocity_span=bf_velocity_span)
 
 # # Template Spectra # #
 template_spectrum_path_A = 'Data/template_spectra/5000_20_m05p00.ms.fits'
 template_spectrum_path_B = 'Data/template_spectra/5500_45_m05p00.ms.fits'
 
-# # Broadening function and radial velocity parameters # #
+# # Computation parameters # #
 number_of_parallel_jobs = 4     # for initial RV guess fits
-bf_velocity_span = 250          # km/s
 
 
 # # Prepare collection lists and arrays # #
@@ -201,7 +201,7 @@ plt.show(block=True)
 # # Calculate broadening function RVs to use as initial guesses # #
 RV_guesses_A, RV_guesses_B, _ = \
     cRV.radial_velocities_of_multiple_spectra(flux_collection_inverted, flux_template_A_inverted, delta_v, ifitpar_A,
-                                              ifitpar_B, number_of_parallel_jobs, bf_velocity_span, plot=False)
+                                              ifitpar_B, number_of_parallel_jobs, plot=False)
 RV_guess_collection = np.empty((RV_guesses_A.size, 2))
 RV_guess_collection[:, 0] = RV_guesses_A
 if estimate_RVb_from_RVa:
@@ -214,8 +214,7 @@ RV_guess_collection[:, 1] = RV_guesses_B
 RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B = \
     ssr.spectral_separation_routine(flux_collection_inverted, flux_template_A_inverted, flux_template_B_inverted,
                                     delta_v, ifitpar_A, ifitpar_B, wavelength, bjdtdb, period=orbital_period_estimate,
-                                    bf_velocity_span=bf_velocity_span, RV_guess_collection=RV_guess_collection,
-                                    convergence_limit=1E-7)
+                                    RV_guess_collection=RV_guess_collection, convergence_limit=1E-7)
 plt.show(block=True)
 
 # # Plot results # #
