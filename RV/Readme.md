@@ -37,7 +37,7 @@ Inspiration is taken from <https://ui.adsabs.harvard.edu/abs/2019AJ....157..243X
   - [*linear_limbd_coeff_estimate.py*](library/linear_limbd_coeff_estimate.py). Convenience functions to estimate a linear limb darkening coefficient for a spectrum by table look-up and interpolation. Not essential, but useful as a linear limb darkening coefficient should be provided to the rotational fitting profile.
 
 #### Data folder
-The [Data folder](Data/) is for storing unprocessed and processed data related to the analysis, as well as template spectra to use in the spectral separation. Some functions (like in *AFS_algorithm.py*) automatically saves to specific folders, which need to be available. Otherwise, most of the data saving and loading is done and designated directly in the script, so paths and folder structure must be specified manually there. You can look at the example script for an idea of how it can be done.
+The [Data folder](Data/) is for storing unprocessed and processed data related to the analysis, as well as template spectra to use in the spectral separation. Some functions (like in *AFS_algorithm.py*) automatically saves to specific folders, which need to be available. Otherwise, most of the data saving and loading is done and designated directly in the script, so paths and folder structure must be specified manually there. You can look at the example script below for an idea of how it can be done.
 
 #### Scripts and implemenation
 An example implementation of the code is provided in the script [*RV_from_spectra_kic8430105.py*](RV_from_spectra_kic8430105.py), which examines the system KIC8430105 housing an RGB star with about ~95-98% of the system luminosity, and an MS star with ~2-3% of the luminosity. 
