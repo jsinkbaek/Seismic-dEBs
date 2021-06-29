@@ -31,7 +31,7 @@ See *Kaluzny 2006: Eclipsing Binaries in the Open Cluster NGC 2243 II. Absolute 
 
 The file *spectrum_processing_functions.py* provides a lot of general functions that are used for multiple different purposes, all relating to general work with spectroscopic data.
 
-Additionally, the following library files provide functionality for other purposes:
+Additionally, the following library files provide functionality for other than core purposes:
   - *AFS_algorithm.py*. Provides some functions for continuum normalization of spectra by fitting to the upper boundary of an alpha shape (polygon) around the data.
 Inspiration is taken from <https://ui.adsabs.harvard.edu/abs/2019AJ....157..243X/abstract>. However, the current implementation here is designed for merged spectra, not un-merged like in the paper.
   - *linear_limbd_coeff_estimate.py*. Convenience functions to estimate a linear limb darkening coefficient for a spectrum by table look-up and interpolation. Not essential, but useful as a linear limb darkening coefficient should be provided to the rotational fitting profile.
