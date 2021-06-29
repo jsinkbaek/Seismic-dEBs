@@ -395,6 +395,7 @@ if True:
 
 mask = ~np.isnan(m) & ~np.isnan(m_err) & ~np.isnan(time_p12) & ~np.isnan(phase_p12)
 m = m[mask]
+flux_p12 = flux_p12[mask]
 time_p12 = time_p12[mask]
 phase_p12 = phase_p12[mask]
 m_err = m_err[mask]
@@ -403,6 +404,7 @@ print(m.shape)
 # Cut fit data down to bone
 mask = ((phase_p12 > 0.117) & (phase_p12 < 0.156)) | ((phase_p12 > 0.457) & (phase_p12 < 0.500))
 m = m[mask]
+flux_p12 = flux_p12[mask]
 time_p12 = time_p12[mask]
 phase_p12 = phase_p12[mask]
 m_err = m_err[mask]
@@ -431,3 +433,7 @@ save_data[:, 0] = time_p12
 save_data[:, 1] = m
 save_data[:, 2] = m_err
 np.savetxt('Data/processed/lcmag_kepler_ltf.txt', save_data)
+save_data[:, 1] = flux_p12
+save_data[:, 2] = np.ones(flux_p12.shape) * error
+np.savetxt('Data/processed/lcflux_kepler_ltf.txt', save_data)
+

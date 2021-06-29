@@ -110,6 +110,82 @@ def interpolate_to_equal_velocity_steps(wavelength_collector_list, flux_collecto
     return wavelength, flux_collector_array
 
 
+def limit_wavelength_interval(wavelength_limits:tuple, wavelength:np.ndarray, flux:np.ndarray, buffer_size=None,
+                              buffer_mask=None, even_length=False):
+    selection_mask = (wavelength > wavelength_limits[0]) & (wavelength < wavelength_limits[1])
+    selection_mask_buffered = np.zeros(wavelength.shape, dtype=bool)
+    if buffer_size is not None and buffer_mask is None:
+        selection_mask_buffered = (wavelength > wavelength_limits[0] - buffer_size) & \
+                                  (wavelength < wavelength_limits[1] + buffer_size)
+        buffer_mask = selection_mask_buffered & \
+                        ((wavelength < wavelength_limits[0]) | (wavelength > wavelength_limits[1]))
+    elif buffer_mask is not None:
+        selection_mask_buffered = selection_mask | buffer_mask
+
+    wavelength_new = wavelength[selection_mask]
+    if flux.ndim == 1:
+        flux_new = flux[selection_mask]
+    elif flux.ndim == 2:
+        flux_new = flux[selection_mask, :]
+    else:
+        raise ValueError('flux has wrong number of dimensions. Should be either 1 or 2.')
+
+    if buffer_mask is not None:
+        wavelength_buffered = wavelength[selection_mask_buffered]
+        if flux.ndim == 1:
+            flux_buffered = flux[selection_mask_buffered]
+        elif flux.ndim == 2:
+            flux_buffered = flux[selection_mask_buffered, :]
+        else:
+            raise ValueError('flux has wrong number of dimensions. Should be either 1 or 2.')
+
+    if even_length is True:
+        if np.mod(wavelength_new.size, 2) != 0.0:
+            wavelength_new = wavelength_new[:-1]
+            if flux_new.ndim == 1:
+                flux_new = flux_new[:-1]
+            else:
+                flux_new = flux_new[:-1, :]
+        if np.mod(wavelength_buffered.size, 2) != 0.0:
+            wavelength_buffered = wavelength_buffered[:-1]
+            if flux_buffered.ndim == 1:
+                flux_buffered = flux_buffered[:-1]
+            else:
+                flux_buffered = flux_buffered[:-1, :]
+            if np.mod(wavelength.size, 2) != 0.0:
+                raise ValueError('Input wavelength must be even length for even buffer_mask.')
+            else:
+                intermediate_array = wavelength_buffered[np.in1d(wavelength_buffered, wavelength_new, invert=True)]
+                buffer_mask = np.in1d(wavelength, intermediate_array)
+
+    if buffer_mask is not None:
+        buffer_mask_new = np.in1d(wavelength_buffered, wavelength_new, invert=True)
+        return (wavelength_new, flux_new), (wavelength_buffered, flux_buffered, buffer_mask_new, buffer_mask)
+    else:
+        return wavelength_new, flux_new
+
+
+def make_spectrum_even(wavelength:np.ndarray, flux:np.ndarray or list):
+    if np.mod(wavelength.size, 2) != 0.0:
+        wavelength = wavelength[:-1]
+        if isinstance(flux, np.ndarray):
+            if flux.ndim == 1:
+                flux = flux[:-1]
+            elif flux.ndim == 2:
+                flux = flux[:-1, :]
+            else:
+                raise ValueError('flux dimension must be 1 or 2.')
+        elif isinstance(flux, list):
+            for i in range(0, len(flux)):
+                if flux[i].ndim == 1:
+                    flux[i] = flux[i][:-1]
+                elif flux[i].ndim == 2:
+                    flux[i] = flux[i][:-1, :]
+                else:
+                    raise ValueError('flux[i] dimension must be 1 or 2.')
+    return wavelength, flux
+
+
 def moving_median_filter(flux, window=51):
     """
     Filters the data using a moving median filter. Useful to capture some continuum trends.

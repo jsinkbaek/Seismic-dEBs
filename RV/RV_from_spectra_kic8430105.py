@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 
 
 # # # # Set variables for script # # # #
+warnings.filterwarnings("ignore", category=UserWarning)
 plt.ion()
 data_path = 'Data/unprocessed/NOT/KIC8430105/'
 data_out_path = 'Data/processed/NOT/KIC8430105/'
@@ -23,9 +24,10 @@ observatory_location = EarthLocation.of_site("lapalma")
 observatory_name = "lapalma"
 stellar_target = "kic8430105"
 wavelength_normalization_limit = (4200, 9600)   # Ångström, limit to data before performing continuum normalization
-wavelength_RV_limit = (4700, 5700)              # Ångström, the actual spectrum area used for analysis
+wavelength_RV_limit = (5000, 5400)              # Ångström, the actual spectrum area used for analysis
 wavelength_buffer_size = 50                     # Ångström, padding included at ends of spectra. Useful when doing
                                                 # wavelength shifts with np.roll()
+wavelength_intervals_error_estimate = 75        # Ångström, size of the intervals used for error estimation on RVs
 load_data = True      # Defines if normalized spectrum should be loaded from earlier, or done with AFS_algorithm
 file_exclude_list = ['FIBl060068_step011_merge.fits']
 delta_v = 1.0          # interpolation resolution for spectrum in km/s
@@ -44,13 +46,13 @@ MH_A  , MH_B   = -0.49, -0.49
 mTur_A, mTur_B = 2.0, 2.0
 
 # # Initial fit parameters for rotational broadening function fit # #
-bf_velocity_span=250        # broadening function span in velocity space, should be the same for both components
+bf_velocity_span = 150        # broadening function span in velocity space, should be the same for both components
 limbd_A = estimate_linear_limbd(wavelength_RV_limit, logg_A, Teff_A, MH_A, mTur_A, loc='Data/tables/atlasco.dat')
 limbd_B = estimate_linear_limbd(wavelength_RV_limit, logg_B, Teff_B, MH_B, mTur_B, loc='Data/tables/atlasco.dat')
 ifitpar_A = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=100, limbd_coef=limbd_A,
-                                 smooth_sigma=3.0, bf_velocity_span=bf_velocity_span)
-ifitpar_B = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=15, limbd_coef=limbd_B,
-                                 smooth_sigma=5.5, bf_velocity_span=bf_velocity_span)
+                                 smooth_sigma=2.5, bf_velocity_span=bf_velocity_span)
+ifitpar_B = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=7.0, limbd_coef=limbd_B,
+                                 smooth_sigma=5.0, bf_velocity_span=bf_velocity_span)
 
 # # Template Spectra # #
 template_spectrum_path_A = 'Data/template_spectra/5000_20_m05p00.ms.fits'
@@ -58,6 +60,10 @@ template_spectrum_path_B = 'Data/template_spectra/5500_45_m05p00.ms.fits'
 
 # # Computation parameters # #
 number_of_parallel_jobs = 4     # for initial RV guess fits
+rv_lower_limit = 10.0           # lower limit for RV_A in order to include a spectrum in the spectral separation
+                                # (if lower, components are assumed to be mixed in BF, and left out to not contaminate)
+                                # This parameter is only useful when the systemic RV is well-known. Otherwise, set it to
+                                # 0.0.
 
 
 # # Prepare collection lists and arrays # #
@@ -172,27 +178,31 @@ for i in range(0, flux_collection_inverted[0, :].size):
     flux_collection_inverted[:, i] = ssr.shift_spectrum(flux_collection_inverted[:, i],
                                                         bc_rv_cor[i]-system_RV_estimate, delta_v)
 
+# # Shorten spectra if uneven # #
+wavelength, [flux_collection_inverted, flux_template_A_inverted, flux_template_B_inverted] = \
+    spf.make_spectrum_even(wavelength, [flux_collection_inverted, flux_template_A_inverted, flux_template_B_inverted])
+
 
 # # Limit data-set to specified area (wavelength_RV_limit) # #
-selection_mask_unbuffered = (wavelength > wavelength_RV_limit[0]) & (wavelength < wavelength_RV_limit[1])
-selection_mask = (wavelength > wavelength_RV_limit[0] - wavelength_buffer_size) & \
-                 (wavelength < wavelength_RV_limit[1] + wavelength_buffer_size)
+unbuffered_res, buffered_res = spf.limit_wavelength_interval(wavelength_RV_limit, wavelength, flux_collection_inverted,
+                                                             buffer_size=wavelength_buffer_size, even_length=True)
+(wavelength_new, flux_collection_inverted) = unbuffered_res
+(wavelength_buffered, flux_collection_inverted_buffered, buffer_mask_new, buffer_mask) = buffered_res
+# buffer_mask_new is for use with wavelength_buffered and flux_coll... buffer_mask is for use with input data
 
-wavelength_buffered = wavelength[selection_mask]
-flux_collection_inverted_buffered = flux_collection_inverted[selection_mask, :]
-flux_template_A_inverted_buffered = flux_template_A_inverted[selection_mask]
-flux_template_B_inverted_buffered = flux_template_B_inverted[selection_mask]
-flux_collection_inverted = flux_collection_inverted[selection_mask_unbuffered, :]
-flux_template_B_inverted = flux_template_B_inverted[selection_mask_unbuffered]
-flux_template_A_inverted = flux_template_A_inverted[selection_mask_unbuffered]
-wavelength = wavelength[selection_mask_unbuffered]
+unbuffered_res, buffered_res = spf.limit_wavelength_interval(wavelength_RV_limit, wavelength, flux_template_A_inverted,
+                                                             buffer_mask=buffer_mask, even_length=True)
+flux_template_A_inverted = unbuffered_res[1]
+flux_template_A_inverted_buffered = buffered_res[1]
 
-# # Shorten spectra if uneven # #
-if np.mod(wavelength.size, 2) != 0.0:
-    wavelength = wavelength[:-1]
-    flux_collection_inverted = flux_collection_inverted[:-1, :]
-    flux_template_A_inverted = flux_template_A_inverted[:-1]
-    flux_template_B_inverted = flux_template_B_inverted[:-1]
+unbuffered_res, buffered_res = spf.limit_wavelength_interval(wavelength_RV_limit, wavelength, flux_template_B_inverted,
+                                                             buffer_mask=buffer_mask, even_length=True)
+flux_template_B_inverted = unbuffered_res[1]
+flux_template_B_inverted_buffered = buffered_res[1]
+
+wavelength = wavelength_new
+buffer_mask = buffer_mask_new
+
 
 # # Plot all spectra # #
 plt.figure(figsize=(16, 9))
@@ -221,14 +231,50 @@ RV_guess_collection[:, 1] = RV_guesses_B
 RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B, wavelength = \
     ssr.spectral_separation_routine(flux_collection_inverted_buffered, flux_template_A_inverted_buffered,
                                     flux_template_B_inverted_buffered, delta_v, ifitpar_A, ifitpar_B,
-                                    wavelength_buffered,  bjdtdb, period=orbital_period_estimate,
-                                    RV_guess_collection=RV_guess_collection, convergence_limit=1E-7,
-                                    wavelength_buffer_size=wavelength_buffer_size)
+                                    wavelength_buffered,  bjdtdb, period=orbital_period_estimate, iteration_limit=10,
+                                    RV_guess_collection=RV_guess_collection, convergence_limit=5E-2,
+                                    buffer_mask=buffer_mask, rv_lower_limit=rv_lower_limit,
+                                    suppress_print='scs', plot=True)
 plt.show(block=True)
 
+# # Calculate uncertainties by splitting up into smaller intervals # #
+RV_collection = RV_guess_collection
+RV_collection[:, 0] = RV_collection_A
+RV_collection[:, 1] = RV_guesses_B
+RV_errors_A, RV_errors_B = ssr.estimate_errors(100, flux_collection_inverted_buffered, flux_template_A_inverted_buffered,
+                                               flux_template_B_inverted_buffered, delta_v, ifitpar_A, ifitpar_B,
+                                               wavelength_buffered,  bjdtdb, period=orbital_period_estimate,
+                                               iteration_limit=10, RV_collection=RV_collection, convergence_limit=5E-2,
+                                               wavelength_buffer_size=wavelength_buffer_size,
+                                               rv_lower_limit=rv_lower_limit, suppress_print='scs', plot=True)
+
+print('RV errors')
+print(RV_errors_A)
+print(RV_errors_B)
+
 # # Plot results # #
+
+print(RV_collection_A.size)
+print(RV_errors_A.size)
 plt.figure()
-plt.plot(bjdtdb-245000, RV_collection_A, 'r*')
-plt.plot(bjdtdb-245000, RV_collection_B, 'b*')
+plt.errorbar(np.mod(bjdtdb, orbital_period_estimate)/orbital_period_estimate, RV_collection_A, yerr=RV_errors_A, fmt='r*')
+plt.errorbar(np.mod(bjdtdb, orbital_period_estimate)/orbital_period_estimate, RV_collection_B, yerr=RV_errors_B, fmt='b*')
 plt.show(block=True)
+
+# # Save result # #
+save_data = np.empty((RV_collection_A.size, 3))
+save_data[:, 0] = bjdtdb
+save_data[:, 1] = RV_collection_A
+save_data[:, 2] = RV_errors_A
+np.savetxt('Data/processed/RV_results/rvA_not_8430105_3.txt', save_data)
+
+bad_data_mask = np.abs(RV_collection_A) < rv_lower_limit
+bjdtdb = bjdtdb[~bad_data_mask]
+RV_errors_B = RV_errors_B[~bad_data_mask]
+RV_collection_B = RV_collection_B[~bad_data_mask]
+save_data = np.empty((RV_collection_B.size, 3))
+save_data[:, 0] = bjdtdb
+save_data[:, 1] = RV_collection_B
+save_data[:, 2] = RV_errors_B
+np.savetxt('Data/processed/RV_results/rvB_not_8430105_3.txt', save_data)
 

@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import astropy.units as u, astropy.constants as c
 import astropy as ap
 from numpy.polynomial import Polynomial
+from copy import copy
 
 
 target = 'KIC8430105'
@@ -174,8 +175,8 @@ lc_norm = lc_norm1.append(lc_norm2)
 # print(int(coords[0][0]), int(coords[1][0]), int(coords[2][0]), int(coords[3][0]))
 # include1 = np.array(range(int(coords[0][0]), int(coords[1][0])))
 # include2 = np.array(range(int(coords[2][0]), int(coords[3][0])))
-include1 = np.array(range(0, 2230))
-include2 = np.array(range(10182, 12385))
+include1 = np.array(range(360, 1870))
+include2 = np.array(range(10682, 12385))
 include = np.append(include1, include2)
 mask2 = np.zeros(lc_norm.flux.shape, bool)
 mask2[include] = True
@@ -188,7 +189,7 @@ m = -2.5*np.log10(lc_norm.flux)
 # https://en.wikipedia.org/wiki/Propagation_of_uncertainty
 m_err = np.abs(-2.5/np.log(10) * lc_norm.flux_err/lc_norm.flux)
 
-lc_mag = lc_norm
+lc_mag = copy(lc_norm)
 lc_mag.flux = m
 lc_mag.flux_err = m_err
 lc_mag.errorbar(ylabel='Relative magnitude', fmt='k.', markersize=0.5, elinewidth=0.25)
@@ -201,4 +202,8 @@ save_data = np.zeros((lc_mag.flux.size, 3))
 save_data[:, 0] = lc_mag.time.value + time_correct
 save_data[:, 1] = lc_mag.flux
 save_data[:, 2] = lc_mag.flux_err
-np.savetxt('Data/processed/lcmag_tess.txt', save_data, header='Time\tMagnitude\tError', delimiter='\t')
+np.savetxt('Data/processed/lcmag_tess.txt', save_data, delimiter='\t')
+save_data[:, 0] = lc_norm.time.value + time_correct
+save_data[:, 1] = lc_norm.flux
+save_data[:, 2] = lc_norm.flux_err
+np.savetxt('Data/processed/lcflux_tess.txt', save_data, delimiter='\t')
