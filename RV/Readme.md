@@ -9,7 +9,7 @@ Author: Jeppe Sinkbæk Thomsen, Master's Thesis student at Aarhus University 202
  - matplotlib https://matplotlib.org/
  - joblib     https://joblib.readthedocs.io/en/latest/
  - lmfit      https://lmfit.github.io/lmfit-py/
- - localreg 0.3.1 https://pypi.org/project/localreg/
+ - localreg 0.3.1 https://pypi.org/project/localreg/   (for *AFS_algorithm.py* only)
  - descartes 1.1.0 https://pypi.org/project/descartes/  (for *AFS_algorithm.py* only)
  - alphashape 1.3.1 https://pypi.org/project/alphashape/ (for *AFS_algorithm.py* only)
 
