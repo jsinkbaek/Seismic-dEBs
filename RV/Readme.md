@@ -10,8 +10,8 @@ Dependencies:
  - joblib     https://joblib.readthedocs.io/en/latest/
  - lmfit      https://lmfit.github.io/lmfit-py/
  - localreg 0.3.1 https://pypi.org/project/localreg/
- - descartes 1.1.0 https://pypi.org/project/descartes/
- - alphashape 1.3.1 https://pypi.org/project/alphashape/
+ - descartes 1.1.0 https://pypi.org/project/descartes/  (for *AFS_algorithm.py* only)
+ - alphashape 1.3.1 https://pypi.org/project/alphashape/ (for *AFS_algorithm.py* only)
 
 
 The primary purpose of this code is radial velocity calculations for detached eclipsing binaries, specifically ones with a giant (luminous) and a main sequence (faint) component.
