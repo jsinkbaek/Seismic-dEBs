@@ -12,6 +12,7 @@ from RV.library.initial_fit_parameters import InitialFitParameters
 import RV.library.spectral_separation_routine as ssr
 from RV.library.linear_limbd_coeff_estimate import estimate_linear_limbd
 import matplotlib.pyplot as plt
+from copy import copy
 
 
 # # # # Set variables for script # # # #
@@ -50,9 +51,9 @@ bf_velocity_span = 150        # broadening function span in velocity space, shou
 limbd_A = estimate_linear_limbd(wavelength_RV_limit, logg_A, Teff_A, MH_A, mTur_A, loc='Data/tables/atlasco.dat')
 limbd_B = estimate_linear_limbd(wavelength_RV_limit, logg_B, Teff_B, MH_B, mTur_B, loc='Data/tables/atlasco.dat')
 ifitpar_A = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=100, limbd_coef=limbd_A,
-                                 smooth_sigma=2.5, bf_velocity_span=bf_velocity_span)
+                                 smooth_sigma=2.0, bf_velocity_span=bf_velocity_span)
 ifitpar_B = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=7.0, limbd_coef=limbd_B,
-                                 smooth_sigma=5.0, bf_velocity_span=bf_velocity_span)
+                                 smooth_sigma=3.5, bf_velocity_span=bf_velocity_span)
 
 # # Template Spectra # #
 template_spectrum_path_A = 'Data/template_spectra/5000_20_m05p00.ms.fits'
@@ -231,22 +232,25 @@ RV_guess_collection[:, 1] = RV_guesses_B
 RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B, wavelength = \
     ssr.spectral_separation_routine(flux_collection_inverted_buffered, flux_template_A_inverted_buffered,
                                     flux_template_B_inverted_buffered, delta_v, ifitpar_A, ifitpar_B,
-                                    wavelength_buffered,  bjdtdb, period=orbital_period_estimate, iteration_limit=10,
+                                    wavelength_buffered,  bjdtdb, period=orbital_period_estimate, iteration_limit=20,
                                     RV_guess_collection=RV_guess_collection, convergence_limit=5E-2,
                                     buffer_mask=buffer_mask, rv_lower_limit=rv_lower_limit,
-                                    suppress_print='scs', plot=True)
+                                    suppress_print='scs', plot=True, adaptive_rv_limit=False, amplitude_weighing=True)
 plt.show(block=True)
 
 # # Calculate uncertainties by splitting up into smaller intervals # #
 RV_collection = RV_guess_collection
-RV_collection[:, 0] = RV_collection_A
-RV_collection[:, 1] = RV_guesses_B
-RV_errors_A, RV_errors_B = ssr.estimate_errors(100, flux_collection_inverted_buffered, flux_template_A_inverted_buffered,
-                                               flux_template_B_inverted_buffered, delta_v, ifitpar_A, ifitpar_B,
-                                               wavelength_buffered,  bjdtdb, period=orbital_period_estimate,
-                                               iteration_limit=10, RV_collection=RV_collection, convergence_limit=5E-2,
+RV_collection[:, 0] = copy(RV_collection_A)
+RV_collection[:, 1] = copy(RV_guesses_B)
+wiee = wavelength_intervals_error_estimate
+RV_errors_A, RV_errors_B = ssr.estimate_errors(wiee, flux_collection_inverted_buffered,
+                                               flux_template_A_inverted_buffered, flux_template_B_inverted_buffered,
+                                               delta_v, ifitpar_A, ifitpar_B, wavelength_buffered,  bjdtdb,
+                                               period=orbital_period_estimate, iteration_limit=10,
+                                               RV_collection=RV_collection, convergence_limit=5E-2,
                                                wavelength_buffer_size=wavelength_buffer_size,
-                                               rv_lower_limit=rv_lower_limit, suppress_print='scs', plot=True)
+                                               rv_lower_limit=rv_lower_limit, suppress_print='scs', plot=True,
+                                               adaptive_rv_limit=False, amplitude_weighing=True)
 
 print('RV errors')
 print(RV_errors_A)

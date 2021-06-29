@@ -37,14 +37,14 @@ def rotational_broadening_function_profile(velocities, amplitude, radial_velocit
     a = (velocities - radial_velocity_cm) / vsini
 
     # Create bf function values
-    mask = (np.abs(a) < 1.0)        # TODO: Is this to sort out bad values or down-weigh them in some way?
+    mask = (np.abs(a) < 1.0)        # Select only near-peak values
     broadening_function_values[mask] += amplitude*((1-limbd_coef)*np.sqrt(1.0-a[mask]**2) + 0.25*np.pi*(1-a[mask]**2))
 
     # Create gs function values
     scaled_width = np.sqrt(2*np.pi) * gaussian_width
     gaussian_function_values = np.exp(-0.5 * (velocities/gaussian_width)**2) / scaled_width
 
-    # Convolve to get rotational broadening function
+    # Convolve rotational broadening function profile to get smoothed version
     rot_bf_profile = fftconvolve(broadening_function_values, gaussian_function_values, mode='same')
     return rot_bf_profile
 
@@ -128,7 +128,7 @@ def fitting_routine_rotational_broadening_profile(velocities, broadening_functio
                                         model: np.ndarray, model values of the broadening function according to the fit.
     """
     speed_of_light = scc.c / 1000  # in km/s
-    gaussian_width = np.sqrt(((speed_of_light/ifitparams.spectral_resolution)/(2.354 * dv)) ** 2 +(smooth_sigma/dv)**2)
+    gaussian_width = np.sqrt(((speed_of_light/ifitparams.spectral_resolution)/(2.354 * dv))**2 + (smooth_sigma/dv)**2)
     params = lmfit.Parameters()
 
     weight_function_values = weight_function(velocities, broadening_function_values, ifitparams.velocity_fit_width,
