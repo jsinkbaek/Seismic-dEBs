@@ -1,7 +1,7 @@
 ### Radial Velocity code for detached Eclipsing Binaries
 Author: Jeppe Sinkbæk Thomsen, Master's Thesis student at Aarhus University 2021
 
-Dependencies:
+#### Dependencies:
  - numpy      https://numpy.org/
  - barycorrpy https://pypi.org/project/barycorrpy/    (for script only)
  - astropy    https://www.astropy.org/   (for script only)
@@ -18,7 +18,7 @@ The primary purpose of this code is radial velocity calculations for detached ec
 It should be suited for this purpose in most cases, but it would probably handle systems of close luminosities even better regardless (it might need a few tweaks).
 Additionally, it also includes some functions for processing of reduced/merged spectra in order to standardize input.
 
-
+#### Library folder
 Most of the actual "code" is located in the library folder. The following files present form the *core* functionality of the code:
   - *spectral_separation_routine.py*. 
 Includes functions that form a routine to perform spectral separation (or disentangling) and radial velocity calculation of the two components using the method described in *J.F. Gonzalez and H. Levato ( A&A 448, 283-292(2006))*.
@@ -36,6 +36,10 @@ Additionally, the following library files provide functionality for other purpos
 Inspiration is taken from <https://ui.adsabs.harvard.edu/abs/2019AJ....157..243X/abstract>. However, the current implementation here is designed for merged spectra, not un-merged like in the paper.
   - *linear_limbd_coeff_estimate.py*. Convenience functions to estimate a linear limb darkening coefficient for a spectrum by table look-up and interpolation. Not essential, but useful as a linear limb darkening coefficient should be provided to the rotational fitting profile.
 
-An example implementation of the code is provided in the script *RV_from_spectra_kic8430105.py*, which examines the system KIC8430105 housing a RGB star with about ~95-98% of the system luminosity, and an MS star with ~2-3% of the luminosity. 
+#### Data folder
+The Data folder is for storing unprocessed and processed data related to the analysis. Some functions (like in *AFS_algorithm.py*) automatically saves to specific folders, which need to be available. Otherwise, most of the data saving and loading is done and designated directly in the script, so paths must be specified there. You can look at the example script for an idea of how to do it.
+
+#### Scripts and implemenation
+An example implementation of the code is provided in the script *RV_from_spectra_kic8430105.py*, which examines the system KIC8430105 housing an RGB star with about ~95-98% of the system luminosity, and an MS star with ~2-3% of the luminosity. 
 The primary purpose of a script here is still to designate input, specifiy variables/"turn-knobs", and to act as pipeline between function calls. However, it does include some essential processing in the script, which means it is hard to call it completely separate from the code.
 Therefore it is recommended to examine the example script and draw inspiration from it when trying to work with the code on a new system.
