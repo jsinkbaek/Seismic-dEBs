@@ -19,7 +19,7 @@ It should be suited for this purpose in most cases, but it would probably handle
 Additionally, it also includes some functions for processing of reduced/merged spectra in order to standardize input.
 
 #### Library folder
-Most of the actual "code" is located in the library folder. The following files present form the *core* functionality of the code:
+Most of the actual "code" is located in the [library folder](library/). The following files present form the *core* functionality of the code:
   - [*spectral_separation_routine.py*](library/spectral_separation_routine.py). 
 Includes functions that form a routine to perform spectral separation (or disentangling) and radial velocity calculation of the two components using the method described in *J.F. Gonzalez and H. Levato ( A&A 448, 283-292(2006))*.
 The radial velocities are calculated using the broadening function formalism (instead of using cross correlations like described in the paper).
