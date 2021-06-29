@@ -15,7 +15,7 @@ Author: Jeppe Sinkbæk Thomsen, Master's Thesis student at Aarhus University 202
 
 
 The primary purpose of this code is radial velocity calculations for detached eclipsing binaries, specifically ones with a giant (luminous) and a main sequence (faint) component.
-It should be suited for this purpose in most cases, but it would probably handle systems of close luminosities even better regardless (it might need a few tweaks).
+It should be suited for this purpose in most cases, but it would probably handle systems of closer luminosities even better regardless (it might need a few tweaks).
 Additionally, it also includes some functions for processing of reduced/merged spectra in order to standardize input.
 
 #### Library folder
