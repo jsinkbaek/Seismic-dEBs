@@ -331,10 +331,11 @@ def jktebop_iterator(n_iter=4, loc_infile='JKTEBOP/tess/infile.TESS', loc_jktebo
         print("Radius MS        ", R_MS)
         print("Radius RG        ", R_RG)
         print("L_ratio          ", L_ratio)
-        if loc_jktebop=='JKTEBOP/tess/' or loc_jktebop=='JKTEBOP/tess_ltf':
+        if loc_jktebop=='../Binary_Analysis/JKTEBOP/tess/' or loc_jktebop=='../Binary_Analysis/JKTEBOP/tess_ltf':
             spectral_response=tess_spectral_response
-        elif loc_jktebop=='JKTEBOP/kepler_kasfit/' \
-                or loc_jktebop=='JKTEBOP/kepler_kasoc/' or loc_jktebop=='JKTEBOP/kepler_LTF/':
+        elif loc_jktebop=='../Binary_Analysis/JKTEBOP/kepler_kasfit/' \
+                or loc_jktebop=='../Binary_Analysis/JKTEBOP/kepler_kasoc/' \
+                or loc_jktebop=='../Binary_Analysis/JKTEBOP/kepler_LTF/':
             spectral_response=kepler_spectral_response
         else:
             raise AttributeError("Unknown spectral response")
@@ -352,7 +353,8 @@ def main():
     # print(T2)
     # print(interpolated_LD_param(4.62640, T2, -0.5, 2.0, loc='Data/tables/kepler_sing_table.dat'))
     # print(interpolated_LD_param(2.80835, 5042, -0.5, 2.0, loc='Data/tables/kepler_sing_table.dat'))
-    jktebop_iterator(n_iter=1, loc_infile='JKTEBOP/tess/infile.TESS', loc_jktebop='JKTEBOP/tess/',
+    jktebop_iterator(n_iter=1, loc_infile='../Binary_Analysis/JKTEBOP/tess/infile.TESS',
+                     loc_jktebop='../Binary_Analysis/JKTEBOP/tess/',
                      loc_ld_table='Data/tables/tess_ldquad_table25.dat')
     # jktebop_iterator(n_iter=1, loc_infile='JKTEBOP/kepler_LTF/infile.KEPLER', loc_jktebop='JKTEBOP/kepler_LTF/',
     #                  loc_ld_table='Data/tables/kepler_sing_table.dat')
