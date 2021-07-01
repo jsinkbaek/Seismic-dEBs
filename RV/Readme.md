@@ -41,5 +41,4 @@ The [Data folder](Data/) is for storing unprocessed and processed data related t
 
 #### Scripts and implemenation
 An example implementation of the code is provided in the script [*RV_from_spectra_kic8430105.py*](RV_from_spectra_kic8430105.py), which examines the system KIC8430105 housing an RGB star with about ~95-98% of the system luminosity, and an MS star with ~2-3% of the luminosity. 
-The primary purpose of a script here is still to designate input, specifiy variables/"turn-knobs", and to act as pipeline between function calls. However, it does include some essential processing in the script, which means it is hard to call it completely separate from the code.
-Therefore it is recommended to examine the example script and draw inspiration from it when trying to work with the code on a new system.
+The script does include some essential processing necessary before the appropriate routines are called. Its primary purpose is to act as pipeline between function calls. It is recommended to examine the script in detail and draw inspiration from it when creating your own, to get a feel for what the code can handle by itself, and what your script must provide it with.
