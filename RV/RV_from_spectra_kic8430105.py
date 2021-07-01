@@ -229,16 +229,20 @@ RV_guess_collection[:, 1] = RV_guesses_B
 
 
 # # Separate component spectra and calculate RVs iteratively # #
-RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B, wavelength = \
+RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B, wavelength, iteration_errors = \
     ssr.spectral_separation_routine(flux_collection_inverted_buffered, flux_template_A_inverted_buffered,
                                     flux_template_B_inverted_buffered, delta_v, ifitpar_A, ifitpar_B,
                                     wavelength_buffered,  bjdtdb, period=orbital_period_estimate, iteration_limit=20,
                                     RV_guess_collection=RV_guess_collection, convergence_limit=5E-2,
                                     buffer_mask=buffer_mask, rv_lower_limit=rv_lower_limit,
-                                    suppress_print='scs', plot=True, adaptive_rv_limit=False, amplitude_weighing=True)
-plt.show(block=True)
+                                    suppress_print='scs', plot=False, adaptive_rv_limit=False, amplitude_weighing=True,
+                                    estimate_error=True)
+# plt.show(block=True)
 
+RV_errors_A = iteration_errors[0]
+RV_errors_B = iteration_errors[1]
 # # Calculate uncertainties by splitting up into smaller intervals # #
+"""
 RV_collection = RV_guess_collection
 RV_collection[:, 0] = copy(RV_collection_A)
 RV_collection[:, 1] = copy(RV_guesses_B)
@@ -251,10 +255,11 @@ RV_errors_A, RV_errors_B = ssr.estimate_errors(wiee, flux_collection_inverted_bu
                                                wavelength_buffer_size=wavelength_buffer_size,
                                                rv_lower_limit=rv_lower_limit, suppress_print='scs', plot=True,
                                                adaptive_rv_limit=False, amplitude_weighing=True)
-
+"""
 print('RV errors')
 print(RV_errors_A)
 print(RV_errors_B)
+
 
 # # Plot results # #
 
