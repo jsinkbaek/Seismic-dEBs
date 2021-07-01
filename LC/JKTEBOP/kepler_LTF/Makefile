@@ -22,7 +22,7 @@ lc.out model.out param.out rvA.out rvB.out: jktebop
 	./jktebop infile.KEPLER
 
 jktebop: jktebop.f
-	gfortran -o jktebop jktebop.f
+	gfortran -o kepler_LTF/jktebop ../jktebop.f
 
 .PHONY:clean
 clean:

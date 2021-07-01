@@ -21,8 +21,8 @@ Plot.rv.svg: plot.rv.gpi rvB.out rvA.out model.out
 lc.out model.out param.out rvA.out rvB.out: jktebop
 	./jktebop infile.KEPLER
 
-jktebop: jktebop.f
-	gfortran -o jktebop jktebop.f
+jktebop: ../jktebop.f
+	gfortran -o kepler_kasfit/jktebop ../jktebop.f
 
 .PHONY:clean
 clean:

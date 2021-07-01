@@ -1,0 +1,10 @@
+set term svg font ",13" background rgb "white" size 750,750
+set title "RV curves found with JKTEBOP"
+set xlabel "Phase"
+set ylabel "Radial Velocity [km/s]"
+set out "Plot.rv.svg"
+
+plot "rvA.out" u 4:2 with points ls 1 title "RV A data"\
+	, "model.out" u 1:7 with lines lw 2 title "RV A model"\
+	, "rvB.out" u 4:2 with points ls 2 title "RV B data"\
+	, "model.out" u 1:8 with lines lw 2 title "RV B model"	
