@@ -27,7 +27,7 @@ The radial velocities are calculated using the broadening function formalism (in
   - [*rotational_broadening_function_fitting.py*](library/rotational_broadening_function_fitting.py). The whole fitting routine and every function related to fitting a rotational broadening function profile to the calculated broadening function.
 See *Kaluzny 2006: Eclipsing Binaries in the Open Cluster NGC 2243 II. Absolute Properties of NV CMa* for the profile used.
   - [*broadening_function_svd.py*](library/broadening_function_svd.py). The broadening function implementation following <http://www.astro.utoronto.ca/~rucinski/SVDcookbook.html> in object-oriented structure. This implementation is used as the groundwork for most of the above functions.
-  - [*initial_fit_parameters.py*](library/initial_fit_parameters.py). A convenience class for storing, modifying and accessing fit parameter guesses throughout the code.
+  - [*initial_fit_parameters.py*](library/initial_fit_parameters.py). A convenience class for storing, modifying and accessing fit parameter guesses and broadening function parameters throughout the code.
 
 The file [*spectrum_processing_functions.py*](library/spectrum_processing_functions.py) provides a lot of general functions that are used for multiple different purposes, all relating to general work with spectroscopic data.
 
