@@ -8,7 +8,7 @@ import scipy.constants as scc
 from scipy.interpolate import interp1d
 
 
-def load_template_spectrum(template_spectrum_path):
+def load_template_spectrum(template_spectrum_path: str):
     with fits.open(template_spectrum_path) as hdul:
         hdr = hdul[0].header
         flux = hdul[0].data
@@ -17,7 +17,7 @@ def load_template_spectrum(template_spectrum_path):
     return wavelength, flux
 
 
-def load_program_spectrum(program_spectrum_path):
+def load_program_spectrum(program_spectrum_path: str):
     with fits.open(program_spectrum_path) as hdul:
         hdr = hdul[0].header
         flux = hdul[0].data
@@ -28,8 +28,10 @@ def load_program_spectrum(program_spectrum_path):
     return wavelength, flux, date, RA, DEC
 
 
-def resample_to_equal_velocity_steps(wavelength, delta_v, flux=None, wavelength_resampled=None, wavelength_a=None,
-                                     wavelength_b=None, resampled_len_even=True):
+def resample_to_equal_velocity_steps(
+        wavelength: np.ndarray or list, delta_v: float, flux=None, wavelength_resampled=None, wavelength_a=None,
+        wavelength_b=None, resampled_len_even=True
+):
     """
     Over-engineered, multi-use function that can be used to either: Create a new wavelength grid equi-distant in vel
     (without interpolation), create grid and resample flux to it, create mutual grid and resample flux for multiple
@@ -85,7 +87,7 @@ def resample_to_equal_velocity_steps(wavelength, delta_v, flux=None, wavelength_
         return wavelength_resampled
 
 
-def interpolate_to_equal_velocity_steps(wavelength_collector_list, flux_collector_list, delta_v):
+def interpolate_to_equal_velocity_steps(wavelength_collector_list: list, flux_collector_list: list, delta_v: float):
     """
     Resamples a set of spectra to the same wavelength grid equi-spaced in velocity map.
     :param wavelength_collector_list:   list of arrays, one array for each spectrum
@@ -110,8 +112,10 @@ def interpolate_to_equal_velocity_steps(wavelength_collector_list, flux_collecto
     return wavelength, flux_collector_array
 
 
-def limit_wavelength_interval(wavelength_limits:tuple, wavelength:np.ndarray, flux:np.ndarray, buffer_size=None,
-                              buffer_mask=None, even_length=False):
+def limit_wavelength_interval(
+        wavelength_limits:tuple, wavelength:np.ndarray, flux:np.ndarray, buffer_size=None, buffer_mask=None,
+        even_length=False
+):
     selection_mask = (wavelength > wavelength_limits[0]) & (wavelength < wavelength_limits[1])
     selection_mask_buffered = np.zeros(wavelength.shape, dtype=bool)
     if buffer_size is not None and buffer_mask is None:
@@ -186,7 +190,7 @@ def make_spectrum_even(wavelength:np.ndarray, flux:np.ndarray or list):
     return wavelength, flux
 
 
-def moving_median_filter(flux, window=51):
+def moving_median_filter(flux: np.ndarray, window=51):
     """
     Filters the data using a moving median filter. Useful to capture some continuum trends.
     :param flux:        np.ndarray size (n, ) of y-values (fluxes) for each wavelength
@@ -197,7 +201,8 @@ def moving_median_filter(flux, window=51):
     return median_filter(flux, size=window, mode='reflect')
 
 
-def reduce_emission_lines(wavelength, flux, mf_window=401, std_factor=1.5, plot=False, limit=None):
+def reduce_emission_lines(wavelength: np.ndarray, flux: np.ndarray, mf_window=401, std_factor=1.5, plot=False,
+                          limit=None):
     """
     Reduces the effect of emission lines in a spectrum by median-filtering and cutting away all data points a certain
     point ABOVE the median variance of the data (flux - median flux).
@@ -244,15 +249,17 @@ def reduce_emission_lines(wavelength, flux, mf_window=401, std_factor=1.5, plot=
     return wavelength_reduced, flux_emission_reduced
 
 
-def save2col(column1, column2, filename):
+def save2col(column1: np.ndarray, column2: np.ndarray, filename: str):
     save_data = np.empty((column1.size, 2))
     save_data[:, 0] = column1
     save_data[:, 1] = column2
     np.savetxt(filename, save_data)
 
 
-def savefig(filename, xs, ys, xlabel, ylabel, title=None, xlim=None, ylim=None, legend=None, legend_loc='upper left',
-            figsize=(17.78, 10), dpi=400):
+def savefig(
+        filename: str, xs: np.ndarray, ys: np.ndarray, xlabel: str, ylabel: str, title=None, xlim=None, ylim=None,
+        legend=None, legend_loc='upper left',figsize=(17.78, 10), dpi=400
+):
     fig = plt.figure(figsize=figsize)
     for i in range(0, len(xs)):
         plt.plot(xs[i], ys[i], linewidth=0.5)

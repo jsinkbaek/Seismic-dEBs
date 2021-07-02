@@ -2,13 +2,13 @@ import numpy as np
 import scipy.interpolate as interp
 
 
-def estimate_photometric_system(wavelength_range):
+def estimate_photometric_system(wavelength_range: np.ndarray or tuple):
     """
     Estimates which photometric system is appropriate to look up linear limb-darkening coefficients for.
     Wavelengths in Ångstrom units. Assumes passbands symmetric and simple, and follows peak wvl and fwhm from
     https://en.wikipedia.org/wiki/Photometric_system and
     https://en.wikipedia.org/wiki/Str%C3%B6mgren_photometric_system
-    :param wavelength_range: np.array([wavelength_a, wavelength_b]) limits on the wavelength range of spectrum.
+    :param wavelength_range: np.ndarray([wavelength_a, wavelength_b]) limits on the wavelength range of spectrum.
     :return: string, pass-band indicator
     """
     passband_names = np.array(['u', 'v', 'b', 'y', 'U', 'B', 'V', 'R', 'I', 'J', 'H', 'K'])
@@ -78,9 +78,11 @@ def read_linear_limbd_param(logg_range=np.array([0, 7]), Trange=np.array([2000, 
     return data
 
 
-def interpolate_linear_limbd(logg, Teff, MH, mTurb, logg_range=np.array([0, 7]), Trange=np.array([2000, 9000]),
-                             MH_range=-0.5, mTurb_range=2.0, loc='../Data/tables/atlasco.dat', band='V'):
-    data = read_linear_limbd_param(logg_range, Trange, MH_range, mTurb_range, loc)
+def interpolate_linear_limbd(
+        logg: float, Teff: float, MH: float, mTurb: float, logg_range=np.array([0, 7]), Trange=np.array([2000, 9000]),
+        MH_range=-0.5, mTurb_range=2.0, loc='../Data/tables/atlasco.dat', band='V'
+):
+    data = read_linear_limbd_param(logg_range, Trange, MH_range, mTurb_range, loc, band)
     vals = data[:, -1]
     points = data[:, 0:-1]
     eval_points = np.array([])
@@ -103,9 +105,11 @@ def interpolate_linear_limbd(logg, Teff, MH, mTurb, logg_range=np.array([0, 7]),
     return res[0]
 
 
-def estimate_linear_limbd(wavelength_range, logg, T, MH, mTurb, logg_range=np.array([0, 7]),
-                          Trange=np.array([2000, 9000]), MH_range=-0.5, mTurb_range=2.0,
-                          loc='../Data/tables/atlasco.dat', print_bool=False):
+def estimate_linear_limbd(
+        wavelength_range: np.ndarray or tuple, logg: float, T: float, MH: float, mTurb: float,
+        logg_range=np.array([0, 7]), Trange=np.array([2000, 9000]), MH_range=-0.5, mTurb_range=2.0,
+        loc='../Data/tables/atlasco.dat', print_bool=False
+):
     """
     Estimates linear limb-darkening coefficient by interpolating table values by A. Claret 2000
     https://ui.adsabs.harvard.edu/abs/2000A%26A...363.1081C/abstract

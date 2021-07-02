@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 
 
 class DesignMatrix:
-    def __init__(self, template_spectrum, span):
+    def __init__(self, template_spectrum: np.ndarray, span: int):
         """
         Creates a Design Matrix (DesignMatrix.mat) of a template spectrum for the SVD broadening function method.
         :param template_spectrum:   np.ndarray, flux of the template spectrum that design matrix should be made on.
@@ -58,7 +58,7 @@ class DesignMatrix:
 
 
 class SingularValueDecomposition:
-    def __init__(self, template_spectrum, span):
+    def __init__(self, template_spectrum: np.ndarray, span: int):
         """
         Creates a Singular Value Decomposition of a template spectrum DesignMatrix for the SVD broadening function.
 
@@ -84,7 +84,14 @@ class SingularValueDecomposition:
 
 
 class BroadeningFunction:
-    def __init__(self, program_spectrum, template_spectrum, velocity_span, dv, span=None, copy=False, plot_w=False):
+    def __init__(
+            self,
+            program_spectrum: np.ndarray,
+            template_spectrum: np.ndarray,
+            velocity_span: float,
+            dv: float,
+            span=None, copy=False, plot_w=False
+    ):
         """
         Creates a broadening function object storing all the necessary variables for it.
         Using BroadeningFunction.solve(), the broadening function is found by solving the Singular Value
@@ -146,7 +153,7 @@ class BroadeningFunction:
         return self.__spectrum
 
     @spectrum.setter
-    def spectrum(self, new_value):
+    def spectrum(self, new_value: np.ndarray):
         if np.mod(new_value.size, 2) != 0.0:
             warnings.warn('new_value for BroadeningFunction.spectrum size must be even. Shortening by 1.')
             new_value = new_value[:-1]
@@ -164,11 +171,11 @@ class BroadeningFunction:
         return new_copy
 
     @staticmethod
-    def truncate(spectrum, design_matrix):
+    def truncate(spectrum: np.ndarray, design_matrix: DesignMatrix):
         """
         Truncates a program spectrum, which is essential before solving the linear equations.
         :param spectrum:        np.ndarray, the input spectrum
-        :param design_matrix:   np.ndarray, the design matrix which is to be used
+        :param design_matrix:   DesignMatrix, the design matrix which is to be used
         """
         m = design_matrix.m
         truncated_spectrum = spectrum[int((m-1)/2):-int((m+1)/2)+1]
@@ -213,8 +220,11 @@ class BroadeningFunction:
         self.bf_smooth = fftconvolve(self.bf, gaussian, mode='same')
         return self.bf_smooth
 
-    def fit_rotational_profile(self, ifitparams:InitialFitParameters,
-                               fitting_routine=fitting_routine_rotational_broadening_profile):
+    def fit_rotational_profile(
+            self,
+            ifitparams:InitialFitParameters,
+            fitting_routine=fitting_routine_rotational_broadening_profile
+    ):
         """
         Fits the broadening function with a rotational broadening profile by calling a fitting routine provided.
         The routine must include all essential parts of the fitting procedure.

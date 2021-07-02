@@ -1,7 +1,14 @@
 
 class InitialFitParameters:
-    def __init__(self, vsini_guess=1.0, spectral_resolution=60000, velocity_fit_width=300, limbd_coef=0.68,
-                 smooth_sigma=4.0, bf_velocity_span=200):
+    def __init__(
+            self,
+            vsini_guess=1.0,
+            spectral_resolution=60000,
+            velocity_fit_width=300,
+            limbd_coef=0.68,
+            smooth_sigma=4.0,
+            bf_velocity_span=200
+    ):
         # Value for vsini, and whether or not to fit it
         self.vsini = vsini_guess
         self.vary_vsini = True

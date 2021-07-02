@@ -5,8 +5,10 @@ from joblib import Parallel, delayed
 from RV.library.initial_fit_parameters import InitialFitParameters
 
 
-def radial_velocity_from_broadening_function(inv_flux, broadening_function_template:BroadeningFunction,
-                                             ifitparamsA:InitialFitParameters, ifitparamsB:InitialFitParameters):
+def radial_velocity_from_broadening_function(
+        inv_flux, broadening_function_template:BroadeningFunction, ifitparamsA:InitialFitParameters,
+        ifitparamsB:InitialFitParameters
+):
     BFsvd = copy(broadening_function_template)
     BFsvd.spectrum = inv_flux
     BFsvd.smooth_sigma = ifitparamsA.bf_smooth_sigma
@@ -34,9 +36,10 @@ def radial_velocity_from_broadening_function(inv_flux, broadening_function_templ
     return (RV_A, RV_B), (model_values_A, fit_A, model_values_B, fit_B), (bf, bf_smooth)
 
 
-def radial_velocities_of_multiple_spectra(inv_flux_collection, inv_flux_template, delta_v,
-                                          ifitparamsA:InitialFitParameters, ifitparamsB:InitialFitParameters,
-                                          number_of_parallel_jobs=4, plot=False):
+def radial_velocities_of_multiple_spectra(
+        inv_flux_collection, inv_flux_template, delta_v, ifitparamsA:InitialFitParameters,
+        ifitparamsB:InitialFitParameters, number_of_parallel_jobs=4, plot=False
+):
     """
     Calculates radial velocities for two components, for multiple spectra, by fitting two rotational broadening function
     profiles successively to calculated broadening functions. Uses joblib to parallelize the calculations. Calls
@@ -101,14 +104,15 @@ def radial_velocities_of_multiple_spectra(inv_flux_collection, inv_flux_template
     return RVs_A, RVs_B, extra_results
 
 
-def radial_velocity_single_component(inv_flux, broadening_function_template:BroadeningFunction,
-                                     ifitparams:InitialFitParameters):
+def radial_velocity_single_component(
+        inv_flux: np.ndarray, broadening_function_template: BroadeningFunction, ifitparams: InitialFitParameters
+):
     """
     Calculates the broadening function of a spectrum and fits a single rotational broadening function profile to it.
     Needs a template object of the BroadeningFunction with the correct parameters and template spectrum already set. 
     Setup to be of convenient use during the spectral separation routine (see spectral_separation_routine.py).
     
-    :param inv_flux:                np.ndarray. Inverted flux of the program spectrum (e.g. 1-normalized_flux)
+    :param inv_flux:                     np.ndarray. Inverted flux of the program spectrum (e.g. 1-normalized_flux)
     :param broadening_function_template: BroadeningFunction. The template used to calculate the broadening function.
     :param ifitparams:                   InitialFitParameters. Object that stores the fitting parameters needed.
     :return:    RV, (fit, model_values, BFsvd.velocity, BFsvd.bf, BFsvd.bf_smooth)

@@ -16,10 +16,10 @@ from localreg import *
 from matplotlib.widgets import Cursor
 from RV.library.spectrum_processing_functions import *
 from matplotlib.ticker import FuncFormatter
+from shapely.geometry.polygon import Polygon
 
 
-
-def separate_polygon_boundary(polygon):
+def separate_polygon_boundary(polygon: Polygon):
     """
     Separates a polygon to its boundary, and into an upper and lower part, for use in the AFS algorithm.
     :param polygon:     shapely.geometry.polygon.Polygon encasing the spectrum data
@@ -50,7 +50,7 @@ def separate_polygon_boundary(polygon):
     return upper_boundary, lower_boundary
 
 
-def select_areas(fig, ax):
+def select_areas(fig: plt.Figure, ax: plt.Axes):
     """
     Select areas on figure using pyplot.ginput.
     Expects figure to be created with data beforehand. Adds the option to zoom to dataset.
@@ -84,8 +84,10 @@ def select_areas(fig, ax):
     return selected_areas
 
 
-def AFS_merged_spectrum(wavelength, flux, alpha=None, mf_window=5001, emline_factor=1, lr_frac=0.2, save_string=None,
-                        em_line_limit=None):
+def AFS_merged_spectrum(
+        wavelength: np.ndarray, flux: np.ndarray, alpha=None, mf_window=5001, emline_factor=1, lr_frac=0.2,
+        save_string=None, em_line_limit=None
+):
     """
     https://arxiv.org/pdf/1904.10065v1.pdf
     https://iopscience.iop.org/article/10.3847/1538-3881/ab1b47/pdf

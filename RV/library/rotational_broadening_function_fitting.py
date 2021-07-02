@@ -15,8 +15,10 @@ import scipy.constants as scc
 from RV.library.initial_fit_parameters import InitialFitParameters
 
 
-def rotational_broadening_function_profile(velocities, amplitude, radial_velocity_cm, vsini, gaussian_width,
-                                           continuum_constant, limbd_coef):
+def rotational_broadening_function_profile(
+        velocities: np.ndarray, amplitude: float, radial_velocity_cm: float, vsini: float, gaussian_width: float,
+        continuum_constant: float, limbd_coef: float
+):
     """
     Calculates a theoretical broadening function profile based on the one described in
     Kaluzny 2006: Eclipsing Binaries in the Open Cluster NGC 2243 II. Absolute Properties of NV CMa.
@@ -49,7 +51,10 @@ def rotational_broadening_function_profile(velocities, amplitude, radial_velocit
     return rot_bf_profile
 
 
-def weight_function(velocities, broadening_function_values, velocity_fit_half_width, radial_velocity_guess):
+def weight_function(
+        velocities: np.ndarray, broadening_function_values: np.ndarray, velocity_fit_half_width: float,
+        radial_velocity_guess: float
+):
     """
     Weight function for the fit. Finds the peak value, and limits the data set to velocities within a certain distance
     of it.
@@ -72,7 +77,7 @@ def weight_function(velocities, broadening_function_values, velocity_fit_half_wi
     return weight_function_values
 
 
-def get_fit_parameter_values(parameters):
+def get_fit_parameter_values(parameters: lmfit.Parameters):
     """
     Convenience function to pull parameter values from an lmfit.Parameters object.
     """
@@ -86,8 +91,10 @@ def get_fit_parameter_values(parameters):
     return amplitude, radial_velocity_cm, vsini, gaussian_width, continuum_constant, limbd_coef
 
 
-def compare_broadening_function_with_profile(parameters, velocities, broadening_function_values,
-                                             weight_function_values):
+def compare_broadening_function_with_profile(
+        parameters: lmfit.Parameters, velocities: np.ndarray, broadening_function_values: np.ndarray,
+        weight_function_values: np.ndarray
+):
     """
     Evaluates fit using rotational broadening function profile and fit parameters, and compares with the observed
     SVD broadening function. Returns the difference to the lmfit minimizer routine with weight function applied.
@@ -102,9 +109,10 @@ def compare_broadening_function_with_profile(parameters, velocities, broadening_
     return weight_function_values * comparison
 
 
-def fitting_routine_rotational_broadening_profile(velocities, broadening_function_values,
-                                                  ifitparams:InitialFitParameters, smooth_sigma, dv, print_report=False,
-                                                  compare_func=compare_broadening_function_with_profile):
+def fitting_routine_rotational_broadening_profile(
+        velocities: np.ndarray, broadening_function_values: np.ndarray, ifitparams:InitialFitParameters,
+        smooth_sigma: float, dv: float, print_report=False, compare_func=compare_broadening_function_with_profile
+):
     """
     The fitting routine utilizing lmfit. Sets up the initial guesses to the fit, adds parameters, creates weight
     function, and calls the lmfit.minimize routine to fit a rotational broadening profile to match the observed

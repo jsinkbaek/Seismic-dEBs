@@ -30,9 +30,10 @@ def shift_spectrum(flux, radial_velocity_shift, delta_v):
     return np.roll(flux, shift)
 
 
-def separate_component_spectra(flux_collection, radial_velocity_collection_A, radial_velocity_collection_B, delta_v,
-                               convergence_limit, suppress_scs=False, max_iterations=20, rv_lower_limit=0.0,
-                               weights_A=None, weights_B=None):
+def separate_component_spectra(
+        flux_collection, radial_velocity_collection_A, radial_velocity_collection_B, delta_v, convergence_limit,
+        suppress_scs=False, max_iterations=20, rv_lower_limit=0.0, weights_A=None, weights_B=None
+):
     """
     Assumes that component A is the dominant component in the spectrum. Attempts to separate the two components using
     RV shifts and averaged spectra.
@@ -112,7 +113,7 @@ def separate_component_spectra(flux_collection, radial_velocity_collection_A, ra
     return separated_flux_A, separated_flux_B
 
 
-def update_bf_plot(plot_ax, model, index, rv_lower_limit):
+def update_bf_plot(plot_ax, model, index):
     fit = model[0]
     model_values = model[1]
     velocity_values = model[2]
@@ -125,11 +126,13 @@ def update_bf_plot(plot_ax, model, index, rv_lower_limit):
                  color='grey')
 
 
-def recalculate_RVs(inv_flux_collection: np.ndarray, separated_flux_A: np.ndarray, separated_flux_B: np.ndarray,
-                    RV_collection_A: np.ndarray, RV_collection_B: np.ndarray, inv_flux_templateA: np.ndarray,
-                    inv_flux_templateB: np.ndarray, delta_v: float, ifitparamsA:InitialFitParameters,
-                    ifitparamsB:InitialFitParameters, buffer_mask: np.ndarray, plot_ax_A=None, plot_ax_B=None,
-                    rv_lower_limit=0.0, return_weights=True):
+def recalculate_RVs(
+        inv_flux_collection: np.ndarray, separated_flux_A: np.ndarray, separated_flux_B: np.ndarray,
+        RV_collection_A: np.ndarray, RV_collection_B: np.ndarray, inv_flux_templateA: np.ndarray,
+        inv_flux_templateB: np.ndarray, delta_v: float, ifitparamsA:InitialFitParameters,
+        ifitparamsB:InitialFitParameters, buffer_mask: np.ndarray, plot_ax_A=None, plot_ax_B=None, rv_lower_limit=0.0,
+        return_weights=True
+):
     """
     This part of the spectral separation routine corrects the spectra for the separated spectra found by
     separate_component_spectra and recalculates RV values for each component using the corrected spectra (with one
@@ -252,9 +255,10 @@ def initialize_ssr_plots():
     return f1_ax1, f1_ax2, f1_ax3, f2_ax1, f3_ax1, f3_ax2, f4_ax1, f5_ax1
 
 
-def plot_ssr_iteration(f1_ax1, f1_ax2, f1_ax3, f2_ax1, f3_ax1, f3_ax2, separated_flux_A, separated_flux_B, wavelength,
-                       flux_template_A, flux_template_B, RV_A, RV_B, time, period, flux_collection, buffer_mask,
-                       rv_lower_limit):
+def plot_ssr_iteration(
+        f1_ax1, f1_ax2, f1_ax3, f2_ax1, f3_ax1, f3_ax2, separated_flux_A, separated_flux_B, wavelength, flux_template_A,
+        flux_template_B, RV_A, RV_B, time, period, flux_collection, buffer_mask, rv_lower_limit
+):
     f1_ax1.clear(); f1_ax2.clear(); f1_ax3.clear(); f2_ax1.clear()
     separated_flux_A, separated_flux_B = separated_flux_A[~buffer_mask], separated_flux_B[~buffer_mask]
     wavelength = wavelength[~buffer_mask]
@@ -303,13 +307,13 @@ def plot_ssr_iteration(f1_ax1, f1_ax2, f1_ax3, f2_ax1, f3_ax1, f3_ax2, separated
     # plt.show(block=True)
 
 
-def spectral_separation_routine(inv_flux_collection: np.ndarray, inv_flux_templateA: np.ndarray,
-                                inv_flux_templateB: np.ndarray, delta_v: float, ifitparamsA:InitialFitParameters,
-                                ifitparamsB:InitialFitParameters, wavelength: np.ndarray, time_values: np.ndarray,
-                                RV_guess_collection: np.ndarray, convergence_limit=1E-5, iteration_limit=10, plot=True,
-                                period=None, buffer_mask=None, rv_lower_limit=0.0, suppress_print=False,
-                                convergence_limit_scs=1E-7, adaptive_rv_limit=False, amplitude_weighing=False,
-                                estimate_error=False, return_unbuffered=True):
+def spectral_separation_routine(
+        inv_flux_collection: np.ndarray, inv_flux_templateA: np.ndarray, inv_flux_templateB: np.ndarray, delta_v: float,
+        ifitparamsA:InitialFitParameters, ifitparamsB:InitialFitParameters, wavelength: np.ndarray,
+        time_values: np.ndarray, RV_guess_collection: np.ndarray, convergence_limit=1E-5, iteration_limit=10, plot=True,
+        period=None, buffer_mask=None, rv_lower_limit=0.0, suppress_print=False, convergence_limit_scs=1E-7,
+        adaptive_rv_limit=False, amplitude_weighing=False, estimate_error=False, return_unbuffered=True
+):
     """
     Routine that separates component spectra and calculates radial velocities by iteratively calling
     separate_component_spectra() and recalculate_RVs() to attempt to converge towards the correct RV values for the
@@ -327,7 +331,7 @@ def spectral_separation_routine(inv_flux_collection: np.ndarray, inv_flux_templa
     other component would still be present at that wavelength shift.
 
     Additional features included to improve either the RV fitting process or the spectral separation:
-      - Fitted v*sin(i) values are meaned and used as fit guesses for next iteration. Simultaneously, and the parameter
+      - Fitted v*sin(i) values are meaned and used as fit guesses for next iteration. Simultaneously, the parameter
         is bounded to the limits v*sin(i) * [1-0.3, 1+0.3], in order to ensure stable fitting for all spectra.
       - Amplitude weighing of spectra during separation of component spectra. If enabled, the "component signal" of each
         spectrum is weighed against the noise when calculating the component spectra from them. The weight is
@@ -378,6 +382,9 @@ def spectral_separation_routine(inv_flux_collection: np.ndarray, inv_flux_templa
                                     separate_component_spectra().
     :param estimate_error:        bool. Indicates if the minimum precision error of the routine should be estimated in
                                     case the routine reaches the convergence limit.
+    :param return_unbuffered:     bool. Indicates if returned results should be unbuffered (un-padded) or not. Default
+                                    is True, meaning the shorter arrays are returned.
+
     :return:    RV_collection_A,  RV_collection_B, separated_flux_A, separated_flux_B, wavelength, iteration_errors
                 RV_collection_A:  np.ndarray shape (n_spectra, ). RV values of component A for each program spectrum.
                 RV_collection_B:  same, but for component B (includes values below rv_lower_limit).
@@ -393,6 +400,7 @@ def spectral_separation_routine(inv_flux_collection: np.ndarray, inv_flux_templa
             Note on :*
                 if buffer_mask is provided, the returned spectra will be the un-buffered versions, meaning
                 separated_flux_A.size = inv_flux_templateA[buffer_mask].size. Same for the returned wavelength.
+                This can be disabled by setting return_unbuffered=False.
     """
 
     suppress_scs = False; suppress_ssr = False
@@ -509,17 +517,19 @@ def spectral_separation_routine(inv_flux_collection: np.ndarray, inv_flux_templa
                ifitparams
 
 
-def estimate_errors(wavelength_interval_size: float, inv_flux_collection: np.ndarray, inv_flux_templateA: np.ndarray,
-                      inv_flux_templateB: np.ndarray, separated_flux_A: np.ndarray, separated_flux_B: np.ndarray,
-                      delta_v: float, ifitparamsA:InitialFitParameters, ifitparamsB:InitialFitParameters,
-                      wavelength: np.ndarray, RV_collection_A: np.ndarray, RV_collection_B: np.ndarray,
-                      times: np.ndarray, wavelength_buffer_size=100.0, plot=False, period=1.0):
-    wavelength_intervals = []
-    flux_intervals = []
-    flux_templateA_intervals = []
-    flux_templateB_intervals = []
-    sep_flux_A_intervals = []
-    sep_flux_B_intervals = []
+def estimate_errors(
+        wavelength_interval_size: float, inv_flux_collection: np.ndarray, inv_flux_templateA: np.ndarray,
+        inv_flux_templateB: np.ndarray, separated_flux_A: np.ndarray, separated_flux_B: np.ndarray, delta_v: float,
+        ifitparamsA:InitialFitParameters, ifitparamsB:InitialFitParameters, wavelength: np.ndarray,
+        RV_collection_A: np.ndarray, RV_collection_B: np.ndarray, times: np.ndarray, wavelength_buffer_size=100.0,
+        plot=False, period=1.0
+):
+    wavelength_interval_collection = []
+    flux_interval_collection = []
+    templateA_interval_collection = []
+    templateB_interval_collection = []
+    sep_flux_A_interval_collection = []
+    sep_flux_B_interval_collection = []
     interval_buffer_mask = []
     w_interval_start = wavelength[0] + wavelength_buffer_size
 
@@ -552,21 +562,21 @@ def estimate_errors(wavelength_interval_size: float, inv_flux_collection: np.nda
             spf.limit_wavelength_interval(wavelength_interval, wavelength, separated_flux_B,
                                           buffer_mask=buffer_mask_internal, even_length=True)
 
-        wavelength_intervals.append(wavelength_buffered)
-        flux_intervals.append(flux_buffered)
-        flux_templateA_intervals.append(templateA_buffered)
-        flux_templateB_intervals.append(templateB_buffered)
-        sep_flux_A_intervals.append(sep_flux_A_buffered)
-        sep_flux_B_intervals.append(sep_flux_B_buffered)
+        wavelength_interval_collection.append(wavelength_buffered)
+        flux_interval_collection.append(flux_buffered)
+        templateA_interval_collection.append(templateA_buffered)
+        templateB_interval_collection.append(templateB_buffered)
+        sep_flux_A_interval_collection.append(sep_flux_A_buffered)
+        sep_flux_B_interval_collection.append(sep_flux_B_buffered)
         interval_buffer_mask.append(buffer_mask)
 
         w_interval_start = w_interval_end
 
-    RV_estimates_A = np.empty((RV_collection_A.size, len(wavelength_intervals)))
-    RV_estimates_B = np.empty((RV_collection_B.size, len(wavelength_intervals)))
+    RV_estimates_A = np.empty((RV_collection_A.size, len(wavelength_interval_collection)))
+    RV_estimates_B = np.empty((RV_collection_B.size, len(wavelength_interval_collection)))
 
     # # Calculate RVs using limited part of spectra # #
-    for i in range(0, len(wavelength_intervals)):
+    for i in range(0, len(wavelength_interval_collection)):
         if plot:
             # RVs and separated spectra
             fig_1 = plt.figure(figsize=(16, 9))
@@ -587,20 +597,23 @@ def estimate_errors(wavelength_interval_size: float, inv_flux_collection: np.nda
         else:
             f2_ax1 = None; f3_ax1 = None
 
-        RV_estimates_A[:, i], RV_estimates_B[:, i], _ = \
-            recalculate_RVs(flux_intervals[i], sep_flux_A_intervals[i], sep_flux_B_intervals[i], RV_collection_A,
-                            RV_collection_B, flux_templateA_intervals[i], flux_templateB_intervals[i], delta_v,
-                            ifitparamsA, ifitparamsB, interval_buffer_mask[i], return_weights=False, plot_ax_A=f2_ax1,
-                            plot_ax_B=f3_ax1)
+        RV_estimates_A[:, i], RV_estimates_B[:, i], _ = recalculate_RVs(
+            flux_interval_collection[i], sep_flux_A_interval_collection[i], sep_flux_B_interval_collection[i],
+            RV_collection_A, RV_collection_B, templateA_interval_collection[i], templateB_interval_collection[i],
+            delta_v, ifitparamsA, ifitparamsB, interval_buffer_mask[i], return_weights=False, plot_ax_A=f2_ax1,
+            plot_ax_B=f3_ax1
+        )
 
         if plot:
             phase = np.mod(times, period) / period
             f1_ax1.plot(phase, RV_estimates_A[:, i], 'b*')
             f1_ax1.plot(phase, RV_estimates_B[:, i], 'r*')
-            f1_ax2.plot(wavelength_intervals[i], 1-sep_flux_A_intervals[i], 'b', linewidth=2)
-            f1_ax2.plot(wavelength_intervals[i], 1-flux_templateA_intervals[i], '--', color='grey', linewidth=0.5)
-            f1_ax3.plot(wavelength_intervals[i], 1 - sep_flux_B_intervals[i], 'r', linewidth=2)
-            f1_ax3.plot(wavelength_intervals[i], 1 - flux_templateB_intervals[i], '--', color='grey', linewidth=0.5)
+            f1_ax2.plot(wavelength_interval_collection[i], 1-sep_flux_A_interval_collection[i], 'b', linewidth=2)
+            f1_ax2.plot(wavelength_interval_collection[i], 1-templateA_interval_collection[i], '--', color='grey',
+                        linewidth=0.5)
+            f1_ax3.plot(wavelength_interval_collection[i], 1 - sep_flux_B_interval_collection[i], 'r', linewidth=2)
+            f1_ax3.plot(wavelength_interval_collection[i], 1 - templateB_interval_collection[i], '--', color='grey',
+                        linewidth=0.5)
             f1_ax1.set_ylabel('Radial Velocity [km/s]')
             f1_ax2.set_ylabel('Normalized Flux')
             f1_ax2.set_xlabel('Wavelength [Å]')
@@ -612,18 +625,20 @@ def estimate_errors(wavelength_interval_size: float, inv_flux_collection: np.nda
     return (errors_RV_A, errors_RV_B), (RV_estimates_A, RV_estimates_B)
 
 
-def estimate_errors_2(wavelength_interval_size: int, inv_flux_collection: np.ndarray,
-                    inv_flux_templateA: np.ndarray, inv_flux_templateB: np.ndarray, delta_v: float,
-                    ifitparamsA: InitialFitParameters, ifitparamsB: InitialFitParameters, wavelength: np.ndarray,
-                    time_values: np.ndarray, RV_collection: np.ndarray, convergence_limit=1E-5,
-                    iteration_limit=10, plot=True, period=None, wavelength_buffer_size=100, rv_lower_limit=0.0,
-                    suppress_print=False, convergence_limit_scs=1E-7, adaptive_rv_limit=False,
-                    amplitude_weighing=False):
+def estimate_errors_2(
+        wavelength_interval_size: int, inv_flux_collection: np.ndarray,
+        inv_flux_templateA: np.ndarray, inv_flux_templateB: np.ndarray, delta_v: float,
+        ifitparamsA: InitialFitParameters, ifitparamsB: InitialFitParameters, wavelength: np.ndarray,
+        time_values: np.ndarray, RV_collection: np.ndarray, convergence_limit=1E-5,
+        iteration_limit=10, plot=True, period=None, wavelength_buffer_size=100, rv_lower_limit=0.0,
+        suppress_print=False, convergence_limit_scs=1E-7, adaptive_rv_limit=False,
+        amplitude_weighing=False
+):
 
-    wavelength_intervals = []
-    flux_intervals = []
-    flux_templateA_intervals = []
-    flux_templateB_intervals = []
+    wavelength_interval_collection = []
+    flux_interval_collection = []
+    templateA_interval_collection = []
+    templateB_interval_collection = []
     interval_buffer_mask = []
     w_interval_start = wavelength[0] + wavelength_buffer_size
     while True:
@@ -645,19 +660,19 @@ def estimate_errors_2(wavelength_interval_size: int, inv_flux_collection: np.nda
         _, (_, flB_buffered, _, _) = spf.limit_wavelength_interval(w_interval, wavelength, inv_flux_templateB,
                                                                    buffer_mask=buffer_mask_internal, even_length=True)
 
-        wavelength_intervals.append(wl_buffered)
-        flux_intervals.append(fl_buffered)
-        flux_templateA_intervals.append(flA_buffered)
-        flux_templateB_intervals.append(flB_buffered)
+        wavelength_interval_collection.append(wl_buffered)
+        flux_interval_collection.append(fl_buffered)
+        templateA_interval_collection.append(flA_buffered)
+        templateB_interval_collection.append(flB_buffered)
         interval_buffer_mask.append(buffer_mask)
 
         w_interval_start = w_interval_end
 
-    RV_A_interval_values = np.empty((RV_collection[:, 0].size, len(wavelength_intervals)))
-    RV_B_interval_values = np.empty((RV_collection[:, 0].size, len(wavelength_intervals)))
-    for i in range(0, len(wavelength_intervals)):
-        current_wl, current_fl = wavelength_intervals[i], flux_intervals[i]
-        current_fltA, current_fltB = flux_templateA_intervals[i], flux_templateB_intervals[i]
+    RV_A_interval_values = np.empty((RV_collection[:, 0].size, len(wavelength_interval_collection)))
+    RV_B_interval_values = np.empty((RV_collection[:, 0].size, len(wavelength_interval_collection)))
+    for i in range(0, len(wavelength_interval_collection)):
+        current_wl, current_fl = wavelength_interval_collection[i], flux_interval_collection[i]
+        current_fltA, current_fltB = templateA_interval_collection[i], templateB_interval_collection[i]
         current_buffer = interval_buffer_mask[i]
 
         RV_A_temp, RV_B_temp, _, _, _, _, _ = \
