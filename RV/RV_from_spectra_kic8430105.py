@@ -12,7 +12,6 @@ from RV.library.initial_fit_parameters import InitialFitParameters
 import RV.library.spectral_separation_routine as ssr
 from RV.library.linear_limbd_coeff_estimate import estimate_linear_limbd
 import matplotlib.pyplot as plt
-from copy import copy, deepcopy
 
 
 # # # # Set variables for script # # # #
@@ -25,11 +24,12 @@ observatory_location = EarthLocation.of_site("lapalma")
 observatory_name = "lapalma"
 stellar_target = "kic8430105"
 wavelength_normalization_limit = (4200, 9600)   # Ångström, limit to data before performing continuum normalization
-wavelength_RV_limit = (4600, 5400)              # Ångström, the actual spectrum area used for analysis
+wavelength_RV_limit = (4700, 5400)              # Ångström, the actual spectrum area used for analysis
 wavelength_buffer_size = 50                     # Ångström, padding included at ends of spectra. Useful when doing
                                                 # wavelength shifts with np.roll()
 wavelength_intervals_error_estimate = 100       # Ångström, size of the intervals used for error estimation on RVs
 load_data = True      # Defines if normalized spectrum should be loaded from earlier, or done with AFS_algorithm
+plot = False
 file_exclude_list = ['FIBl060068_step011_merge.fits']
 delta_v = 1.0          # interpolation resolution for spectrum in km/s
 speed_of_light = scc.c / 1000    # in km/s
@@ -37,7 +37,7 @@ estimate_RVb_from_RVa = True        # defines if a guess on RVb should be made i
                                     # initial fitting
 mass_A_estimate = 1.31
 mass_B_estimate = 0.83
-system_RV_estimate = 16.053
+system_RV_estimate = 19.44  # 16.053
 orbital_period_estimate = 63.33  # only for plotting
 
 # # Stellar parameter estimates (important for limb darkening calculation) # #
@@ -47,13 +47,13 @@ MH_A  , MH_B   = -0.49, -0.49
 mTur_A, mTur_B = 2.0, 2.0
 
 # # Initial fit parameters for rotational broadening function fit # #
-bf_velocity_span = 150        # broadening function span in velocity space, should be the same for both components
+bf_velocity_span = 175        # broadening function span in velocity space, should be the same for both components
 limbd_A = estimate_linear_limbd(wavelength_RV_limit, logg_A, Teff_A, MH_A, mTur_A, loc='Data/tables/atlasco.dat')
 limbd_B = estimate_linear_limbd(wavelength_RV_limit, logg_B, Teff_B, MH_B, mTur_B, loc='Data/tables/atlasco.dat')
 ifitpar_A = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=100, limbd_coef=limbd_A,
                                  smooth_sigma=2.0, bf_velocity_span=bf_velocity_span)
-ifitpar_B = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=7.0, limbd_coef=limbd_B,
-                                 smooth_sigma=3.5, bf_velocity_span=bf_velocity_span)
+ifitpar_B = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=10.0, limbd_coef=limbd_B,
+                                 smooth_sigma=4.0, bf_velocity_span=bf_velocity_span)
 
 # # Template Spectra # #
 template_spectrum_path_A = 'Data/template_spectra/5000_20_m05p00.ms.fits'
@@ -61,7 +61,7 @@ template_spectrum_path_B = 'Data/template_spectra/5500_45_m05p00.ms.fits'
 
 # # Computation parameters # #
 number_of_parallel_jobs = 4     # for initial RV guess fits
-rv_lower_limit = 10.0           # lower limit for RV_A in order to include a spectrum in the spectral separation
+rv_lower_limit = 14.0           # lower limit for RV_A in order to include a spectrum in the spectral separation
                                 # (if lower, components are assumed to be mixed in BF, and left out to not contaminate)
                                 # This parameter is only useful when the systemic RV is well-known. Otherwise, set it to
                                 # 0.0.
@@ -143,15 +143,16 @@ print(bjdtdb)
 print(warning)
 
 # # Plot # #
-plt.figure(figsize=(16, 9))
-for i in range(0, len(wavelength_collection_list)):
-    # plt.plot(wavelength, 1-0.05*i -(flux_collection_inverted[:, i]*0.025))
-    plt.plot(wavelength_collection_list[i], 1-0.05*i - 0.025 + flux_collection_list[i]*0.025)
-    plt.plot(wavelength_collection_list[i], np.ones(shape=wavelength_collection_list[i].shape)-0.05*i, '--',
-             color='grey', linewidth=0.7)
-plt.xlim([4600, 6400])
-plt.xlabel('Wavelength [Å]')
-plt.show(block=False)
+if plot:
+    plt.figure(figsize=(16, 9))
+    for i in range(0, len(wavelength_collection_list)):
+        # plt.plot(wavelength, 1-0.05*i -(flux_collection_inverted[:, i]*0.025))
+        plt.plot(wavelength_collection_list[i], 1 - 0.05 * i - 0.025 + flux_collection_list[i] * 0.025)
+        plt.plot(wavelength_collection_list[i], np.ones(shape=wavelength_collection_list[i].shape) - 0.05 * i, '--',
+                 color='grey', linewidth=0.7)
+    plt.xlim([4600, 6400])
+    plt.xlabel('Wavelength [Å]')
+    plt.show(block=False)
 
 
 # # Load template spectrum # #
@@ -206,15 +207,18 @@ buffer_mask = buffer_mask_new
 
 
 # # Plot all spectra # #
-plt.figure(figsize=(16, 9))
-for i in range(0, flux_collection_inverted[0, :].size):
-    plt.plot(wavelength_buffered, 1-0.05*i -(flux_collection_inverted_buffered[:, i]*0.025), '--', color='grey',
-             linewidth=0.3)
-    plt.plot(wavelength, 1-0.05*i -(flux_collection_inverted[:, i]*0.025))
-    plt.plot(wavelength, np.ones(shape=wavelength.shape)-0.05*i, '--', color='grey', linewidth=0.5)
-plt.xlim([4600, 6400])
-plt.xlabel('Wavelength [Å]')
-plt.show(block=True)
+if plot:
+    plt.figure(figsize=(16, 9))
+    for i in range(0, flux_collection_inverted[0, :].size):
+        plt.plot(wavelength_buffered, 1 - 0.05 * i - (flux_collection_inverted_buffered[:, i] * 0.025), '--',
+                 color='grey',
+                 linewidth=0.3)
+        plt.plot(wavelength, 1 - 0.05 * i - (flux_collection_inverted[:, i] * 0.025))
+        plt.plot(wavelength, np.ones(shape=wavelength.shape) - 0.05 * i, '--', color='grey', linewidth=0.5)
+    plt.xlim([4600, 6400])
+    plt.xlabel('Wavelength [Å]')
+    plt.show(block=True)
+
 
 # # Calculate broadening function RVs to use as initial guesses # #
 RV_guesses_A, RV_guesses_B, _ = \
@@ -252,56 +256,35 @@ wiee = wavelength_intervals_error_estimate
     ssr.estimate_errors(wiee, flux_collection_inverted_buffered, flux_template_A_inverted_buffered,
                         flux_template_B_inverted_buffered, separated_flux_A, separated_flux_B, delta_v, ifitpars[0],
                         ifitpars[1], wavelength, RV_collection_A, RV_collection_B, bjdtdb, wavelength_buffer_size,
-                        plot=False, period=orbital_period_estimate)
-print('\nRV actual errors estimate')
-print(RV_errors_A)
-print(RV_errors_B)
-print('\nRV estimates')
-print(RV_estimates_A)
-print(RV_estimates_B)
+                        plot=plot, period=orbital_period_estimate)
+
+
+bad_data_mask = np.abs(RV_collection_A) < rv_lower_limit
+bjdtdb_B = bjdtdb[~bad_data_mask]
+RV_errors_B = RV_errors_B[~bad_data_mask]
+RV_collection_B = RV_collection_B[~bad_data_mask]
+
 
 plt.figure()
-plt.errorbar(np.mod(bjdtdb, orbital_period_estimate)/orbital_period_estimate, RV_collection_A, yerr=RV_errors_A, fmt='b*')
-plt.errorbar(np.mod(bjdtdb, orbital_period_estimate)/orbital_period_estimate, RV_collection_B, yerr=RV_errors_B, fmt='r*')
+plt.errorbar(np.mod(bjdtdb, orbital_period_estimate)/orbital_period_estimate, RV_collection_A, yerr=RV_errors_A,
+             fmt='b*')
+plt.errorbar(np.mod(bjdtdb_B, orbital_period_estimate)/orbital_period_estimate, RV_collection_B, yerr=RV_errors_B,
+             fmt='r*')
+plt.xlabel('Orbital Phase')
+plt.ylabel('Radial Velocity (km/s)')
 plt.show(block=True)
-"""
-RV_collection = RV_guess_collection
-RV_collection[:, 0] = deepcopy(RV_collection_A)
-RV_collection[:, 1] = deepcopy(RV_collection_B)
 
-RV_errors_A2, RV_errors_B2 = ssr.estimate_errors_2(wiee, flux_collection_inverted_buffered,
-                                                 flux_template_A_inverted_buffered, flux_template_B_inverted_buffered,
-                                                 delta_v, ifitpar_A, ifitpar_B, wavelength_buffered,  bjdtdb,
-                                                 period=orbital_period_estimate, iteration_limit=10,
-                                                 RV_collection=RV_collection, convergence_limit=5E-2,
-                                                 wavelength_buffer_size=wavelength_buffer_size,
-                                                 rv_lower_limit=rv_lower_limit, suppress_print='scs', plot=False,
-                                                 adaptive_rv_limit=False, amplitude_weighing=True)
-
-# # Plot results # #
-print('RV errors 2')
-print(RV_errors_A2)
-print(RV_errors_B2)
-#plt.figure()
-plt.errorbar(np.mod(bjdtdb, orbital_period_estimate)/orbital_period_estimate, RV_collection_A, yerr=RV_errors_A2, fmt='g*')
-plt.errorbar(np.mod(bjdtdb, orbital_period_estimate)/orbital_period_estimate, RV_collection_B, yerr=RV_errors_B2, fmt='y*')
-plt.show(block=True)
-"""
 
 # # Save result # #
 save_data = np.empty((RV_collection_A.size, 3))
 save_data[:, 0] = bjdtdb
 save_data[:, 1] = RV_collection_A
 save_data[:, 2] = RV_errors_A
-np.savetxt('Data/processed/RV_results/rvA_not_8430105_3.txt', save_data)
+np.savetxt('Data/processed/RV_results/rvA_not_8430105_4600_5400_100.txt', save_data)
 
-bad_data_mask = np.abs(RV_collection_A) < rv_lower_limit
-bjdtdb = bjdtdb[~bad_data_mask]
-RV_errors_B = RV_errors_B[~bad_data_mask]
-RV_collection_B = RV_collection_B[~bad_data_mask]
 save_data = np.empty((RV_collection_B.size, 3))
-save_data[:, 0] = bjdtdb
+save_data[:, 0] = bjdtdb_B
 save_data[:, 1] = RV_collection_B
 save_data[:, 2] = RV_errors_B
-np.savetxt('Data/processed/RV_results/rvB_not_8430105_3.txt', save_data)
+np.savetxt('Data/processed/RV_results/rvB_not_8430105_4600_5400_100.txt', save_data)
 

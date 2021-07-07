@@ -16,8 +16,7 @@ However, multiple people have been over shazam.py, including Karsten Frank Broga
 based on previous implementations by J. Jessen Hansen and others.
 """
 
-from RV.library.calculate_radial_velocities import radial_velocities_of_multiple_spectra, \
-    radial_velocity_single_component
+from RV.library.calculate_radial_velocities import radial_velocity_single_component
 from RV.library.broadening_function_svd import *
 from RV.library.initial_fit_parameters import InitialFitParameters
 from lmfit.minimizer import MinimizerResult
@@ -77,7 +76,7 @@ def separate_component_spectra(
             rvB = radial_velocity_collection_B[i]
             if np.abs(rvA) > rv_lower_limit:
                 shifted_flux_A = shift_spectrum(flux_collection[:, i], -rvA, delta_v)
-                separated_flux_A += weights_A[i]*shifted_flux_A - shift_spectrum(separated_flux_B, rvB - rvA, delta_v)
+                separated_flux_A += weights_A[i]*(shifted_flux_A - shift_spectrum(separated_flux_B, rvB - rvA, delta_v))
                 n_used_spectra += weights_A[i]
 
         separated_flux_A = separated_flux_A / n_used_spectra
@@ -89,7 +88,7 @@ def separate_component_spectra(
             rvB = radial_velocity_collection_B[i]
             if np.abs(rvA) > rv_lower_limit:
                 shifted_flux_B = shift_spectrum(flux_collection[:, i], -rvB, delta_v)
-                separated_flux_B += weights_B[i]*shifted_flux_B - shift_spectrum(separated_flux_A, rvA - rvB, delta_v)
+                separated_flux_B += weights_B[i]*(shifted_flux_B - shift_spectrum(separated_flux_A, rvA - rvB, delta_v))
                 n_used_spectra += weights_B[i]
 
         separated_flux_B = separated_flux_B / n_used_spectra
@@ -124,6 +123,49 @@ def update_bf_plot(plot_ax, model, index):
     plot_ax.plot(np.ones(shape=(2,))*RV, [1-0.05*index-0.005,
                                           1+0.025*np.max(model_values)/np.max(bf_smooth_values)-0.05*index],
                  color='grey')
+
+
+def evaluate_weight_quality_plot(weight_A, weight_B, model_A, model_B, RV_A):
+    fig = plt.figure(figsize=(16, 9))
+    gs = fig.add_gridspec(2, 2)
+    ax1 = fig.add_subplot(gs[0, 0])
+    ax2 = fig.add_subplot(gs[0, 1])
+    ax3 = fig.add_subplot(gs[1, 0])
+    ax4 = fig.add_subplot(gs[1, 1])
+
+    fit_A, fit_B = model_A[0], model_B[0]
+    model_vals_A, model_vals_B = model_A[1], model_B[1]
+    velocity_A, velocity_B = model_A[2], model_B[2]
+    bf_A, bf_B = model_A[3], model_B[3]
+    bf_smooth_A, bf_smooth_B = model_A[4], model_B[4]
+
+    amplitude_A, _, _, _, _, _ = get_fit_parameter_values(fit_A.params)
+    amplitude_B, _, _, _, _, _ = get_fit_parameter_values(fit_B.params)
+
+    ax1.plot(velocity_A, bf_smooth_A, 'b-')
+    ax1.plot(velocity_A, model_vals_A, 'k--')
+    ax1.set_ylabel('Broadening function')
+    ax2.plot(velocity_B, bf_smooth_B, 'r-')
+    ax2.plot(velocity_B, model_vals_B, 'k--')
+    ax3.plot(velocity_A, bf_smooth_A-model_vals_A, 'b-')
+    ax3.set_ylabel('Residuals')
+    ax3.set_xlabel('Velocity [km/s]')
+    ax4.plot(velocity_B, bf_smooth_B-model_vals_B, 'r-')
+    ax4.set_ylabel('Velocity [km/s]')
+    if RV_A > 0.0:
+        rms_mask_B = velocity_B < 0.0
+    else:
+        rms_mask_B = velocity_B > 0.0
+    rms_A = np.sqrt(np.sum((bf_smooth_A-model_vals_A)**2)/bf_smooth_A.size) / np.abs(np.mean(bf_smooth_A))
+    rms_B = np.sqrt(np.sum((bf_smooth_B[rms_mask_B]-model_vals_B[rms_mask_B])**2)/bf_smooth_B[rms_mask_B].size) \
+            / np.abs(np.mean(bf_smooth_B[rms_mask_B]))
+
+    ax1.annotate(text=f'Weight: {weight_A} \nrms: {rms_A} \namplitude: {amplitude_A}',
+                 xy=(0.9, 0.9), xycoords='axes fraction')
+    ax2.annotate(text=f'Weight: {weight_B} \nrms: {rms_B} \namplitude: {amplitude_B}',
+                 xy=(0.9, 0.9), xycoords='axes fraction')
+    plt.tight_layout()
+    plt.show(block=False)
 
 
 def recalculate_RVs(
@@ -201,26 +243,39 @@ def recalculate_RVs(
         RV_collection_A[i], model_A = radial_velocity_single_component(corrected_flux_A, BRsvd_template_A, ifitparamsA)
         RV_collection_B[i], model_B = radial_velocity_single_component(corrected_flux_B, BRsvd_template_B, ifitparamsB)
 
+        """
         fits_A[i], fits_B[i] = model_A[0], model_B[0]
         model_values_A, model_values_B = model_A[1], model_B[1]
         bf_smooth_A, bf_smooth_B = model_A[4], model_B[4]
-
+        velocity_B = model_B[2]
         if return_weights:
             amplitude_A, _, _, _, _, _ = get_fit_parameter_values(fits_A[i].params)
             amplitude_B, _, _, _, _, _ = get_fit_parameter_values(fits_B[i].params)
-            weights_A[i] = amplitude_A / np.std(bf_smooth_A - model_values_A)
-            weights_B[i] = amplitude_B / np.std(bf_smooth_B - model_values_B)
+            if RV_collection_A[i] > 0.0:
+                rms_mask_B = velocity_B < 0.0
+            else:
+                rms_mask_B = velocity_B > 0.0
+            rms_A = np.sqrt(np.sum((bf_smooth_A - model_values_A)**2)/bf_smooth_A.size) / np.abs(np.mean(bf_smooth_A))
+            rms_B = np.sqrt(np.sum((bf_smooth_B[rms_mask_B] - model_values_B[rms_mask_B])**2)/
+                            bf_smooth_B[rms_mask_B].size) / np.abs(np.mean(bf_smooth_B[rms_mask_B]))
+            weights_A[i] = 1 / rms_A
+            weights_B[i] = 1 / rms_B
+            if amplitude_B == 0.0:
+                weights_B[i] = 0.0
+            evaluate_weight_quality_plot(weights_A[i], weights_B[i], model_A, model_B, RV_collection_A[i])
+        """
 
         if plot_ax_A is not None and i < 20:
-            update_bf_plot(plot_ax_A, model_A, i, rv_lower_limit)
+            update_bf_plot(plot_ax_A, model_A, i)
             if rv_lower_limit != 0.0:
                 plot_ax_A.plot([rv_lower_limit, rv_lower_limit], [0, 1.1], 'k', linewidth=0.3)
                 plot_ax_A.plot([-rv_lower_limit, -rv_lower_limit], [0, 1.1], 'k', linewidth=0.3)
         if plot_ax_B is not None and i < 20:
-            update_bf_plot(plot_ax_B, model_B, i, rv_lower_limit)
+            update_bf_plot(plot_ax_B, model_B, i)
             if rv_lower_limit != 0.0:
                 plot_ax_B.plot([rv_lower_limit, rv_lower_limit], [0, 1.1], 'k', linewidth=0.3)
                 plot_ax_B.plot([-rv_lower_limit, -rv_lower_limit], [0, 1.1], 'k', linewidth=0.3)
+    plt.show(block=True)
     return RV_collection_A, RV_collection_B, (fits_A, fits_B, weights_A, weights_B)
 
 
@@ -460,6 +515,7 @@ def spectral_separation_routine(
         ifitparamsA.vsini_vary_limit = 0.3
         ifitparamsB.vsini_vary_limit = 0.3
 
+        """
         if adaptive_rv_limit:       # Crude assumption that vsini matches a sigma of a gaussian function
             speed_light = scc.c / 1000
             width_A = ((speed_light/ifitparamsA.spectral_resolution)/2.354)**2
@@ -475,6 +531,7 @@ def spectral_separation_routine(
             if not suppress_ssr:
                 print('rv_lower_limit', rv_lower_limit)
                 print('B velocity_fit_width', ifitparamsB.velocity_fit_width)
+        """
 
         iterations += 1
         RMS_A += RV_collection_A
