@@ -21,7 +21,6 @@ from RV.library.broadening_function_svd import *
 from RV.library.initial_fit_parameters import InitialFitParameters
 from lmfit.minimizer import MinimizerResult
 import RV.library.spectrum_processing_functions as spf
-import scipy.constants as scc
 
 
 def shift_spectrum(flux, radial_velocity_shift, delta_v):
@@ -31,7 +30,8 @@ def shift_spectrum(flux, radial_velocity_shift, delta_v):
 
 def separate_component_spectra(
         flux_collection, radial_velocity_collection_A, radial_velocity_collection_B, delta_v, convergence_limit,
-        suppress_scs=False, max_iterations=20, rv_lower_limit=0.0, weights_A=None, weights_B=None
+        suppress_scs=False, max_iterations=20, rv_proximity_limit=0.0, rv_lower_limit=0.0, weights_A=None,
+        weights_B=None, use_spectra=True or np.ndarray
 ):
     """
     Assumes that component A is the dominant component in the spectrum. Attempts to separate the two components using
@@ -47,11 +47,17 @@ def separate_component_spectra(
     :param convergence_limit:             float, the precision needed to break while loop
     :param suppress_scs:                  bool, indicates if printing should be suppressed
     :param max_iterations:                int, maximum number of allowed iterations before breaking loop
-    :param rv_lower_limit:                float, lower RV limit in order to add separated spectrum (if below, the
+    :param rv_proximity_limit:            float, RV limit in order to add separated spectrum (if closer, the
                                           components are expected to be mixed, and are not included to avoid pollution)
+    :param rv_lower_limit:                float. RV limit using only component A. Overrides rv_proximity_limit if also
+                                          provided. Useful if RV for B is unstable.
     :param weights_A:                     np.ndarray shape (nspectra, ). Amplitude weights to scale spectra importance
                                           by. Used if not None.
     :param weights_B:
+    :param use_spectra:                   bool, np.ndarray. If True, use all spectra for calculating the
+                                            separated spectra. If np.ndarray or list, this should indicate the indices
+                                            of the spectra to use from 0 to n_spectra-1 in flux_collection[:, i].
+                                            Overrides use of rv_lower_limit and rv_proximity_limit
 
     :return separated_flux_A, separated_flux_B:   the separated and meaned total component spectra of A and B.
     """
@@ -72,24 +78,54 @@ def separate_component_spectra(
         separated_flux_A = np.zeros((flux_collection[:, 0].size,))
         n_used_spectra = 0
         for i in range(0, n_spectra):
-            rvA = radial_velocity_collection_A[i]
-            rvB = radial_velocity_collection_B[i]
-            if np.abs(rvA) > rv_lower_limit:
-                shifted_flux_A = shift_spectrum(flux_collection[:, i], -rvA, delta_v)
-                separated_flux_A += weights_A[i]*(shifted_flux_A - shift_spectrum(separated_flux_B, rvB - rvA, delta_v))
-                n_used_spectra += weights_A[i]
+            if (isinstance(use_spectra, bool) and use_spectra is True) or (isinstance(use_spectra, np.ndarray) and
+                                                                           i in use_spectra):
+                rvA = radial_velocity_collection_A[i]
+                rvB = radial_velocity_collection_B[i]
+                if rv_lower_limit == 0.0 and not isinstance(use_spectra, np.ndarray):
+                    condition = np.abs(rvA-rvB) > rv_proximity_limit
+                elif not isinstance(use_spectra, np.ndarray):
+                    condition = np.abs(rvA) > rv_lower_limit
+                else:
+                    condition = True
+
+                if condition:
+                    shifted_flux_A = shift_spectrum(flux_collection[:, i], -rvA, delta_v)
+                    separated_flux_A += weights_A[i]*(shifted_flux_A - shift_spectrum(separated_flux_B, rvB - rvA,
+                                                                                      delta_v))
+                    n_used_spectra += weights_A[i]
+            elif isinstance(use_spectra, np.ndarray) and use_spectra.size != 0 and i not in use_spectra:
+                pass
+            else:
+                raise TypeError(f'use_spectra is either of wrong type ({type(use_spectra)}), empty, or wrong value.\n' +
+                                f'Expected type: {type(True)} or np.ndarray. Expected value if bool: True')
 
         separated_flux_A = separated_flux_A / n_used_spectra
 
         separated_flux_B = np.zeros((flux_collection[:, 0].size,))
         n_used_spectra = 0
         for i in range(0, n_spectra):
-            rvA = radial_velocity_collection_A[i]
-            rvB = radial_velocity_collection_B[i]
-            if np.abs(rvA) > rv_lower_limit:
-                shifted_flux_B = shift_spectrum(flux_collection[:, i], -rvB, delta_v)
-                separated_flux_B += weights_B[i]*(shifted_flux_B - shift_spectrum(separated_flux_A, rvA - rvB, delta_v))
-                n_used_spectra += weights_B[i]
+            if (isinstance(use_spectra, bool) and use_spectra is True) or (isinstance(use_spectra, np.ndarray) and
+                                                                           i in use_spectra):
+                rvA = radial_velocity_collection_A[i]
+                rvB = radial_velocity_collection_B[i]
+                if rv_lower_limit == 0.0 and not isinstance(use_spectra, np.ndarray):
+                    condition = np.abs(rvA-rvB) > rv_proximity_limit
+                elif not isinstance(use_spectra, np.ndarray):
+                    condition = np.abs(rvA) > rv_lower_limit
+                else:
+                    condition = True
+
+                if condition:
+                    shifted_flux_B = shift_spectrum(flux_collection[:, i], -rvB, delta_v)
+                    separated_flux_B += weights_B[i]*(shifted_flux_B - shift_spectrum(separated_flux_A, rvA - rvB,
+                                                                                      delta_v))
+                    n_used_spectra += weights_B[i]
+            elif isinstance(use_spectra, np.ndarray) and use_spectra.size != 0 and i not in use_spectra:
+                pass
+            else:
+                raise TypeError(f'use_spectra is either of wrong type ({type(use_spectra)}), empty, or wrong value.\n' +
+                                f'Expected type: {type(True)} or np.ndarray. Expected value if bool: True')
 
         separated_flux_B = separated_flux_B / n_used_spectra
 
@@ -172,8 +208,8 @@ def recalculate_RVs(
         inv_flux_collection: np.ndarray, separated_flux_A: np.ndarray, separated_flux_B: np.ndarray,
         RV_collection_A: np.ndarray, RV_collection_B: np.ndarray, inv_flux_templateA: np.ndarray,
         inv_flux_templateB: np.ndarray, delta_v: float, ifitparamsA:InitialFitParameters,
-        ifitparamsB:InitialFitParameters, buffer_mask: np.ndarray, plot_ax_A=None, plot_ax_B=None, rv_lower_limit=0.0,
-        return_weights=True
+        ifitparamsB:InitialFitParameters, buffer_mask: np.ndarray, iteration_limit=10, convergence_limit=1e-5,
+        plot_ax_A=None, plot_ax_B=None, plot_ax_d1=None, plot_ax_d2=None, rv_lower_limit=0.0, return_weights=True
 ):
     """
     This part of the spectral separation routine corrects the spectra for the separated spectra found by
@@ -192,8 +228,12 @@ def recalculate_RVs(
     :param ifitparamsB:         InitialFitParameters. Fitting and broadening function parameters for component B.
     :param buffer_mask:         np.ndarray shape (:, ). Mask used to remove "buffer" (or "padding") from spectrum.
                                     See spectral_separation_routine() for more info.
+    :param iteration_limit:     int, number of allowed iterations for each spectrum.
+    :param convergence_limit:   float, convergence limit for RV changes during loop.
     :param plot_ax_A:           matplotlib.axes.axes. Used to update RV plots during iterations.
     :param plot_ax_B:           matplotlib.axes.axes. Used to update RV plots during iterations.
+    :param plot_ax_d1:          matplotlib.axes.axes. Extra plot to examine BF A in detail for 1 or 2 spectra.
+    :param plot_ax_d2:          matplotlib.axes.axes. Extra plot to examine BF B in detail for 1 or 2 spectra.
     :param rv_lower_limit:      float. Lower limit for the RV. See main routine for details. Only used for plots here.
     :param return_weights:      bool. Indicates whether amplitude weighing is enabled, in which case weights should be
                                 calculated and returned using the profile amplitude from the fit. If False, returns
@@ -223,6 +263,14 @@ def recalculate_RVs(
         plot_ax_B.clear()
         plot_ax_B.set_xlim([-v_span/2, +v_span/2])
         plot_ax_B.set_xlabel('Velocity shift [km/s]')
+    if plot_ax_d1 is not None:
+        plot_ax_d1.clear()
+        plot_ax_d1.set_xlabel('Velocity shift [km/s]')
+        plot_ax_d1.set_title('Component A, spectrum 16 and 19')
+    if plot_ax_d2 is not None:
+        plot_ax_d2.clear()
+        plot_ax_d2.set_xlabel('Velocity shift [km/s]')
+        plot_ax_d2.set_title('Component B, spectrum 16 and 19')
 
     fits_A = np.empty(shape=(n_spectra,), dtype=MinimizerResult)
     fits_B = np.empty(shape=(n_spectra,), dtype=MinimizerResult)
@@ -231,39 +279,51 @@ def recalculate_RVs(
     weights_B = np.ones(shape=(n_spectra, ))
 
     for i in range(0, n_spectra):
-        corrected_flux_A = inv_flux_collection[:, i] -shift_spectrum(separated_flux_B, RV_collection_B[i], delta_v)
-        corrected_flux_B = inv_flux_collection[:, i] -shift_spectrum(separated_flux_A, RV_collection_A[i], delta_v)
+        iterations = 0
+        while True:
+            iterations += 1
+            RMS_RV_A = -RV_collection_A[i]
+            corrected_flux_A = inv_flux_collection[:, i] -shift_spectrum(separated_flux_B, RV_collection_B[i], delta_v)
+            corrected_flux_A = corrected_flux_A[~buffer_mask]
+            ifitparamsA.RV = RV_collection_A[i]
 
-        corrected_flux_A = corrected_flux_A[~buffer_mask]
-        corrected_flux_B = corrected_flux_B[~buffer_mask]
+            RV_collection_A[i], model_A = radial_velocity_single_component(corrected_flux_A, BRsvd_template_A,
+                                                                           ifitparamsA)
+            RMS_RV_A = np.abs(RMS_RV_A + RV_collection_A[i])
+            if RMS_RV_A < convergence_limit:
+                if iterations > iteration_limit//2 and return_weights is True:
+                    weights_A[i] = 1 - (iteration_limit - iterations) / iteration_limit//2
+                break
+            elif iterations > iteration_limit:
+                warnings.warn(f'RV: spectrum {i} did not reach convergence limit {convergence_limit} for component A.')
+                if return_weights is True:
+                    weights_A[i] = 0.0
+                break
 
-        ifitparamsA.RV = RV_collection_A[i]
-        ifitparamsB.RV = RV_collection_B[i]
+        iterations = 0
+        while True:
+            iterations += 1
+            RMS_RV_B = -RV_collection_B[i]
+            corrected_flux_B = inv_flux_collection[:, i] -shift_spectrum(separated_flux_A, RV_collection_A[i], delta_v)
+            corrected_flux_B = corrected_flux_B[~buffer_mask]
+            ifitparamsB.RV = RV_collection_B[i]
 
-        RV_collection_A[i], model_A = radial_velocity_single_component(corrected_flux_A, BRsvd_template_A, ifitparamsA)
-        RV_collection_B[i], model_B = radial_velocity_single_component(corrected_flux_B, BRsvd_template_B, ifitparamsB)
+            RV_collection_B[i], model_B = radial_velocity_single_component(corrected_flux_B, BRsvd_template_B,
+                                                                           ifitparamsB)
 
-        """
+            RMS_RV_B = np.abs(RMS_RV_B + RV_collection_B[i])
+            if RMS_RV_B < convergence_limit:
+                if iterations > iteration_limit//2 and return_weights is True:
+                    weights_B[i] = 1 - (iteration_limit - iterations) / iteration_limit//2
+                break
+            elif iterations > iteration_limit:
+                warnings.warn(f'RV: spectrum {i} did not reach convergence limit {convergence_limit} for component B.',
+                              category=Warning)
+                if return_weights is True:
+                    weights_B[i] = 0.0
+                break
+
         fits_A[i], fits_B[i] = model_A[0], model_B[0]
-        model_values_A, model_values_B = model_A[1], model_B[1]
-        bf_smooth_A, bf_smooth_B = model_A[4], model_B[4]
-        velocity_B = model_B[2]
-        if return_weights:
-            amplitude_A, _, _, _, _, _ = get_fit_parameter_values(fits_A[i].params)
-            amplitude_B, _, _, _, _, _ = get_fit_parameter_values(fits_B[i].params)
-            if RV_collection_A[i] > 0.0:
-                rms_mask_B = velocity_B < 0.0
-            else:
-                rms_mask_B = velocity_B > 0.0
-            rms_A = np.sqrt(np.sum((bf_smooth_A - model_values_A)**2)/bf_smooth_A.size) / np.abs(np.mean(bf_smooth_A))
-            rms_B = np.sqrt(np.sum((bf_smooth_B[rms_mask_B] - model_values_B[rms_mask_B])**2)/
-                            bf_smooth_B[rms_mask_B].size) / np.abs(np.mean(bf_smooth_B[rms_mask_B]))
-            weights_A[i] = 1 / rms_A
-            weights_B[i] = 1 / rms_B
-            if amplitude_B == 0.0:
-                weights_B[i] = 0.0
-            evaluate_weight_quality_plot(weights_A[i], weights_B[i], model_A, model_B, RV_collection_A[i])
-        """
 
         if plot_ax_A is not None and i < 20:
             update_bf_plot(plot_ax_A, model_A, i)
@@ -275,7 +335,11 @@ def recalculate_RVs(
             if rv_lower_limit != 0.0:
                 plot_ax_B.plot([rv_lower_limit, rv_lower_limit], [0, 1.1], 'k', linewidth=0.3)
                 plot_ax_B.plot([-rv_lower_limit, -rv_lower_limit], [0, 1.1], 'k', linewidth=0.3)
-    plt.show(block=True)
+        if plot_ax_d1 is not None and (i==19 or i==16):
+            update_bf_plot(plot_ax_d1, model_A, i)
+        if plot_ax_d2 is not None and (i==19 or i==16):
+            update_bf_plot(plot_ax_d2, model_B, i)
+
     return RV_collection_A, RV_collection_B, (fits_A, fits_B, weights_A, weights_B)
 
 
@@ -287,10 +351,11 @@ def initialize_ssr_plots():
     f1_ax2 = fig_1.add_subplot(gs_1[1, 0])
     f1_ax3 = fig_1.add_subplot(gs_1[1, 1])
 
-    # Program spectra
+    # Select BF fits
     fig_2 = plt.figure(figsize=(16, 9))
-    gs_2 = fig_2.add_gridspec(1, 1)
-    f2_ax1 = fig_2.add_subplot(gs_2[:, :])
+    gs_2 = fig_2.add_gridspec(1, 2)
+    f2_ax1 = fig_2.add_subplot(gs_2[:, 0])
+    f2_ax2 = fig_2.add_subplot(gs_2[:, 1])
 
     # RV corrected program spectra
     fig_3 = plt.figure(figsize=(16, 9))
@@ -307,14 +372,14 @@ def initialize_ssr_plots():
     fig_5 = plt.figure(figsize=(16, 9))
     gs_5 = fig_5.add_gridspec(1, 1)
     f5_ax1 = fig_5.add_subplot(gs_5[:, :])
-    return f1_ax1, f1_ax2, f1_ax3, f2_ax1, f3_ax1, f3_ax2, f4_ax1, f5_ax1
+    return f1_ax1, f1_ax2, f1_ax3, f2_ax1, f2_ax2, f3_ax1, f3_ax2, f4_ax1, f5_ax1
 
 
 def plot_ssr_iteration(
-        f1_ax1, f1_ax2, f1_ax3, f2_ax1, f3_ax1, f3_ax2, separated_flux_A, separated_flux_B, wavelength, flux_template_A,
-        flux_template_B, RV_A, RV_B, time, period, flux_collection, buffer_mask, rv_lower_limit
+        f1_ax1, f1_ax2, f1_ax3, f3_ax1, f3_ax2, separated_flux_A, separated_flux_B, wavelength, flux_template_A,
+        flux_template_B, RV_A, RV_B, time, period, flux_collection, buffer_mask, rv_lower_limit, rv_proximity_limit
 ):
-    f1_ax1.clear(); f1_ax2.clear(); f1_ax3.clear(); f2_ax1.clear()
+    f1_ax1.clear(); f1_ax2.clear(); f1_ax3.clear()
     separated_flux_A, separated_flux_B = separated_flux_A[~buffer_mask], separated_flux_B[~buffer_mask]
     wavelength = wavelength[~buffer_mask]
     flux_template_A, flux_template_B = flux_template_A[~buffer_mask], flux_template_B[~buffer_mask]
@@ -326,7 +391,10 @@ def plot_ssr_iteration(
     else:
         xval = np.mod(time, period) / period
         f1_ax1.set_xlabel('Phase')
-    RV_below_limit_mask = np.abs(RV_A) < rv_lower_limit
+    if rv_lower_limit == 0.0:
+        RV_below_limit_mask = np.abs(RV_A - RV_B) < rv_proximity_limit
+    else:
+        RV_below_limit_mask = np.abs(RV_A) < rv_lower_limit
     f1_ax1.plot(xval[~RV_below_limit_mask], RV_A[~RV_below_limit_mask], 'b*')
     f1_ax1.plot(xval[~RV_below_limit_mask], RV_B[~RV_below_limit_mask], 'r*')
     f1_ax1.plot(xval[RV_below_limit_mask], RV_A[RV_below_limit_mask], 'bx')
@@ -342,12 +410,6 @@ def plot_ssr_iteration(
     f1_ax2.set_ylabel('Normalized Flux')
     f1_ax2.set_xlabel('Wavelength [Å]')
     f1_ax3.set_xlabel('Wavelength [Å]')
-
-    for i in range(0, np.min([5, flux_collection[0, :].size])):
-        f2_ax1.plot(wavelength, 1-0.15*i-(flux_collection[:, i]*0.1))
-        f2_ax1.plot(wavelength, np.ones(shape=wavelength.shape)-0.15*i, '--', color='grey', linewidth=0.5)
-    f2_ax1.set_xlabel('Wavelength [Å]')
-    f2_ax1.set_xlabel('Normalized Flux')
 
     for i in range(0, np.min([5, flux_collection[0, :].size])):
         f3_ax1.plot(wavelength, 1-0.15*i-0.1*shift_spectrum(flux_collection[:, i], -RV_A[i], delta_v=1.0))
@@ -366,8 +428,9 @@ def spectral_separation_routine(
         inv_flux_collection: np.ndarray, inv_flux_templateA: np.ndarray, inv_flux_templateB: np.ndarray, delta_v: float,
         ifitparamsA:InitialFitParameters, ifitparamsB:InitialFitParameters, wavelength: np.ndarray,
         time_values: np.ndarray, RV_guess_collection: np.ndarray, convergence_limit=1E-5, iteration_limit=10, plot=True,
-        period=None, buffer_mask=None, rv_lower_limit=0.0, suppress_print=False, convergence_limit_scs=1E-7,
-        adaptive_rv_limit=False, amplitude_weighing=False, estimate_error=False, return_unbuffered=True
+        period=None, buffer_mask=None, rv_lower_limit=0.0, rv_proximity_limit=0.0, suppress_print=False,
+        convergence_limit_scs=1E-7, weigh_spectra=False, estimate_error=False, return_unbuffered=True,
+        use_spectra=True or np.ndarray
 ):
     """
     Routine that separates component spectra and calculates radial velocities by iteratively calling
@@ -379,32 +442,34 @@ def spectral_separation_routine(
     It is recommended to supply spectra that are buffered (padded) in the ends, and a buffer_mask that indicates this.
     This will limit the effect of loop-back when rolling (shifting) the spectra. spf.limit_wavelength_interval() can be
     used to produce a buffered data-set (and others of the same size).
-    It is recommended to supply an rv_lower_limit in the case where broadening function peaks overlap significantly, or
-    if the height of the secondary peak is on the same order of magnitude as the residuals left-over when subtracting
-    the primary spectrum. This limit will indicate that spectra with primary RV below the limit should not be used when
-    attempting to separate the component spectra by averaging over them, as significant spectral information from the
-    other component would still be present at that wavelength shift.
+
+    The spectra used for calculating the separated spectra should cover a wide range of orbital phases to provide a
+    decent averaged spectrum. They should have a high S/N, and should not include significant emission lines. Avoid
+    using spectra with RVs of the two components close to each others, or spectra from within eclipses.
 
     Additional features included to improve either the RV fitting process or the spectral separation:
       - Fitted v*sin(i) values are meaned and used as fit guesses for next iteration. Simultaneously, the parameter
-        is bounded to the limits v*sin(i) * [1-0.3, 1+0.3], in order to ensure stable fitting for all spectra.
-      - Amplitude weighing of spectra during separation of component spectra. If enabled, the "component signal" of each
-        spectrum is weighed against the noise when calculating the component spectra from them. The weight is
-        amplitude/np.std(broadening_function_values), where amplitude is the height of the fitted component peak.
-        This seems to produce more correct secondary spectra, as it values the data-sets with higher S/N over those with
-        low S/N or large primary residuals.
-      - Adaptive RV lower limits for fitting of secondary component. If enabled, the routine attempts to estimate the
-        width of each component from previous iterations, in order to appropriately adapt the threshold for when to
-        allow the secondary to be fit in the case of close RVs (low primary RV). This might be useful in case the
-        separated broadening functions change significantly on each iteration. It is currently an experimental feature,
-        as it does not seem to produce stable convergence. The feature will also limit the allowed secondary fit width,
-        in case it ends up larger than rv_lower_limit as a result of this. It seems to currently produce a larger
-        rv_lower_limit than would be estimated as significant by eye.
+        is bounded to the limits v*sin(i) * [1-0.5, 1+0.5], in order to ensure stable fitting for all spectra.
+      - Weighing of spectra during separation of component spectra. If enabled, data-set quality is weighed when
+        calculating the disentangled spectra by the routine's ability to quickly converge when measuring RV values.
+        Explanation: Each spectrum has a weight of 1. When fitting RVs, if it takes more than half the maximum allowed
+        iterations for a component, the spectrum's weight for that component is calculated as
+            1 - (iteration_limit - iterations)/ iteration_limit//2
+        If it reaches the iteration limit, it receives a weight of 0 for use in the spectral disentangling for that
+        component. This is an experimental feature, and is not recommended since it hides a lot of selection process.
       - The routine can estimate a minimum precision error if it converges, if estimate_error is True. It does this by
         doing 10 more iterations after convergence is reached, and calculating the standard deviation of the resulting
         RVs. Note that this is likely much lower than the true error, since it only measures the deviations as a result
         of the routine repeatedly including different noise patterns in its estimate for the separated fluxes and
         fitting results. This should not in any way be used as actual errors when lower than other estimates.
+      - The routine can be provided with an array of indices specifying which spectra to use when creating the separated
+        spectra. This is the recommended way to designate. A lower RV limit on the primary component, or a proximity
+        limit of the two RVs, can also be provided isntead. However, this does not consider any other important
+        factors for why you would leave out a spectrum (low S/N, bad reduction, within eclipses).
+        Providing rv_lower_limit (or rv_proximity_limit) while also supplying use_spectra, can be useful since the
+        routines avoids using the "bad" component B RVs when calculating RMS values.
+        Note that if use_spectra is provided as an array, the two rv limit options will only be used for RMS
+        calculation, and not for spectral separation.
 
     :param inv_flux_collection:   np.ndarray shape (:, n_spectra). Collection of inverted fluxes for each spectrum.
     :param inv_flux_templateA:    np.ndarray shape (:, ). Inverted flux of template spectrum for component A.
@@ -423,22 +488,27 @@ def spectral_separation_routine(
     :param buffer_mask:           np.ndarray of bools, shape (:, ). If supplied, the routine treats the spectra as
                                     buffered (padded) in the ends, and will cut them out by masking the data-set with
                                     this array before calculating RV values.
-    :param rv_lower_limit:        float. The lower RV limit for the spectral separation. If component A RV is below,
+    :param rv_lower_limit:       float. A lower RV limit on component A for the spectral separation. Overrides
+                                    rv_proximity_limit. This limit will only consider component A when deciding if
+                                    the data-set is reasonable enough. Useful for when RV for component B is unstable.
+                                    Requires that spectra has been decently corrected for systemic RV beforehand.
+    :param rv_proximity_limit:   float. The RV limit for the spectral separation. If RV_A-RV_B is below,
                                     the individual spectrum will not be used for calculating the separated spectra, as
-                                    it will be treated as contaminated by the other component.
+                                    it will be treated as mixed.
     :param suppress_print:        string. Indicates whether console printing should be suppressed. If 'scs', prints from
                                     separate_component_spectra() will not be shown. If 'ssr', prints from this routine
                                     will not be shown (but separate_component_spectra() will). If 'all', not prints are
                                     allowed.
     :param convergence_limit_scs: float. Convergence limit to pass along to the function separate_component_spectra().
-    :param adaptive_rv_limit:     bool. Indicates whether rv_lower_limit should be adaptively recalculated by estimating
-                                    broadening function profile widths each iteration.
-    :param amplitude_weighing:    bool. Indicates whether amplitude weighing should be used during in
+    :param weigh_spectra:         bool. Indicates whether weighing should be used during in
                                     separate_component_spectra().
     :param estimate_error:        bool. Indicates if the minimum precision error of the routine should be estimated in
                                     case the routine reaches the convergence limit.
     :param return_unbuffered:     bool. Indicates if returned results should be unbuffered (un-padded) or not. Default
                                     is True, meaning the shorter arrays are returned.
+    :param use_spectra:           bool, np.ndarray. If True, use all spectra for calculating the "separated spectra".
+                                    If np.ndarray or list, this should indicate the indices of the spectra to
+                                    use from 0 to n_spectra-1.
 
     :return:    RV_collection_A,  RV_collection_B, separated_flux_A, separated_flux_B, wavelength, iteration_errors
                 RV_collection_A:  np.ndarray shape (n_spectra, ). RV values of component A for each program spectrum.
@@ -474,9 +544,9 @@ def spectral_separation_routine(
 
     # Initialize plot figures
     if plot:
-        f1_ax1, f1_ax2, f1_ax3, f2_ax1, f3_ax1, f3_ax2, f4_ax1, f5_ax1 = initialize_ssr_plots()
+        f1_ax1, f1_ax2, f1_ax3, f2_ax1, f2_ax2, f3_ax1, f3_ax2, f4_ax1, f5_ax1 = initialize_ssr_plots()
     else:
-        f4_ax1 = None; f5_ax1 = None
+        f2_ax1=None; f2_ax2=None; f4_ax1 = None; f5_ax1 = None
 
     # Iterative loop that repeatedly separates the spectra from each other in order to calculate new RVs (Gonzales 2005)
     iterations = 0
@@ -485,25 +555,28 @@ def spectral_separation_routine(
     print('Spectral Separation: ')
     while True:
         print(f'\nIteration {iterations}.')
-        RV_mask = np.abs(RV_collection_A) > rv_lower_limit
+        if rv_lower_limit == 0.0:
+            RV_mask = np.abs(RV_collection_A-RV_collection_B) > rv_proximity_limit
+        else:
+            RV_mask = np.abs(RV_collection_A) > rv_lower_limit
         RMS_A, RMS_B = -RV_collection_A, -RV_collection_B[RV_mask]
 
-        separated_flux_A, separated_flux_B = separate_component_spectra(inv_flux_collection, RV_collection_A,
-                                                                        RV_collection_B, delta_v, convergence_limit_scs,
-                                                                        suppress_scs, rv_lower_limit=rv_lower_limit,
-                                                                        weights_A=weights_A, weights_B=weights_B)
+        separated_flux_A, separated_flux_B = separate_component_spectra(
+            inv_flux_collection, RV_collection_A, RV_collection_B, delta_v, convergence_limit_scs, suppress_scs,
+            rv_proximity_limit=rv_proximity_limit, rv_lower_limit=rv_lower_limit, weights_A=weights_A,
+            weights_B=weights_B, use_spectra=use_spectra)
 
         RV_collection_A, RV_collection_B, (fits_A, fits_B, weights_A, weights_B) \
             = recalculate_RVs(inv_flux_collection, separated_flux_A, separated_flux_B, RV_collection_A,
                               RV_collection_B, inv_flux_templateA, inv_flux_templateB, delta_v, ifitparamsA,
-                              ifitparamsB, buffer_mask, f4_ax1, f5_ax1, rv_lower_limit=rv_lower_limit,
-                              return_weights=amplitude_weighing)
+                              ifitparamsB, buffer_mask, plot_ax_A=f4_ax1, plot_ax_B=f5_ax1, plot_ax_d1=f2_ax1,
+                              plot_ax_d2=f2_ax2, rv_lower_limit=rv_lower_limit, return_weights=weigh_spectra)
 
         if plot:
-            plot_ssr_iteration(f1_ax1, f1_ax2, f1_ax3, f2_ax1, f3_ax1, f3_ax2, separated_flux_A, separated_flux_B,
+            plot_ssr_iteration(f1_ax1, f1_ax2, f1_ax3, f3_ax1, f3_ax2, separated_flux_A, separated_flux_B,
                                wavelength, inv_flux_templateA, inv_flux_templateB, RV_collection_A,
-                               RV_collection_B, time_values, period, inv_flux_collection, buffer_mask,
-                               rv_lower_limit=rv_lower_limit)
+                               RV_collection_B, time_values, period, inv_flux_collection, buffer_mask, rv_lower_limit,
+                               rv_proximity_limit)
 
         # Average vsini values for future fit guess and limit allowed fit area
         vsini_A, vsini_B = np.empty(shape=fits_A.shape), np.empty(shape=fits_B.shape)
@@ -512,26 +585,8 @@ def spectral_separation_routine(
             _, _, vsini_B[i], _, _, _ = get_fit_parameter_values(fits_B[i].params)
         ifitparamsA.vsini = np.mean(vsini_A)
         ifitparamsB.vsini = np.mean(vsini_B)
-        ifitparamsA.vsini_vary_limit = 0.3
-        ifitparamsB.vsini_vary_limit = 0.3
-
-        """
-        if adaptive_rv_limit:       # Crude assumption that vsini matches a sigma of a gaussian function
-            speed_light = scc.c / 1000
-            width_A = ((speed_light/ifitparamsA.spectral_resolution)/2.354)**2
-            width_A += ifitparamsA.bf_smooth_sigma**2 + ifitparamsA.vsini**2
-            hwhm_A = 2.354 * np.sqrt(width_A) / 2
-            width_B = ((speed_light/ifitparamsB.spectral_resolution)/2.354)**2
-            width_B += ifitparamsB.bf_smooth_sigma**2 + ifitparamsB.vsini**2
-            hwhm_B = 2.354 * np.sqrt(width_B) / 2
-
-            rv_lower_limit = hwhm_A + hwhm_B
-            if ifitparamsB.velocity_fit_width > rv_lower_limit:
-                ifitparamsB.velocity_fit_width = 0.8*rv_lower_limit
-            if not suppress_ssr:
-                print('rv_lower_limit', rv_lower_limit)
-                print('B velocity_fit_width', ifitparamsB.velocity_fit_width)
-        """
+        ifitparamsA.vsini_vary_limit = 0.5
+        ifitparamsB.vsini_vary_limit = 0.5
 
         iterations += 1
         RMS_A += RV_collection_A

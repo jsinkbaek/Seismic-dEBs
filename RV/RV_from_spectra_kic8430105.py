@@ -31,13 +31,20 @@ wavelength_intervals_error_estimate = 100       # Ångström, size of the interv
 load_data = True      # Defines if normalized spectrum should be loaded from earlier, or done with AFS_algorithm
 plot = False
 file_exclude_list = ['FIBl060068_step011_merge.fits']
+# use_for_spectral_separation = ['FIBk140069_step011_merge.fits']
+use_for_spectral_separation = [
+    'FIBj150080_step011_merge.fits', 'FIDi130112_step011_merge.fits', 'FIBk030043_step011_merge.fits',
+    'FIBk060011_step011_merge.fits', 'FIBk140069_step011_merge.fits', 'FIDh160100_step011_merge.fits',
+    'FIBi230047_step011_merge.fits', 'FIBi240080_step011_merge.fits',  # 'FIBI010114_step011_merge.fits',
+    # 'FIBi300038_step011_merge.fits'
+]
 delta_v = 1.0          # interpolation resolution for spectrum in km/s
 speed_of_light = scc.c / 1000    # in km/s
 estimate_RVb_from_RVa = True        # defines if a guess on RVb should be made in case it cannot be picked up during
                                     # initial fitting
 mass_A_estimate = 1.31
 mass_B_estimate = 0.83
-system_RV_estimate = 19.44  # 16.053
+system_RV_estimate = 16.053  # 16.053 19.44
 orbital_period_estimate = 63.33  # only for plotting
 
 # # Stellar parameter estimates (important for limb darkening calculation) # #
@@ -47,12 +54,12 @@ MH_A  , MH_B   = -0.49, -0.49
 mTur_A, mTur_B = 2.0, 2.0
 
 # # Initial fit parameters for rotational broadening function fit # #
-bf_velocity_span = 175        # broadening function span in velocity space, should be the same for both components
+bf_velocity_span = 300        # broadening function span in velocity space, should be the same for both components
 limbd_A = estimate_linear_limbd(wavelength_RV_limit, logg_A, Teff_A, MH_A, mTur_A, loc='Data/tables/atlasco.dat')
 limbd_B = estimate_linear_limbd(wavelength_RV_limit, logg_B, Teff_B, MH_B, mTur_B, loc='Data/tables/atlasco.dat')
 ifitpar_A = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=100, limbd_coef=limbd_A,
                                  smooth_sigma=2.0, bf_velocity_span=bf_velocity_span)
-ifitpar_B = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=10.0, limbd_coef=limbd_B,
+ifitpar_B = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=20.0, limbd_coef=limbd_B,
                                  smooth_sigma=4.0, bf_velocity_span=bf_velocity_span)
 
 # # Template Spectra # #
@@ -61,11 +68,11 @@ template_spectrum_path_B = 'Data/template_spectra/5500_45_m05p00.ms.fits'
 
 # # Computation parameters # #
 number_of_parallel_jobs = 4     # for initial RV guess fits
-rv_lower_limit = 14.0           # lower limit for RV_A in order to include a spectrum in the spectral separation
+rv_lower_limit = 10.0           # lower limit for RV_A in order to include a spectrum in the spectral separation
                                 # (if lower, components are assumed to be mixed in BF, and left out to not contaminate)
                                 # This parameter is only useful when the systemic RV is well-known. Otherwise, set it to
                                 # 0.0.
-
+# rv_proximity_limit = 10.0
 
 # # Prepare collection lists and arrays # #
 flux_collection_list = []
@@ -73,8 +80,10 @@ wavelength_collection_list = []
 date_array = np.array([])
 RA_array = np.array([])
 DEC_array = np.array([])
+spectral_separation_array = np.array([])
 
 # # # Load fits files, collect and normalize data # # #
+i = 0
 for filename in os.listdir(data_path):
     if 'merge.fits' in filename and '.lowSN' not in filename and filename not in file_exclude_list:
         # Load observation
@@ -105,9 +114,14 @@ for filename in os.listdir(data_path):
         flux = flux[~selection_mask]
         wavelength = wavelength[~selection_mask]
 
+        # Designate if spectrum should be used for spectral separation
+        if filename in use_for_spectral_separation:
+            spectral_separation_array = np.append(spectral_separation_array, i)
+
         # Append to collection
         wavelength_collection_list.append(wavelength)
         flux_collection_list.append(flux)
+        i += 1
 
 # # Verify RA and DEC # #
 RA, DEC = RA_array[0], DEC_array[0]
@@ -239,9 +253,9 @@ RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B, wavelength
                                     wavelength_buffered,  bjdtdb, period=orbital_period_estimate, iteration_limit=20,
                                     RV_guess_collection=RV_guess_collection, convergence_limit=5E-2,
                                     buffer_mask=buffer_mask, rv_lower_limit=rv_lower_limit,
-                                    suppress_print='scs', plot=False, adaptive_rv_limit=False, amplitude_weighing=True,
-                                    estimate_error=False, return_unbuffered=False)
-# plt.show(block=True)
+                                    suppress_print='scs', plot=True, estimate_error=False, return_unbuffered=False,
+                                    weigh_spectra=False, use_spectra=spectral_separation_array)
+plt.show(block=True)
 
 # RV_errors_A = iteration_errors[0]
 # RV_errors_B = iteration_errors[1]
@@ -259,6 +273,7 @@ wiee = wavelength_intervals_error_estimate
                         plot=plot, period=orbital_period_estimate)
 
 
+# bad_data_mask = np.abs(RV_collection_A-RV_collection_B) < rv_proximity_limit
 bad_data_mask = np.abs(RV_collection_A) < rv_lower_limit
 bjdtdb_B = bjdtdb[~bad_data_mask]
 RV_errors_B = RV_errors_B[~bad_data_mask]
