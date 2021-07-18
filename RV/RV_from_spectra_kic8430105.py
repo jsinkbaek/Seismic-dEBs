@@ -12,6 +12,7 @@ from RV.library.initial_fit_parameters import InitialFitParameters
 import RV.library.spectral_separation_routine as ssr
 from RV.library.linear_limbd_coeff_estimate import estimate_linear_limbd
 import matplotlib.pyplot as plt
+from copy import deepcopy
 
 
 # # # # Set variables for script # # # #
@@ -33,13 +34,13 @@ plot = False
 file_exclude_list = ['FIBl060068_step011_merge.fits']
 # use_for_spectral_separation = ['FIBk140069_step011_merge.fits']
 use_for_spectral_separation = [
+    'FIDi080098_step011_merge.fits',
     'FIBj150080_step011_merge.fits', 'FIDi130112_step011_merge.fits', 'FIBk030043_step011_merge.fits',
     'FIBk060011_step011_merge.fits', 'FIBk140069_step011_merge.fits', 'FIDh160100_step011_merge.fits',
-    'FIBi230047_step011_merge.fits', 'FIBi240080_step011_merge.fits',  # 'FIBI010114_step011_merge.fits',
-    # 'FIBi300038_step011_merge.fits'
+    'FIBi230047_step011_merge.fits', 'FIBi240080_step011_merge.fits', 'FIBI010114_step011_merge.fits',
 ]
 delta_v = 1.0          # interpolation resolution for spectrum in km/s
-speed_of_light = scc.c / 1000    # in km/s
+speed_of_light = scc.c / 1000       # in km/s
 estimate_RVb_from_RVa = True        # defines if a guess on RVb should be made in case it cannot be picked up during
                                     # initial fitting
 mass_A_estimate = 1.31
@@ -248,14 +249,21 @@ RV_guess_collection[:, 1] = RV_guesses_B
 
 # # Separate component spectra and calculate RVs iteratively # #
 RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B, wavelength, iteration_errors, ifitpars = \
-    ssr.spectral_separation_routine(flux_collection_inverted_buffered, flux_template_A_inverted_buffered,
-                                    flux_template_B_inverted_buffered, delta_v, ifitpar_A, ifitpar_B,
-                                    wavelength_buffered,  bjdtdb, period=orbital_period_estimate, iteration_limit=20,
-                                    RV_guess_collection=RV_guess_collection, convergence_limit=5E-2,
-                                    buffer_mask=buffer_mask, rv_lower_limit=rv_lower_limit,
-                                    suppress_print='scs', plot=True, estimate_error=False, return_unbuffered=False,
-                                    weigh_spectra=False, use_spectra=spectral_separation_array)
-plt.show(block=True)
+    ssr.spectral_separation_routine(
+        flux_collection_inverted_buffered, flux_template_A_inverted_buffered, flux_template_B_inverted_buffered,
+        delta_v, ifitpar_A, ifitpar_B, wavelength_buffered,  bjdtdb, period=orbital_period_estimate, iteration_limit=7,
+        RV_guess_collection=RV_guess_collection, convergence_limit=1E-1, buffer_mask=buffer_mask,
+        rv_lower_limit=rv_lower_limit, suppress_print='scs', plot=False, estimate_error=False, return_unbuffered=False,
+        use_spectra=spectral_separation_array
+    )
+# plt.show(block=True)
+
+# plt.figure()
+bad_data_mask = np.abs(RV_collection_A) < rv_lower_limit
+phase_B = np.mod(bjdtdb[~bad_data_mask], orbital_period_estimate)/orbital_period_estimate
+phase_A = np.mod(bjdtdb, orbital_period_estimate) / orbital_period_estimate
+# plt.plot(phase_B, RV_collection_B[~bad_data_mask], 'rp', markersize=3)
+# plt.plot(phase_A, RV_collection_A, 'bp', markersize=3)
 
 # RV_errors_A = iteration_errors[0]
 # RV_errors_B = iteration_errors[1]
@@ -266,28 +274,27 @@ plt.show(block=True)
 
 # # Calculate uncertainties by splitting up into smaller intervals # #
 wiee = wavelength_intervals_error_estimate
-(RV_errors_A, RV_errors_B), (RV_estimates_A, RV_estimates_B) = \
-    ssr.estimate_errors(wiee, flux_collection_inverted_buffered, flux_template_A_inverted_buffered,
-                        flux_template_B_inverted_buffered, separated_flux_A, separated_flux_B, delta_v, ifitpars[0],
-                        ifitpars[1], wavelength, RV_collection_A, RV_collection_B, bjdtdb, wavelength_buffer_size,
-                        plot=plot, period=orbital_period_estimate)
+(RV_errors_A, RV_errors_B), (RV_estimates_A, RV_estimates_B) = ssr.estimate_errors(
+    wiee, flux_collection_inverted_buffered, flux_template_A_inverted_buffered, flux_template_B_inverted_buffered,
+    separated_flux_A, separated_flux_B, delta_v, ifitpars[0], ifitpars[1], wavelength, RV_collection_A, RV_collection_B,
+    bjdtdb, wavelength_buffer_size, plot=plot, period=orbital_period_estimate
+)
 
 
 # bad_data_mask = np.abs(RV_collection_A-RV_collection_B) < rv_proximity_limit
 bad_data_mask = np.abs(RV_collection_A) < rv_lower_limit
 bjdtdb_B = bjdtdb[~bad_data_mask]
-RV_errors_B = RV_errors_B[~bad_data_mask]
-RV_collection_B = RV_collection_B[~bad_data_mask]
+# RV_errors_B = RV_errors_B[~bad_data_mask]
+# RV_collection_B = RV_collection_B[~bad_data_mask]
 
 
-plt.figure()
-plt.errorbar(np.mod(bjdtdb, orbital_period_estimate)/orbital_period_estimate, RV_collection_A, yerr=RV_errors_A,
-             fmt='b*')
-plt.errorbar(np.mod(bjdtdb_B, orbital_period_estimate)/orbital_period_estimate, RV_collection_B, yerr=RV_errors_B,
-             fmt='r*')
-plt.xlabel('Orbital Phase')
-plt.ylabel('Radial Velocity (km/s)')
-plt.show(block=True)
+# plt.errorbar(np.mod(bjdtdb, orbital_period_estimate)/orbital_period_estimate, RV_collection_A, yerr=RV_errors_A,
+#              fmt='b*')
+# plt.errorbar(np.mod(bjdtdb_B, orbital_period_estimate)/orbital_period_estimate, RV_collection_B, yerr=RV_errors_B,
+#              fmt='r*')
+# plt.xlabel('Orbital Phase')
+# plt.ylabel('Radial Velocity (km/s)')
+# plt.show(block=True)
 
 
 # # Save result # #
@@ -295,11 +302,32 @@ save_data = np.empty((RV_collection_A.size, 3))
 save_data[:, 0] = bjdtdb
 save_data[:, 1] = RV_collection_A
 save_data[:, 2] = RV_errors_A
-np.savetxt('Data/processed/RV_results/rvA_not_8430105_4600_5400_100.txt', save_data)
+np.savetxt('Data/processed/RV_results/rvA_not_8430105_4700_5400_100_3.txt', save_data)
 
-save_data = np.empty((RV_collection_B.size, 3))
+save_data = np.empty((RV_collection_B[~bad_data_mask].size, 3))
 save_data[:, 0] = bjdtdb_B
-save_data[:, 1] = RV_collection_B
-save_data[:, 2] = RV_errors_B
-np.savetxt('Data/processed/RV_results/rvB_not_8430105_4600_5400_100.txt', save_data)
+save_data[:, 1] = RV_collection_B[~bad_data_mask]
+save_data[:, 2] = RV_errors_B[~bad_data_mask]
+np.savetxt('Data/processed/RV_results/rvB_not_8430105_4700_5400_100_3.txt', save_data)
 
+RV_coll = np.empty(shape=(RV_collection_A.size, 2))
+RV_coll[:, 0] = deepcopy(RV_collection_A)
+RV_coll[:, 1] = deepcopy(RV_collection_B)
+RV_errors_A2, RV_errors_B2 = ssr.estimate_errors_2(
+    wiee, flux_collection_inverted_buffered, flux_template_A_inverted_buffered, flux_template_B_inverted_buffered,
+    delta_v, ifitpar_A, ifitpar_B, wavelength_buffered, bjdtdb, RV_coll, convergence_limit=1E-1, plot=False,
+    period=orbital_period_estimate, wavelength_buffer_size=wavelength_buffer_size, rv_lower_limit=rv_lower_limit,
+    suppress_print='all', use_spectra=spectral_separation_array)
+
+# # Save result # #
+save_data = np.empty((RV_collection_A.size, 3))
+save_data[:, 0] = bjdtdb
+save_data[:, 1] = RV_collection_A
+save_data[:, 2] = RV_errors_A2
+np.savetxt('Data/processed/RV_results/rvA_not_8430105_4700_5400_100_3errors2.txt', save_data)
+
+save_data = np.empty((RV_collection_B[~bad_data_mask].size, 3))
+save_data[:, 0] = bjdtdb_B
+save_data[:, 1] = RV_collection_B[~bad_data_mask]
+save_data[:, 2] = RV_errors_B2[~bad_data_mask]
+np.savetxt('Data/processed/RV_results/rvB_not_8430105_4700_5400_100_3errors2.txt', save_data)

@@ -2,10 +2,10 @@ from matplotlib import pyplot as plt; import numpy as np
 from scipy.interpolate import interp1d
 from scipy.optimize import minimize
 
-filename_1A = 'Data/processed/RV_results/rvA_not_8430105_4700_5400_100.txt'
-filename_1B = 'Data/processed/RV_results/rvB_not_8430105_4700_5400_100.txt'
-filename_2A = 'Data/processed/RV_results/rvA_not_8430105_4600_5400_100.txt'
-filename_2B = 'Data/processed/RV_results/rvB_not_8430105_4600_5400_100.txt'
+filename_1A = 'Data/processed/RV_results/rvA_not_8430105_4700_5400_100_3.txt'
+filename_1B = 'Data/processed/RV_results/rvB_not_8430105_4700_5400_100_3.txt'
+filename_2A = 'Data/processed/RV_results/rvA_not_8430105_4700_5400_100_3errors2.txt'
+filename_2B = 'Data/processed/RV_results/rvB_not_8430105_4700_5400_100_3errors2.txt'
 model_filename = '../Binary_Analysis/JKTEBOP/kepler_LTF/model.out'
 
 times_1A, rv_1A, err_1A = np.loadtxt(filename_1A, unpack=True)
@@ -36,11 +36,11 @@ system_rv_new = -minimize(rv_eval_plus_constant, x0=np.array([0])).x
 print(system_rv_new)
 
 plt.figure(figsize=(16, 9))
-plt.errorbar(np.mod(times_1A, period)/period, rv_1A, yerr=err_1A, fmt='b*')
-plt.errorbar(np.mod(times_1B, period)/period, rv_1B, yerr=err_1B, fmt='r*')
 plt.errorbar(np.mod(times_2A, period)/period, rv_2A, yerr=err_2A, fmt='g*')
 plt.errorbar(np.mod(times_2B, period)/period, rv_2B, yerr=err_2B, fmt='y*')
-plt.legend(['Component A using 4700-5400 Å', 'Component B', 'Component A using 4600-5400 Å', 'Component B'])
+plt.errorbar(np.mod(times_1A, period)/period, rv_1A, yerr=err_1A, fmt='b*')
+plt.errorbar(np.mod(times_1B, period)/period, rv_1B, yerr=err_1B, fmt='r*')
+plt.legend(['Component A errors by full split', 'Component B', 'Component A errors retain sep spectrum', 'Component B'])
 # plt.plot(phase_model, rv_Am - system_rv, 'k--')
 # plt.plot(phase_model, rv_Bm - system_rv, 'k--')
 plt.plot(phase_model, rv_Am - system_rv_new, 'k-')
