@@ -22,11 +22,34 @@ from RV.library.initial_fit_parameters import InitialFitParameters
 from lmfit.minimizer import MinimizerResult
 import RV.library.spectrum_processing_functions as spf
 from copy import deepcopy
+import matplotlib
+import RV.library.broadening_function_svd as bfsvd
+from scipy.interpolate import interp1d
 
 
 def shift_spectrum(flux, radial_velocity_shift, delta_v):
-    shift = int(radial_velocity_shift / delta_v)
-    return np.roll(flux, shift)
+    """
+    Performs a wavelength shift of a spectrum. Two-step process:
+     - First, it performs a low resolution roll of the flux elements. Resolution here is defined by delta_v (which must
+       be the velocity spacing of the flux array). Example precision: 1 km/s (with delta_v=1.0)
+     - Second, it performs linear interpolation to produce a small shift to correct for the low precision.
+     The spectrum must be evenly spaced in velocity space in order for this function to properly work.
+    :param flux:                    np.ndarray size (:, ), flux values of the spectrum.
+    :param radial_velocity_shift:   float, the shift in velocity units (km/s)
+    :param delta_v:                 float, the resolution of the spectrum in km/s.
+    :return flux_shifted:           np.ndarray size (:, ), shifted flux values of the spectrum.
+    """
+    # Perform large delta_v precision shift
+    large_shift = np.floor(radial_velocity_shift / delta_v)
+    flux_ = np.roll(flux, int(large_shift))
+
+    # Perform small < delta_v precision shift using linear interpolation
+    small_shift = radial_velocity_shift/delta_v - large_shift
+    indices = np.linspace(0, flux.size, flux.size)
+    indices_shifted = indices - small_shift         # minus will give same shift direction as np.roll()
+    flux_shifted = interp1d(indices, flux_, fill_value='extrapolate')(indices_shifted)
+
+    return flux_shifted
 
 
 def separate_component_spectra(
@@ -526,8 +549,8 @@ def spectral_separation_routine(
     ifitparams = (ifitparamsA, ifitparamsB)
 
     if return_unbuffered:
-        return RV_collection_A, RV_collection_B, separated_flux_A[buffer_mask], separated_flux_B[buffer_mask], \
-               wavelength[buffer_mask], iteration_errors, ifitparams
+        return RV_collection_A, RV_collection_B, separated_flux_A[~buffer_mask], separated_flux_B[~buffer_mask], \
+               wavelength[~buffer_mask], iteration_errors, ifitparams
     else:
         return RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B, wavelength, iteration_errors, \
                ifitparams
@@ -635,8 +658,8 @@ def estimate_errors(
             f1_ax3.set_xlabel('Wavelength [Å]')
             plt.show(block=True)
 
-    errors_RV_A = np.std(RV_estimates_A, axis=1)
-    errors_RV_B = np.std(RV_estimates_B, axis=1)
+    errors_RV_A = np.std(RV_estimates_A, axis=1) / np.sqrt(RV_estimates_A[0, :].size)
+    errors_RV_B = np.std(RV_estimates_B, axis=1) / np.sqrt(RV_estimates_B[0, :].size)
     return (errors_RV_A, errors_RV_B), (RV_estimates_A, RV_estimates_B)
 
 
@@ -646,7 +669,7 @@ def estimate_errors_2(
         ifitparamsA: InitialFitParameters, ifitparamsB: InitialFitParameters, wavelength: np.ndarray,
         time_values: np.ndarray, RV_collection: np.ndarray, convergence_limit=1E-5,
         iteration_limit=10, plot=True, period=None, wavelength_buffer_size=100, rv_lower_limit=0.0,
-        suppress_print=False, convergence_limit_scs=1E-7, use_spectra=True
+        suppress_print=False, convergence_limit_scs=1E-7, use_spectra=True, save_bf_plots=False
 ):
 
     wavelength_interval_collection = []
@@ -689,6 +712,34 @@ def estimate_errors_2(
         current_fltA, current_fltB = templateA_interval_collection[i], templateB_interval_collection[i]
         current_buffer = interval_buffer_mask[i]
 
+        if save_bf_plots:
+            matplotlib.rcParams.update({'font.size': 25})
+            for k in range(0, current_fl[0, :].size):
+                current_wl_unbuffered = current_wl[~current_buffer]
+                current_fl_unbuffered = current_fl[~current_buffer, :]
+                current_fltA_unbuffered = current_fltA[~current_buffer]
+
+                BF = bfsvd.BroadeningFunction(current_fl_unbuffered[:, k], current_fltA_unbuffered,
+                                              ifitparamsA.bf_velocity_span, delta_v)
+                BF.smooth_sigma = ifitparamsA.bf_smooth_sigma
+                BF.solve()
+                BF.smooth()
+                plt.figure(figsize=(16, 9))
+                plt.plot(BF.velocity, BF.bf_smooth / np.max(BF.bf_smooth), 'r', linewidth=3)
+                plt.xlabel('Velocity Shift [km/s]')
+                plt.ylabel('Normalized Smoothed Broadening Function')
+                plt.xlim([-100, 100])
+                plt.tight_layout()
+                plt.savefig(fname=f'../figures/BF_plots/{k}/{current_wl_unbuffered[0]}_{current_wl_unbuffered[-1]}.png', dpi=400)
+                plt.close()
+                plt.figure(figsize=(16, 9))
+                plt.plot(current_wl_unbuffered, 1-current_fl_unbuffered[:, k])
+                plt.xlabel('Wavelength [Å]')
+                plt.ylabel('Normalized Flux')
+                plt.tight_layout()
+                plt.savefig(fname=f'../figures/spectrum_plots/{k}/{current_wl_unbuffered[0]}_{current_wl_unbuffered[-1]}.png', dpi=400)
+                plt.close()
+
         RV_A_temp, RV_B_temp, _, _, _, _, _ = spectral_separation_routine(
             current_fl, current_fltA, current_fltB, delta_v, ifitparamsA, ifitparamsB, current_wl, time_values,
             RV_collection, convergence_limit, iteration_limit, plot, period, buffer_mask=current_buffer,
@@ -701,6 +752,6 @@ def estimate_errors_2(
         RV_B_interval_values[:, i] = RV_B_temp
 
     # bad_RVB_value_mask = np.abs(RV_A_interval_values) < rv_lower_limit
-    RV_errors_A = np.std(RV_A_interval_values, axis=1)
-    RV_errors_B = np.std(RV_B_interval_values, axis=1)
-    return RV_errors_A, RV_errors_B
+    RV_errors_A = np.std(RV_A_interval_values, axis=1) / np.sqrt(RV_A_interval_values[0, :].size)
+    RV_errors_B = np.std(RV_B_interval_values, axis=1) / np.sqrt(RV_B_interval_values[0, :].size)
+    return RV_errors_A, RV_errors_B, (RV_A_interval_values, RV_B_interval_values)

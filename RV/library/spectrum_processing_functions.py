@@ -6,6 +6,7 @@ from astropy.io import fits
 import matplotlib.pyplot as plt
 import scipy.constants as scc
 from scipy.interpolate import interp1d
+from numpy.polynomial import Polynomial
 
 
 def load_template_spectrum(template_spectrum_path: str):
@@ -247,6 +248,45 @@ def reduce_emission_lines(wavelength: np.ndarray, flux: np.ndarray, mf_window=40
         plt.show()
 
     return wavelength_reduced, flux_emission_reduced
+
+
+def simple_normalizer(wavelength, flux, reduce_em_lines=True, plot=False):
+    filtered_flux = moving_median_filter(flux, flux.size//25)
+
+    selection_mask_1 = flux/filtered_flux > 0.85
+    polynomial_1 = Polynomial.fit(wavelength[selection_mask_1], flux[selection_mask_1], deg=2)
+
+    selection_mask_2 = (flux/polynomial_1(wavelength) > 0.95) & (flux/polynomial_1(wavelength) < 1.1)
+    polynomial_2 = Polynomial.fit(wavelength[selection_mask_2], flux[selection_mask_2], deg=3)
+
+    normalized_flux = flux / polynomial_2(wavelength)
+
+    if reduce_em_lines:
+        std = np.std(normalized_flux[selection_mask_1])
+        mean = np.mean(normalized_flux[selection_mask_1])
+        selection_mask_3 = normalized_flux < mean + 2.5*std
+
+    if plot:
+        plt.figure()
+        plt.plot(wavelength, flux, 'b')
+        plt.plot(wavelength, filtered_flux, 'r')
+        plt.plot(wavelength, polynomial_1(wavelength), 'g')
+
+        plt.figure()
+        plt.plot(wavelength, flux / filtered_flux, 'b')
+        plt.plot(wavelength, flux / polynomial_1(wavelength), 'r')
+        plt.plot(wavelength, flux / polynomial_2(wavelength), 'g')
+
+        if reduce_em_lines:
+            plt.figure()
+            plt.plot(wavelength, normalized_flux, 'r')
+            plt.plot(wavelength[selection_mask_3], normalized_flux[selection_mask_3], 'b')
+        plt.show(block=True)
+
+    if reduce_em_lines:
+        return wavelength[selection_mask_3], normalized_flux[selection_mask_3]
+    else:
+        return wavelength, normalized_flux
 
 
 def save2col(column1: np.ndarray, column2: np.ndarray, filename: str):
