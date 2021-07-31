@@ -6,7 +6,6 @@ from barycorrpy import get_BC_vel, utc_tdb
 import RV.library.spectrum_processing_functions as spf
 import warnings
 import scipy.constants as scc
-# import RV.library.AFS_algorithm as afs
 import RV.library.calculate_radial_velocities as cRV
 from RV.library.initial_fit_parameters import InitialFitParameters
 import RV.library.spectral_separation_routine as ssr
@@ -14,7 +13,6 @@ from RV.library.linear_limbd_coeff_estimate import estimate_linear_limbd
 import RV.library.broadening_function_svd as bfsvd
 import matplotlib.pyplot as plt
 import matplotlib
-from copy import deepcopy
 
 matplotlib.rcParams.update({'font.size': 25})
 
@@ -27,20 +25,20 @@ data_out_path = 'Data/processed/NOT/KIC8430105/'
 observatory_location = EarthLocation.of_site("lapalma")
 observatory_name = "lapalma"
 stellar_target = "kic8430105"
-wavelength_normalization_limit = (4200, 9600)   # Ångström, limit to data before performing continuum normalization
+wavelength_normalization_limit = (4450, 6800)   # Ångström, limit to data before performing continuum normalization
 wavelength_RV_limit = (4700, 5400)              # Ångström, the actual spectrum area used for analysis
 wavelength_buffer_size = 25                     # Ångström, padding included at ends of spectra. Useful when doing
                                                 # wavelength shifts with np.roll()
 wavelength_intervals_error_estimate = 100       # Ångström, size of the intervals used for error estimation on RVs
 load_data = True      # Defines if normalized spectrum should be loaded from earlier, or done with AFS_algorithm
 plot = False
-file_exclude_list = ['FIBl060068_step011_merge.fits']
-# use_for_spectral_separation = ['FIBk140069_step011_merge.fits']
+file_exclude_list = []  # ['FIBl060068_step011_merge.fits']
 use_for_spectral_separation = [
-    'FIDi080098_step011_merge.fits',
+    'FIDi080098_step011_merge.fits', 'FIDi090065_step011_merge.fits',
     'FIBj150080_step011_merge.fits', 'FIDi130112_step011_merge.fits', 'FIBk030043_step011_merge.fits',
+    'FIBk050063_step011_merge.fits', 'FIBk230080_step011_merge.fits'
     'FIBk060011_step011_merge.fits', 'FIBk140069_step011_merge.fits', 'FIDh160100_step011_merge.fits',
-    'FIBi230047_step011_merge.fits', 'FIBi240080_step011_merge.fits', 'FIBI010114_step011_merge.fits',
+    'FIBi230047_step011_merge.fits', 'FIBi240080_step011_merge.fits',
 ]
 delta_v = 1.0          # interpolation resolution for spectrum in km/s
 speed_of_light = scc.c / 1000       # in km/s
@@ -72,7 +70,7 @@ template_spectrum_path_B = 'Data/template_spectra/5500_45_m05p00.ms.fits'
 
 # # Computation parameters # #
 number_of_parallel_jobs = 4     # for initial RV guess fits
-rv_lower_limit = 10.0           # lower limit for RV_A in order to include a spectrum in the spectral separation
+rv_lower_limit = 12             # lower limit for RV_A in order to include a spectrum in the spectral separation
                                 # (if lower, components are assumed to be mixed in BF, and left out to not contaminate)
                                 # This parameter is only useful when the systemic RV is well-known. Otherwise, set it to
                                 # 0.0.
@@ -102,22 +100,12 @@ for filename in os.listdir(data_path):
         wavelength = wavelength[selection_mask]
         flux = flux[selection_mask]
 
-        # Either load normalized data or do continuum fit
-        # file_bulk_name = filename[:filename.rfind(".fits")]         # select everything but '.fits'
-        # if load_data:
-        #    data_in = np.loadtxt('Data/processed/AFS_algorithm/Normalized_Spectrum/'+file_bulk_name+
-        #                         '_reduced_set.dat')
-        #    wavelength, flux = data_in[:, 0], data_in[:, 1]
-        # else:
-        #    print('Current file: ', filename)
-        #    wavelength, flux, _ = afs.AFS_merged_spectrum(wavelength, flux, lr_frac=0.2, save_string=file_bulk_name,
-        #                                                  em_line_limit=1.1)
+        # Remove values under 0
+        selection_mask = (flux >= 0.0)
+        flux = flux[selection_mask]
+        wavelength = wavelength[selection_mask]
 
-        # Remove values over 1.05 and under 0
-        selection_mask = (flux < 0.0) | ((wavelength < 4450) | (wavelength > 6800))
-        flux = flux[~selection_mask]
-        wavelength = wavelength[~selection_mask]
-
+        # Performs continuum fit and reduces emission lines (by removing above 2.5 std from fitted continuum)
         wavelength, flux = spf.simple_normalizer(wavelength, flux, reduce_em_lines=True, plot=False)
 
         # Designate if spectrum should be used for spectral separation
@@ -141,9 +129,6 @@ for i in range(0, len(RA_array)):
 
 # # # Calculate Barycentric RV Corrections # # #
 times = Time(date_array, scale='utc', location=observatory_location)
-# Note: this does not correct timezone differences if dates are given in UTC+XX instead of UTC+00. For NOT this is
-# probably not an issue since European Western time is UTC+-00.
-# Change to Julian Date UTC: probably unnecessary
 times.format = 'jd'
 times.out_subfmt = 'long'
 print()
@@ -190,16 +175,15 @@ _, flux_template_B = spf.resample_to_equal_velocity_steps(wavelength_template_B,
 
 # # Invert fluxes # #
 flux_collection_inverted = 1 - flux_collection_array
-# for i in range(0, flux_collection_array[0, :].size):
-#     print(np.mean(flux_collection_array[:, i]))
-#     flux_collection_inverted[:, i] = np.mean(flux_collection_array[:, i]) - flux_collection_array[:, i]
 flux_template_A_inverted = 1 - flux_template_A
 flux_template_B_inverted = 1 - flux_template_B
 
 # # Perform barycentric corrections # #
 for i in range(0, flux_collection_inverted[0, :].size):
-    flux_collection_inverted[:, i] = ssr.shift_spectrum(flux_collection_inverted[:, i],
-                                                        bc_rv_cor[i]-system_RV_estimate, delta_v)
+    # flux_collection_inverted[:, i] = ssr.shift_wavelength_spectrum(wavelength, flux_collection_inverted[:, i],
+    #                                                                bc_rv_cor[i]-system_RV_estimate)
+    flux_collection_inverted[:, i] = ssr.shift_spectrum(flux_collection_inverted[:, i], bc_rv_cor[i]-system_RV_estimate,
+                                                        delta_v)
 
 # # Shorten spectra if uneven # #
 wavelength, [flux_collection_inverted, flux_template_A_inverted, flux_template_B_inverted] = \
@@ -292,7 +276,7 @@ RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B, wavelength
     ssr.spectral_separation_routine(
         flux_collection_inverted_buffered, flux_template_A_inverted_buffered, flux_template_B_inverted_buffered,
         delta_v, ifitpar_A, ifitpar_B, wavelength_buffered, bjdtdb, period=orbital_period_estimate,
-        iteration_limit=7, RV_guess_collection=RV_guess_collection, convergence_limit=1E-1, buffer_mask=buffer_mask,
+        iteration_limit=10, RV_guess_collection=RV_guess_collection, convergence_limit=5E-2, buffer_mask=buffer_mask,
         rv_lower_limit=rv_lower_limit, suppress_print='scs', plot=True, estimate_error=False, return_unbuffered=False,
         use_spectra=spectral_separation_array
     )
@@ -303,15 +287,6 @@ plt.close('all')
 bad_data_mask = np.abs(RV_collection_A) < rv_lower_limit
 phase_B = np.mod(bjdtdb[~bad_data_mask], orbital_period_estimate) / orbital_period_estimate
 phase_A = np.mod(bjdtdb, orbital_period_estimate) / orbital_period_estimate
-# plt.plot(phase_B, RV_collection_B[~bad_data_mask], 'rp', markersize=3)
-# plt.plot(phase_A, RV_collection_A, 'bp', markersize=3)
-
-# RV_errors_A = iteration_errors[0]
-# RV_errors_B = iteration_errors[1]
-
-# print('RV errors lower limit')
-# print(RV_errors_A)
-# print(RV_errors_B)
 
 # # Calculate uncertainties by splitting up into smaller intervals # #
 wiee = wavelength_intervals_error_estimate
@@ -330,15 +305,15 @@ save_data = np.empty((RV_collection_A.size, 3))
 save_data[:, 0] = bjdtdb
 save_data[:, 1] = RV_collection_A + system_RV_estimate
 save_data[:, 2] = RV_errors_A
-np.savetxt('Data/processed/RV_results/rvA_not_8430105_4700_5400_100.txt', save_data)
+np.savetxt('Data/processed/RV_results/rvA_not_8430105_4700_5400_100_shift1.txt', save_data)
 
 save_data = np.empty((RV_collection_B[~bad_data_mask].size, 3))
 save_data[:, 0] = bjdtdb_B
 save_data[:, 1] = RV_collection_B[~bad_data_mask] + system_RV_estimate
 save_data[:, 2] = RV_errors_B[~bad_data_mask]
-np.savetxt('Data/processed/RV_results/rvB_not_8430105_4700_5400_100.txt', save_data)
+np.savetxt('Data/processed/RV_results/rvB_not_8430105_4700_5400_100_shift1.txt', save_data)
 
-
+"""
 _, RV_A_from_previous, _ = np.loadtxt('Data/processed/RV_results/rvA_not_8430105_4700_5400_100.txt',
                                       unpack=True)
 
@@ -357,7 +332,7 @@ RV_errors_A2, RV_errors_B2, (RV_A_individual, RV_B_individual) = ssr.estimate_er
     wiee, flux_collection_inverted_buffered, flux_template_A_inverted_buffered, flux_template_B_inverted_buffered,
     delta_v, ifitpar_A, ifitpar_B, wavelength_buffered, bjdtdb, RV_coll, convergence_limit=1E-1, plot=False,
     period=orbital_period_estimate, wavelength_buffer_size=wavelength_buffer_size, rv_lower_limit=rv_lower_limit,
-    suppress_print='all', use_spectra=spectral_separation_array, save_bf_plots=True
+    suppress_print='all', use_spectra=spectral_separation_array, save_bf_plots=False
 )
 
 
@@ -372,18 +347,18 @@ save_data = np.empty((RV_collection_B[~bad_data_mask].size, 3))
 save_data[:, 0] = bjdtdb_B
 save_data[:, 1] = RV_collection_B[~bad_data_mask] + system_RV_estimate
 save_data[:, 2] = RV_errors_B2[~bad_data_mask]
-np.savetxt('Data/processed/RV_results/rvB_not_8430105_4700_5400_100errors2.txt', save_data)
-
+np.savetxt('Data/processed/RV_results/rvB_not_8430105_4700_5400_100errors2_shift1.txt', save_data)
 
 # # Save individual interval RV measurements
 save_data = np.empty((RV_A_from_previous.size, 2+RV_A_individual[0, :].size))
 save_data[:, 0] = bjdtdb
 save_data[:, 1] = RV_errors_A2
 save_data[:, 2:] = RV_A_individual + system_RV_estimate
-np.savetxt('Data/processed/RV_results/rvA_not_8430105_4700_5400_100errors2_allvalues.txt', save_data)
+np.savetxt('Data/processed/RV_results/rvA_not_8430105_4700_5400_100errors2_allvalues_shift1.txt', save_data)
 
 save_data = np.empty((RV_guesses_B[~bad_data_mask].size, 2+RV_B_individual[0, :].size))
 save_data[:, 0] = bjdtdb_B
 save_data[:, 1] = RV_errors_B2[~bad_data_mask]
 save_data[:, 2:] = RV_B_individual[~bad_data_mask, :] + system_RV_estimate
-np.savetxt('Data/processed/RV_results/rvB_not_8430105_4700_5400_100errors2_allvalues.txt', save_data)
+np.savetxt('Data/processed/RV_results/rvB_not_8430105_4700_5400_100errors2_allvalues_shift1.txt', save_data)
+"""

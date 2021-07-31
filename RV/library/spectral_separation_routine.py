@@ -25,6 +25,8 @@ from copy import deepcopy
 import matplotlib
 import RV.library.broadening_function_svd as bfsvd
 from scipy.interpolate import interp1d
+import scipy.constants as scc
+from matplotlib.backends.backend_pdf import PdfPages
 
 
 def shift_spectrum(flux, radial_velocity_shift, delta_v):
@@ -38,23 +40,36 @@ def shift_spectrum(flux, radial_velocity_shift, delta_v):
     :param radial_velocity_shift:   float, the shift in velocity units (km/s)
     :param delta_v:                 float, the resolution of the spectrum in km/s.
     :return flux_shifted:           np.ndarray size (:, ), shifted flux values of the spectrum.
+
+    shift = radial_velocity_shift / delta_v
+    indices = np.linspace(0, flux.size, flux.size)
+    indices_shifted = indices - shift
+    flux_shifted = np.interp(indices_shifted, indices, flux)
     """
     # Perform large delta_v precision shift
     large_shift = np.floor(radial_velocity_shift / delta_v)
     flux_ = np.roll(flux, int(large_shift))
 
     # Perform small < delta_v precision shift using linear interpolation
-    small_shift = radial_velocity_shift/delta_v - large_shift
+    small_shift = radial_velocity_shift / delta_v - large_shift
     indices = np.linspace(0, flux.size, flux.size)
-    indices_shifted = indices - small_shift         # minus will give same shift direction as np.roll()
+    indices_shifted = indices - small_shift  # minus will give same shift direction as np.roll()
     flux_shifted = interp1d(indices, flux_, fill_value='extrapolate')(indices_shifted)
 
     return flux_shifted
 
 
+def shift_wavelength_spectrum(wavelength, flux, radial_velocity_shift):
+    wavelength_shifted = wavelength * (1 + radial_velocity_shift/(scc.speed_of_light / 1000))
+    # flux_shifted = interp1d(wavelength_shifted, flux, fill_value='extrapolate')(wavelength)
+    flux_shifted = np.interp(wavelength, wavelength_shifted, flux)
+    return flux_shifted
+
+
 def separate_component_spectra(
         flux_collection, radial_velocity_collection_A, radial_velocity_collection_B, delta_v, convergence_limit,
-        suppress_scs=False, max_iterations=20, rv_proximity_limit=0.0, rv_lower_limit=0.0, use_spectra=True or np.ndarray
+        suppress_scs=False, max_iterations=20, rv_proximity_limit=0.0, rv_lower_limit=0.0,
+        use_spectra=True or np.ndarray, wavelength=None
 ):
     """
     Assumes that component A is the dominant component in the spectrum. Attempts to separate the two components using
@@ -102,8 +117,13 @@ def separate_component_spectra(
                     condition = True
 
                 if condition:
-                    shifted_flux_A = shift_spectrum(flux_collection[:, i], -rvA, delta_v)
-                    separated_flux_A += shifted_flux_A - shift_spectrum(separated_flux_B, rvB - rvA, delta_v)
+                    if wavelength is not None:
+                        shifted_flux_A = shift_wavelength_spectrum(wavelength, flux_collection[:, i], -rvA)
+                        separated_flux_A += shifted_flux_A - shift_wavelength_spectrum(wavelength, separated_flux_B,
+                                                                                       rvB - rvA)
+                    else:
+                        shifted_flux_A = shift_spectrum(flux_collection[:, i], -rvA, delta_v)
+                        separated_flux_A += shifted_flux_A - shift_spectrum(separated_flux_B, rvB - rvA, delta_v)
                     n_used_spectra += 1
             elif isinstance(use_spectra, np.ndarray) and use_spectra.size != 0 and i not in use_spectra:
                 pass
@@ -127,8 +147,13 @@ def separate_component_spectra(
                     condition = True
 
                 if condition:
-                    shifted_flux_B = shift_spectrum(flux_collection[:, i], -rvB, delta_v)
-                    separated_flux_B += shifted_flux_B - shift_spectrum(separated_flux_A, rvA - rvB, delta_v)
+                    if wavelength is not None:
+                        shifted_flux_B = shift_wavelength_spectrum(wavelength, flux_collection[:, i], -rvB)
+                        separated_flux_B += shifted_flux_B - shift_wavelength_spectrum(wavelength, separated_flux_A,
+                                                                                       rvA - rvB)
+                    else:
+                        shifted_flux_B = shift_spectrum(flux_collection[:, i], -rvB, delta_v)
+                        separated_flux_B += shifted_flux_B - shift_spectrum(separated_flux_A, rvA - rvB, delta_v)
                     n_used_spectra += 1
             elif isinstance(use_spectra, np.ndarray) and use_spectra.size != 0 and i not in use_spectra:
                 pass
@@ -174,7 +199,7 @@ def recalculate_RVs(
         RV_collection_A: np.ndarray, RV_collection_B: np.ndarray, inv_flux_templateA: np.ndarray,
         inv_flux_templateB: np.ndarray, delta_v: float, ifitparamsA:InitialFitParameters,
         ifitparamsB:InitialFitParameters, buffer_mask: np.ndarray, iteration_limit=10, convergence_limit=1e-5,
-        plot_ax_A=None, plot_ax_B=None, plot_ax_d1=None, plot_ax_d2=None, rv_lower_limit=0.0
+        plot_ax_A=None, plot_ax_B=None, plot_ax_d1=None, plot_ax_d2=None, rv_lower_limit=0.0, wavelength=None
 ):
     """
     This part of the spectral separation routine corrects the spectra for the separated spectra found by
@@ -242,7 +267,13 @@ def recalculate_RVs(
         while True:
             iterations += 1
             RMS_RV_A = -RV_collection_A[i]
-            corrected_flux_A = inv_flux_collection[:, i] -shift_spectrum(separated_flux_B, RV_collection_B[i], delta_v)
+            if wavelength is not None:
+                corrected_flux_A = inv_flux_collection[:, i] - shift_wavelength_spectrum(wavelength, separated_flux_B,
+                                                                                         RV_collection_B[i])
+            else:
+                corrected_flux_A = inv_flux_collection[:, i] -shift_spectrum(separated_flux_B, RV_collection_B[i],
+                                                                             delta_v)
+
             corrected_flux_A = corrected_flux_A[~buffer_mask]
             ifitparamsA.RV = RV_collection_A[i]
 
@@ -361,13 +392,25 @@ def plot_ssr_iteration(
     # plt.show(block=True)
 
 
+def save_multi_image(filename):
+    """
+    https://www.tutorialspoint.com/saving-all-the-open-matplotlib-figures-in-one-file-at-once
+    """
+    pp = PdfPages(filename)
+    fig_nums = plt.get_fignums()
+    figs = [plt.figure(n) for n in fig_nums]
+    for fig in figs:
+        fig.savefig(pp, format='pdf')
+    pp.close()
+
+
 def spectral_separation_routine(
         inv_flux_collection: np.ndarray, inv_flux_templateA: np.ndarray, inv_flux_templateB: np.ndarray, delta_v: float,
         ifitparamsA:InitialFitParameters, ifitparamsB:InitialFitParameters, wavelength: np.ndarray,
         time_values: np.ndarray, RV_guess_collection: np.ndarray, convergence_limit=1E-5, iteration_limit=10, plot=True,
         period=None, buffer_mask=None, rv_lower_limit=0.0, rv_proximity_limit=0.0, suppress_print=False,
         convergence_limit_scs=1E-7, estimate_error=False, return_unbuffered=True,
-        use_spectra=True or np.ndarray
+        use_spectra=True or np.ndarray, save_plot_path=None
 ):
     """
     Routine that separates component spectra and calculates radial velocities by iteratively calling
@@ -439,6 +482,7 @@ def spectral_separation_routine(
     :param use_spectra:           bool, np.ndarray. If True, use all spectra for calculating the "separated spectra".
                                     If np.ndarray or list, this should indicate the indices of the spectra to
                                     use from 0 to n_spectra-1.
+    :param save_plot_path:        str, path to save iteration plots to. If None, plots are not saved
 
     :return:    RV_collection_A,  RV_collection_B, separated_flux_A, separated_flux_B, wavelength, iteration_errors
                 RV_collection_A:  np.ndarray shape (n_spectra, ). RV values of component A for each program spectrum.
@@ -491,13 +535,14 @@ def spectral_separation_routine(
 
         separated_flux_A, separated_flux_B = separate_component_spectra(
             inv_flux_collection, RV_collection_A, RV_collection_B, delta_v, convergence_limit_scs, suppress_scs,
-            rv_proximity_limit=rv_proximity_limit, rv_lower_limit=rv_lower_limit, use_spectra=use_spectra)
+            rv_proximity_limit=rv_proximity_limit, rv_lower_limit=rv_lower_limit, use_spectra=use_spectra,
+            wavelength=None)
 
         RV_collection_A, RV_collection_B, (fits_A, fits_B) \
             = recalculate_RVs(inv_flux_collection, separated_flux_A, separated_flux_B, RV_collection_A,
                               RV_collection_B, inv_flux_templateA, inv_flux_templateB, delta_v, ifitparamsA,
                               ifitparamsB, buffer_mask, plot_ax_A=f3_ax1, plot_ax_B=f4_ax1, plot_ax_d1=f2_ax1,
-                              plot_ax_d2=f2_ax2, rv_lower_limit=rv_lower_limit)
+                              plot_ax_d2=f2_ax2, rv_lower_limit=rv_lower_limit, wavelength=None)
 
         if plot:
             plot_ssr_iteration(f1_ax1, f1_ax2, f1_ax3, separated_flux_A, separated_flux_B,
@@ -547,6 +592,9 @@ def spectral_separation_routine(
         error_RVs_B = np.std(error_RVs_B, axis=0)
     iteration_errors = (error_RVs_A, error_RVs_B)
     ifitparams = (ifitparamsA, ifitparamsB)
+
+    if save_plot_path is not None:
+        save_multi_image(save_plot_path)
 
     if return_unbuffered:
         return RV_collection_A, RV_collection_B, separated_flux_A[~buffer_mask], separated_flux_B[~buffer_mask], \
@@ -740,11 +788,16 @@ def estimate_errors_2(
                 plt.savefig(fname=f'../figures/spectrum_plots/{k}/{current_wl_unbuffered[0]}_{current_wl_unbuffered[-1]}.png', dpi=400)
                 plt.close()
 
+        if plot:
+            save_plot_path = f'../figures/spectrum_plots/group_plots/{current_wl[~current_buffer][0]}_{current_wl[~current_buffer][1]}_multi.pdf'
+        else:
+            save_plot_path = None
+
         RV_A_temp, RV_B_temp, _, _, _, _, _ = spectral_separation_routine(
             current_fl, current_fltA, current_fltB, delta_v, ifitparamsA, ifitparamsB, current_wl, time_values,
             RV_collection, convergence_limit, iteration_limit, plot, period, buffer_mask=current_buffer,
             rv_lower_limit=rv_lower_limit, suppress_print=suppress_print, convergence_limit_scs=convergence_limit_scs,
-            use_spectra=use_spectra
+            use_spectra=use_spectra, save_plot_path=save_plot_path
         )
         if plot:
             plt.close('all')

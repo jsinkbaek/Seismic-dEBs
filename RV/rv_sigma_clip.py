@@ -28,8 +28,8 @@ for i in range(0, rvs_B[:, 0].size):
     RV_B[i] = np.mean(clipped)
     err_B[i] = np.std(clipped) / np.sqrt(clipped.size)
 
-plt.errorbar(np.mod(time_A, period)/period, RV_A, yerr=err_A, fmt='b*')
-plt.errorbar(np.mod(time_B, period)/period, RV_B, yerr=err_B, fmt='r*')
+plt.errorbar(np.mod(time_A, period)/period, np.mean(rvs_A, axis=1), yerr=np.std(rvs_A, axis=1), fmt='b*')
+plt.errorbar(np.mod(time_B, period)/period, np.mean(rvs_B, axis=1), yerr=np.std(rvs_B, axis=1), fmt='r*')
 plt.xlabel('Orbital Phase')
 plt.show(block=True)
 

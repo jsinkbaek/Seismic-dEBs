@@ -48,12 +48,20 @@ for filename in os.listdir(spectra_folder_path):
         DEC_array = np.append(DEC_array, dec)
         filename_list.append(filename[:filename.rfind("_step011_merge.fits")])
 
+
 # # Calculate bjdtdb
 RA, DEC = RA_array[0], DEC_array[0]
 times = Time(date_array, scale='utc', location=observatory_location)
 times.format = 'jd'
 times.out_subfmt = 'long'
 bjdtdb, _, _ = utc_tdb.JDUTC_to_BJDTDB(times, ra=RA, dec=DEC, starname=stellar_target, obsname=observatory_name)
+
+# # Extra observation date
+time_extra = Time('2021-08-06T23:03:19', scale='utc', location=observatory_location)
+time_extra.format = 'jd'
+time_extra.out_subfmt = 'long'
+bjd_extra, _, _ = utc_tdb.JDUTC_to_BJDTDB(time_extra, ra=RA, dec=DEC, starname=stellar_target, obsname=observatory_name)
+
 
 # Phases
 model_filename = '../Binary_Analysis/JKTEBOP/kepler_LTF/model.out'
@@ -92,7 +100,9 @@ ax_rv.plot([eclipse_secondary-approximate_eclipse_hwidth, eclipse_secondary-appr
            '--', color='gray')
 ax_rv.plot([eclipse_secondary+approximate_eclipse_hwidth, eclipse_secondary+approximate_eclipse_hwidth], [-40, 50],
            '--', color='gray')
-plt.show(block=False)
+ax_rv.plot(np.mod(bjd_extra - 2454976.6348, period)/period, 0, 'g*')
+
+plt.show(block=True)
 
 # Spectrum plots
 for i in range(0, filenames_sorted.size, 2):
