@@ -2,16 +2,16 @@ from matplotlib import pyplot as plt; import numpy as np
 from scipy.interpolate import interp1d
 from scipy.optimize import minimize
 
-filename_1A = 'Data/processed/RV_results/rvA_not_8430105_4700_5400_100_shift1_2.txt'
-filename_1B = 'Data/processed/RV_results/rvB_not_8430105_4700_5400_100_shift1_2.txt'
+filename_1A = 'Data/processed/RV_results/rvA_not_8430105_4700_5400_100_shift1.txt'
+filename_1B = 'Data/processed/RV_results/rvB_not_8430105_4700_5400_100_shift1.txt'
 # filename_1A = 'Data/processed/RV_results/rvA_not_8430105_4500_6700_100errors2_clipped.txt'
 # filename_1B = 'Data/processed/RV_results/rvB_not_8430105_4500_6700_100errors2_clipped.txt'
 #filename_2A = 'Data/processed/RV_results/rvA_not_8430105_4700_5400_100_3errors2.txt'
 #filename_2B = 'Data/processed/RV_results/rvB_not_8430105_4700_5400_100_3errors2.txt'
 # filename_karsten_A = '../../../temp/8430105_RV_G_9.dat'
 # filename_karsten_B = '../../../temp/8430105_RV_MS_9.dat'
-filename_karsten_A = 'Data/processed/RV_results/rvA_not_8430105_4700_5400_100_shift1.txt'
-filename_karsten_B = 'Data/processed/RV_results/rvB_not_8430105_4700_5400_100_shift1.txt'
+filename_karsten_A = 'Data/processed/RV_results/rvA_not_8430105_4700_5400_100_ignoreB.txt'
+filename_karsten_B = 'Data/processed/RV_results/rvB_not_8430105_4700_5400_100_ignoreB.txt'
 model_filename = '../Binary_Analysis/JKTEBOP/kepler_LTF/model.out'
 
 times_1A, rv_1A, err_1A = np.loadtxt(filename_1A, unpack=True)
@@ -53,7 +53,7 @@ plt.errorbar(np.mod(times_1B, period)/period, rv_1B-system_rv, yerr=err_1B, fmt=
 plt.errorbar(np.mod(times_kA, period)/period, rv_kA-system_rv, yerr=err_kA, fmt='g*')
 plt.errorbar(np.mod(times_kB, period)/period, rv_kB-system_rv, yerr=err_kB, fmt='y*')
 #plt.legend(['Component A errors by full split', 'Component B', 'Component A errors retain sep spectrum', 'Component B'])
-plt.legend(['Component A shift method 1', 'Component B', 'Component A shift method 2', 'Component B'])
+plt.legend(['Component A', 'Component B', 'Component A ignoreB', 'Component B'])
 plt.plot(phase_model, rv_Am-system_rv-system_rv_new, 'k-')
 plt.plot(phase_model, rv_Bm-system_rv-system_rv_new, 'k-')
 plt.xlabel('Orbital Phase')

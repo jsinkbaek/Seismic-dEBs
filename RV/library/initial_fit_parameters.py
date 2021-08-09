@@ -7,7 +7,8 @@ class InitialFitParameters:
             velocity_fit_width=300,
             limbd_coef=0.68,
             smooth_sigma=4.0,
-            bf_velocity_span=200
+            bf_velocity_span=200,
+            use_for_spectral_separation=None
     ):
         # Value for vsini, and whether or not to fit it
         self.vsini = vsini_guess
@@ -26,6 +27,8 @@ class InitialFitParameters:
         self.RV = None
         # Smoothing value (in km/s) of the convolved gaussian used in broadening function SVD (bf_smooth()).
         self.bf_smooth_sigma = smooth_sigma
-        # With of the broadening function (in velocity space)
+        # Width of the broadening function (in velocity space)
         self.bf_velocity_span = bf_velocity_span
+        # Which spectra indices that should be used when calculating the separated component spectrum
+        self.use_for_spectral_separation = use_for_spectral_separation
 

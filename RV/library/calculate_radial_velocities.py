@@ -5,7 +5,7 @@ from joblib import Parallel, delayed
 from RV.library.initial_fit_parameters import InitialFitParameters
 
 
-def radial_velocity_from_broadening_function(
+def radial_velocity_2_components(
         inv_flux, broadening_function_template:BroadeningFunction, ifitparamsA:InitialFitParameters,
         ifitparamsB:InitialFitParameters
 ):
@@ -36,9 +36,62 @@ def radial_velocity_from_broadening_function(
     return (RV_A, RV_B), (model_values_A, fit_A, model_values_B, fit_B), (bf, bf_smooth)
 
 
+def _pull_results_mspectra_2comp(broadening_function_template: BroadeningFunction, res_par, n_spectra, plot,
+                                 spectrum_size):
+    RVs_A = np.empty((n_spectra,))
+    RVs_B = np.empty((n_spectra,))
+    broadening_function_vals = np.empty((broadening_function_template.velocity.size, n_spectra))
+    broadening_function_vals_smoothed = np.empty((broadening_function_template.velocity.size, n_spectra))
+    model_values_A = np.empty((broadening_function_template.velocity.size, n_spectra))
+    model_values_B = np.empty((broadening_function_template.velocity.size, n_spectra))
+    for i in range(0, n_spectra):
+        RV_values = res_par[i][0]
+        models, (bf, bf_smooth) = res_par[i][1], res_par[i][2]
+        broadening_function_vals[:, i] = bf
+        broadening_function_vals_smoothed[:, i] = bf_smooth
+        model_values_A[:, i] = models[0]
+        model_values_B[:, i] = models[2]
+        if plot:
+            plt.figure()
+            plt.plot(broadening_function_template.velocity, bf_smooth)
+            plt.plot(broadening_function_template.velocity, models[0], 'k--')
+            plt.plot(broadening_function_template.velocity, models[2], 'k--')
+            plt.show(block=False)
+        RVs_A[i], RVs_B[i] = RV_values[0], RV_values[1]
+    if plot:
+        plt.show(block=True)
+    extra_results = (broadening_function_template.velocity, broadening_function_vals, broadening_function_vals_smoothed,
+                     model_values_A, model_values_B)
+    return RVs_A, RVs_B, extra_results
+
+
+def _pull_results_mspectra_1comp(broadening_function_template: BroadeningFunction, res_par, n_spectra, plot,
+                                 spectrum_size):
+    RVs = np.empty((n_spectra, ))
+    broadening_function_vals = np.empty((broadening_function_template.velocity.size, n_spectra))
+    broadening_function_vals_smoothed = np.empty((broadening_function_template.velocity.size, n_spectra))
+    model_values = np.empty((broadening_function_template.velocity.size, n_spectra))
+    for i in range(0, n_spectra):
+        RVs[i] = res_par[i][0]
+        fit_res = res_par[i][1]
+        model_values[:, i], broadening_function_vals[:, i] = fit_res[1], fit_res[3]
+        broadening_function_vals_smoothed[:, i] = fit_res[4]
+        if plot:
+            plt.figure()
+            plt.plot(broadening_function_template.velocity, broadening_function_vals_smoothed[:, i])
+            plt.plot(broadening_function_template.velocity, model_values, 'k--')
+            plt.show(block=False)
+    if plot:
+        plt.show(block=True)
+    extra_results = (broadening_function_template.velocity, broadening_function_vals, broadening_function_vals_smoothed,
+                     model_values)
+    return RVs, extra_results
+
+
 def radial_velocities_of_multiple_spectra(
-        inv_flux_collection, inv_flux_template, delta_v, ifitparamsA:InitialFitParameters,
-        ifitparamsB:InitialFitParameters, number_of_parallel_jobs=4, plot=False
+        inv_flux_collection: np.ndarray, inv_flux_template: np.ndarray, delta_v: float,
+        ifitparamsA:InitialFitParameters, ifitparamsB: InitialFitParameters = None, number_of_parallel_jobs=4,
+        plot=False
 ):
     """
     Calculates radial velocities for two components, for multiple spectra, by fitting two rotational broadening function
@@ -69,39 +122,30 @@ def radial_velocities_of_multiple_spectra(
     broadening_function_template.smooth_sigma = ifitparamsA.bf_smooth_sigma
 
     # Arguments for parallel job
-    arguments = (broadening_function_template, ifitparamsA, ifitparamsB)
+    if ifitparamsB is not None:
+        arguments = (broadening_function_template, ifitparamsA, ifitparamsB)
+        calc_function = radial_velocity_2_components
+    else:
+        arguments = (broadening_function_template, ifitparamsA)
+        calc_function = radial_velocity_single_component
 
     # Create parallel call to calculate radial velocities
-    res_par = Parallel(n_jobs=number_of_parallel_jobs)\
-        (delayed(radial_velocity_from_broadening_function)(inv_flux_collection[:, i], *arguments)
-         for i in range(0, n_spectra))
+    res_par = Parallel(n_jobs=number_of_parallel_jobs)(
+        delayed(calc_function)(inv_flux_collection[:, i], *arguments) for i in range(0, n_spectra)
+    )
 
     # Pull results from call
-    RVs_A = np.empty((n_spectra, ))
-    RVs_B = np.empty((n_spectra, ))
-    broadening_function_vals = np.empty((broadening_function_template.velocity.size, n_spectra))
-    broadening_function_vals_smoothed = np.empty((broadening_function_template.velocity.size, n_spectra))
-    model_values_A = np.empty((broadening_function_template.velocity.size, n_spectra))
-    model_values_B = np.empty((broadening_function_template.velocity.size, n_spectra))
-    for i in range(0, inv_flux_collection[0, :].size):
-        RV_values = res_par[i][0]
-        models, (bf, bf_smooth) = res_par[i][1], res_par[i][2]
-        broadening_function_vals[:, i] = bf
-        broadening_function_vals_smoothed[:, i] = bf_smooth
-        model_values_A[:, i] = models[0]
-        model_values_B[:, i] = models[2]
-        if plot:
-            plt.figure()
-            plt.plot(broadening_function_template.velocity, bf_smooth)
-            plt.plot(broadening_function_template.velocity, models[0], 'k--')
-            plt.plot(broadening_function_template.velocity, models[2], 'k--')
-            plt.show(block=False)
-        RVs_A[i], RVs_B[i] = RV_values[0], RV_values[1]
-    if plot:
-        plt.show(block=True)
-    extra_results = (broadening_function_template.velocity, broadening_function_vals, broadening_function_vals_smoothed,
-                     model_values_A, model_values_B)
-    return RVs_A, RVs_B, extra_results
+    if ifitparamsB is not None:
+        RVs_A, RVs_B, extra_results = _pull_results_mspectra_2comp(
+            broadening_function_template, res_par, n_spectra, plot, spectrum_size=inv_flux_collection[:, 0].size
+        )
+        bf_velocity, bf_vals, bf_vals_smooth, model_vals_A, model_vals_B = extra_results
+        return RVs_A, RVs_B, (bf_velocity, bf_vals, bf_vals_smooth, model_vals_A, model_vals_B)
+    else:
+        RVs, (bf_velocity, bf_vals, bf_vals_smooth, model_vals) = _pull_results_mspectra_1comp(
+            broadening_function_template, res_par, n_spectra, plot, spectrum_size=inv_flux_collection[:, 0].size
+        )
+        return RVs, (bf_velocity, bf_vals, bf_vals_smooth, model_vals)
 
 
 def radial_velocity_single_component(
