@@ -401,8 +401,8 @@ def spectral_separation_routine(
         ifitparamsA:InitialFitParameters, ifitparamsB:InitialFitParameters, wavelength: np.ndarray,
         time_values: np.ndarray, RV_guess_collection: np.ndarray, convergence_limit=1E-5, iteration_limit=10, plot=True,
         period=None, buffer_mask=None, rv_lower_limit=0.0, rv_proximity_limit=0.0, suppress_print=False,
-        convergence_limit_scs=1E-7, estimate_error=False, return_unbuffered=True,
-        use_spectra=True or np.ndarray, save_plot_path=None, ignore_component_B=False
+        convergence_limit_scs=1E-7, return_unbuffered=True, save_plot_path=None,
+        ignore_component_B=False
 ):
     """
     Routine that separates component spectra and calculates radial velocities by iteratively calling
@@ -467,28 +467,19 @@ def spectral_separation_routine(
                                     will not be shown (but separate_component_spectra() will). If 'all', not prints are
                                     allowed.
     :param convergence_limit_scs: float. Convergence limit to pass along to the function separate_component_spectra().
-    :param estimate_error:        bool. Indicates if the minimum precision error of the routine should be estimated in
-                                    case the routine reaches the convergence limit.
     :param return_unbuffered:     bool. Indicates if returned results should be unbuffered (un-padded) or not. Default
                                     is True, meaning the shorter arrays are returned.
-    :param use_spectra:           bool, np.ndarray. If True, use all spectra for calculating the "separated spectra".
-                                    If np.ndarray or list, this should indicate the indices of the spectra to
-                                    use from 0 to n_spectra-1.
     :param save_plot_path:        str, path to save iteration plots to. If None, plots are not saved
     :param ignore_component_B:    bool. If True, separate_component_spectra will assume that component B is
                                     non-existing in the spectra for calculating component A.
 
-    :return:    RV_collection_A,  RV_collection_B, separated_flux_A, separated_flux_B, wavelength, iteration_errors
+    :return:    RV_collection_A,  RV_collection_B, separated_flux_A, separated_flux_B, wavelength
                 RV_collection_A:  np.ndarray shape (n_spectra, ). RV values of component A for each program spectrum.
                 RV_collection_B:  same, but for component B (includes values below rv_lower_limit).
                 separated_flux_A: np.ndarray shape (:*, ). The found "separated" or "disentangled" spectrum for A.
                                     It is an inverted flux (1-normalized_flux).
                 separated_flux_B: np.ndarray shape (:*, ). The found "separated" or "disentangled" spectrum for B.
                 wavelength:       np.ndarray shape (:*, ). Wavelength values for the separated spectra.
-                iteration_errors: (error_RVs_A, error_RVs_B)
-                    error_RVs_A:  np.ndarray shape (n_spectra, :). Minimum error estimate of the RVs for A obtained by
-                                    repeating continuing iteration after convergence limit is reached.
-                    error_RVs_B:  np.ndarray shape (n_spectra, :). Minimum error estimate of the RVs for B.
 
             Note on :*
                 if buffer_mask is provided, the returned spectra will be the un-buffered versions, meaning
@@ -500,12 +491,8 @@ def spectral_separation_routine(
     if suppress_print == 'scs': suppress_scs = True
     elif suppress_print == 'ssr': suppress_ssr = True
     elif suppress_print == 'all': suppress_scs = True; suppress_ssr = True
-    skip_convergence_check = False
 
     RV_collection_A, RV_collection_B = RV_guess_collection[:, 0], RV_guess_collection[:, 1]
-
-    error_RVs_A = np.zeros((10, RV_collection_A.size))
-    error_RVs_B = np.zeros((10, RV_collection_A.size))
 
     if buffer_mask is None:
         buffer_mask = np.zeros(wavelength.shape, dtype=bool)
@@ -564,29 +551,15 @@ def spectral_separation_routine(
         if not suppress_ssr:
             print(f'RV_A RMS: {RMS_A}. ' +
                   f'RV_B RMS: {RMS_B}.')
-        if RMS_A < convergence_limit and RMS_B < convergence_limit and skip_convergence_check is False:
+        if RMS_A < convergence_limit and RMS_B < convergence_limit:
             print(f'Spectral separation routine terminates after reaching convergence limit {convergence_limit}.')
-            if estimate_error is True:
-                print('\nBeginning iteration error estimation.')
-                skip_convergence_check = True
-                iterations = 0
-                iteration_limit = 9
-            else:
-                break
-        if skip_convergence_check is True:
-            error_RVs_A[iterations, :] = RV_collection_A
-            error_RVs_B[iterations, :] = RV_collection_B
+            break
         if iterations >= iteration_limit:
-            if skip_convergence_check is False:
-                warnings.warn(f'RV convergence limit of {convergence_limit} not reached in {iterations} iterations.',
-                              category=Warning)
+            warnings.warn(f'RV convergence limit of {convergence_limit} not reached in {iterations} iterations.',
+                            category=Warning)
             print('Spectral separation routine terminates.')
             break
 
-    if skip_convergence_check is True:  # Meaning successful convergence and completed error estimate
-        error_RVs_A = np.std(error_RVs_A, axis=0)
-        error_RVs_B = np.std(error_RVs_B, axis=0)
-    iteration_errors = (error_RVs_A, error_RVs_B)
     ifitparams = (ifitparamsA, ifitparamsB)
 
     if save_plot_path is not None:
@@ -594,10 +567,9 @@ def spectral_separation_routine(
 
     if return_unbuffered:
         return RV_collection_A, RV_collection_B, separated_flux_A[~buffer_mask], separated_flux_B[~buffer_mask], \
-               wavelength[~buffer_mask], iteration_errors, ifitparams
+               wavelength[~buffer_mask], ifitparams
     else:
-        return RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B, wavelength, iteration_errors, \
-               ifitparams
+        return RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B, wavelength, ifitparams
 
 
 def estimate_errors(
@@ -733,13 +705,11 @@ def estimate_errors_2(
 
         w_interval = (w_interval_start, w_interval_end)
 
-        _, (wl_buffered, fl_buffered, buffer_mask, buffer_mask_internal) = \
-            spf.limit_wavelength_interval(w_interval, wavelength, inv_flux_collection,
-                                          buffer_size=wavelength_buffer_size, even_length=True)
-        _, (_, flA_buffered, _, _) = spf.limit_wavelength_interval(w_interval, wavelength, inv_flux_templateA,
-                                                                   buffer_mask=buffer_mask_internal, even_length=True)
-        _, (_, flB_buffered, _, _) = spf.limit_wavelength_interval(w_interval, wavelength, inv_flux_templateB,
-                                                                   buffer_mask=buffer_mask_internal, even_length=True)
+        _, _, wl_buffered, flux_buffered_list, buffer_mask = spf.limit_wavelength_interval_multiple_spectra(
+            w_interval, wavelength, inv_flux_collection, inv_flux_templateA, inv_flux_templateB,
+            buffer_size=wavelength_buffer_size, even_length=True
+        )
+        [fl_buffered, flA_buffered, flB_buffered] = flux_buffered_list
 
         wavelength_interval_collection.append(wl_buffered)
         flux_interval_collection.append(fl_buffered)

@@ -29,63 +29,80 @@ def load_program_spectrum(program_spectrum_path: str):
     return wavelength, flux, date, RA, DEC
 
 
+def _resample_multiple_spectra(wavelength_template: np.ndarray, wavelength_list: list, flux_list: list):
+
+    flux_resampled_collection = np.empty(shape=(wavelength_template.size, len(flux_list)))
+    for i in range(0, len(flux_list)):
+        flux_resampled_collection[:, i] = np.interp(wavelength_template, wavelength_list[i], flux_list[i])
+
+    return flux_resampled_collection
+
+
+def _create_wavelength_template(
+        wavelengths: list or np.ndarray, delta_v:float,  wavelength_a:float = None, wavelength_b:float = None,
+        even_length=True
+):
+    if isinstance(wavelengths, list):
+        if wavelength_a is None:
+            wavelength_a = np.max([np.min(x) for x in wavelengths])
+        if wavelength_b is None:
+            wavelength_b = np.min([np.max(x) for x in wavelengths])
+    else:
+        if wavelength_a is None:
+            wavelength_a = np.min(wavelengths)
+        if wavelength_b is None:
+            wavelength_b = np.max(wavelengths)
+
+    speed_of_light = scc.c / 1000  # in km/s
+    step_amnt = int(np.log10(wavelength_b / wavelength_a) / np.log10(1.0 + delta_v / speed_of_light))
+    wavelength_template = wavelength_a * (1.0 + delta_v / speed_of_light) ** (np.linspace(1, step_amnt, step_amnt))
+
+    if even_length is True and np.mod(wavelength_template.size, 2) != 0.0:
+        wavelength_template = wavelength_template[:-1]
+
+    return wavelength_template
+
+
 def resample_to_equal_velocity_steps(
-        wavelength: np.ndarray or list, delta_v: float, flux=None, wavelength_resampled=None, wavelength_a=None,
-        wavelength_b=None, resampled_len_even=True
+        wavelength: np.ndarray or list, delta_v: float, flux=None, wavelength_template: np.ndarray = None,
+        wavelength_a=None, wavelength_b=None, resampled_len_even=True
 ):
     """
-    Over-engineered, multi-use function that can be used to either: Create a new wavelength grid equi-distant in vel
+    Multi-use function that can be used to either: Create a new wavelength grid equi-distant in vel
     (without interpolation), create grid and resample flux to it, create mutual grid and resample flux for multiple
     spectra simultanously. It can also resample one (or more) spectra to a provided wavelength grid.
     See interpolate_to_equal_velocity_steps() for simpler illustration of what this function does.
     :param wavelength:              either a list of np.ndarray's, or a np.ndarray
     :param delta_v:                 desired spectrum resolution in velocity space in km/s
-    :param flux:                    either a list of np.ndarray's, or a np.ndarray. Set to None if not used
-    :param wavelength_resampled:    a np.ndarray with a provided resampled grid. Set to None if one should be calculated
+    :param flux:                    either a list of np.ndarray's, or a np.ndarray. Set to None if only
+                                    wavelength_template should be returned.
+    :param wavelength_template:    a np.ndarray with a provided resampled grid. Set to None if one should be calculated
     :param wavelength_a:            float, start of desired grid. If None, calculates from provided spectra
     :param wavelength_b:            float, end of desired grid. If None, calculates from provided spectra.
     :param resampled_len_even:      bool switch, sets if resampled grid should be kept on an even length
-    :return:    either wavelength_resampled, (wavelength_resampled, flux_resampled_collection),
-                or (wavelength_resampled, flux_resampled)
+    :return:    either wavelength_template,
+                      (wavelength_template, flux_resampled_collection),
+                or    (wavelength_template, flux_resampled)
     """
-    speed_of_light = scc.c / 1000  # in km/s
-    if isinstance(wavelength, list):
-        if wavelength_a is None and wavelength_resampled is None:
-            wavelength_a = np.max([np.min(x) for x in wavelength])
-        if wavelength_b is None and wavelength_resampled is None:
-            wavelength_b = np.min([np.max(x) for x in wavelength])
-    elif isinstance(wavelength, np.ndarray):
-        if wavelength_a is None and wavelength_resampled is None:
-            wavelength_a = np.min(wavelength)
-        if wavelength_b is None and wavelength_resampled is None:
-            wavelength_b = np.max(wavelength)
-    else:
-        raise ValueError("wavelength is neither a list (of arrays) or an array")
-
-    if wavelength_resampled is None:
-        step_amnt = int(np.log10(wavelength_b / wavelength_a) / np.log10(1.0 + delta_v / speed_of_light))
-        wavelength_resampled = wavelength_a * (1.0 + delta_v / speed_of_light) ** (np.linspace(1, step_amnt, step_amnt))
-
-        if resampled_len_even and np.mod(wavelength_resampled.size, 2) != 0.0:
-            wavelength_resampled = wavelength_resampled[:-1]    # all but last element
+    if wavelength_template is None:
+        wavelength_template = _create_wavelength_template(
+           wavelength, delta_v, wavelength_a, wavelength_b, resampled_len_even
+        )
+    elif resampled_len_even and np.mod(wavelength_template.size, 2) != 0.0:
+        wavelength_template = wavelength_template[:-1]
 
     if flux is not None:
-        if isinstance(flux, list):
-            flux_resampled_collection = np.empty(shape=(wavelength_resampled.size, len(flux)))
-            for i in range(0, len(flux)):
-                flux_interpolator = interp1d(wavelength[i], flux[i], kind='linear')
-                flux_resampled_collection[:, i] = flux_interpolator(wavelength_resampled)
-                # flux_resampled_collection[:, i] = np.interp(wavelength_resampled, wavelength[i], flux[i])
-            return wavelength_resampled, flux_resampled_collection
-        elif isinstance(flux, np.ndarray):
-            flux_interpolator = interp1d(wavelength, flux, kind='linear')
-            flux_resampled = flux_interpolator(wavelength_resampled)
-            # flux_resampled = np.interp(wavelength_resampled, wavelength, flux)
-            return wavelength_resampled, flux_resampled
+        if isinstance(flux, list) and isinstance(wavelength, list):
+            flux_resampled_collection = _resample_multiple_spectra(wavelength_template, wavelength, flux)
+            return wavelength_template, flux_resampled_collection
+        elif isinstance(flux, np.ndarray) and isinstance(wavelength, np.ndarray):
+            flux_resampled = np.interp(wavelength_template, wavelength, flux)
+            return wavelength_template, flux_resampled
         else:
-            raise ValueError("flux is neither a list (of arrays), an array, or None.")
+            raise ValueError("flux and wavelength is neither a list (of arrays), an array, or None "
+                             "(they must be the same type).")
     else:
-        return wavelength_resampled
+        return wavelength_template
 
 
 def interpolate_to_equal_velocity_steps(wavelength_collector_list: list, flux_collector_list: list, delta_v: float):
@@ -113,6 +130,13 @@ def interpolate_to_equal_velocity_steps(wavelength_collector_list: list, flux_co
     return wavelength, flux_collector_array
 
 
+def _create_buffer_mask(wavelength: np.ndarray, wavelength_limits: tuple, buffer_size: float):
+    buffer_lower = (wavelength > wavelength_limits[0] - buffer_size) & (wavelength < wavelength_limits[0])
+    buffer_upper = (wavelength < wavelength_limits[1] - buffer_size) & (wavelength > wavelength_limits[1])
+    buffer_mask = buffer_lower | buffer_upper
+    return buffer_mask
+
+
 def limit_wavelength_interval(
         wavelength_limits:tuple, wavelength:np.ndarray, flux:np.ndarray, buffer_size=None, buffer_mask=None,
         even_length=False
@@ -120,11 +144,8 @@ def limit_wavelength_interval(
     selection_mask = (wavelength > wavelength_limits[0]) & (wavelength < wavelength_limits[1])
     selection_mask_buffered = np.zeros(wavelength.shape, dtype=bool)
     if buffer_size is not None and buffer_mask is None:
-        selection_mask_buffered = (wavelength > wavelength_limits[0] - buffer_size) & \
-                                  (wavelength < wavelength_limits[1] + buffer_size)
-        buffer_mask = selection_mask_buffered & \
-                        ((wavelength < wavelength_limits[0]) | (wavelength > wavelength_limits[1]))
-    elif buffer_mask is not None:
+        buffer_mask = _create_buffer_mask(wavelength, wavelength_limits, buffer_size)
+    if buffer_mask is not None:
         selection_mask_buffered = selection_mask | buffer_mask
 
     wavelength_new = wavelength[selection_mask]
@@ -145,29 +166,54 @@ def limit_wavelength_interval(
             raise ValueError('flux has wrong number of dimensions. Should be either 1 or 2.')
 
     if even_length is True:
-        if np.mod(wavelength_new.size, 2) != 0.0:
-            wavelength_new = wavelength_new[:-1]
-            if flux_new.ndim == 1:
-                flux_new = flux_new[:-1]
-            else:
-                flux_new = flux_new[:-1, :]
-        if np.mod(wavelength_buffered.size, 2) != 0.0:
-            wavelength_buffered = wavelength_buffered[:-1]
-            if flux_buffered.ndim == 1:
-                flux_buffered = flux_buffered[:-1]
-            else:
-                flux_buffered = flux_buffered[:-1, :]
-            if np.mod(wavelength.size, 2) != 0.0:
-                raise ValueError('Input wavelength must be even length for even buffer_mask.')
-            else:
-                intermediate_array = wavelength_buffered[np.in1d(wavelength_buffered, wavelength_new, invert=True)]
-                buffer_mask = np.in1d(wavelength, intermediate_array)
+        wavelength_new, flux_new = make_spectrum_even(wavelength_new, flux_new)
+
+        if np.mod(wavelength.size, 2) != 0.0:
+            raise ValueError('Input wavelength must be even length for even buffer_mask.')
+        elif buffer_mask is not None:
+            wavelength_buffered, flux_buffered = make_spectrum_even(wavelength_buffered, flux_buffered)
+            intermediate_array = wavelength_buffered[np.in1d(wavelength_buffered, wavelength_new, invert=True)]
+            buffer_mask = np.in1d(wavelength, intermediate_array)
 
     if buffer_mask is not None:
         buffer_mask_new = np.in1d(wavelength_buffered, wavelength_new, invert=True)
         return (wavelength_new, flux_new), (wavelength_buffered, flux_buffered, buffer_mask_new, buffer_mask)
     else:
         return wavelength_new, flux_new
+
+
+def limit_wavelength_interval_multiple_spectra(
+        wavelength_limits:tuple, wavelength:np.ndarray, *args, buffer_size=None, even_length=True
+):
+    """
+    Expects all *args to be fluxes, either a collection of spectral fluxes (np.ndarray with ndims 2) or a single
+    spectrum each (np.ndarray with ndims 2). They must all have been resampled to the same wavelength grid beforehand.
+    :return: lists of wavelength limited spectra, including their wavelength values. Will also return buffered versions
+              (with padding in the ends) if buffer_size is given, as well as a buffer mask that can be used to access
+              the buffer or the unbuffered data from it.
+    """
+    buffer_mask_internal = None
+    flux_buffered_list = []
+    flux_unbuffered_list = []
+    for arg in args:
+        temp_0, temp_1 = limit_wavelength_interval(
+            wavelength_limits, wavelength, arg, buffer_size, buffer_mask_internal, even_length
+        )
+        if buffer_size is None:
+            wavelength_unbuffered = temp_0
+            flux_unbuffered_list.append(temp_1)
+        else:
+            wavelength_unbuffered = temp_0[0]
+            flux_unbuffered_list.append(temp_0[1])
+            wavelength_buffered = temp_1[0]
+            flux_buffered_list.append(temp_1[1])
+            buffer_mask_return = temp_1[2]
+            buffer_mask_internal = temp_1[3]
+
+    if buffer_size is None:
+        return wavelength_unbuffered, flux_unbuffered_list
+    else:
+        return wavelength_unbuffered, flux_unbuffered_list, wavelength_buffered, flux_buffered_list, buffer_mask_return
 
 
 def make_spectrum_even(wavelength:np.ndarray, flux:np.ndarray or list):

@@ -202,24 +202,14 @@ wavelength, [flux_collection_inverted, flux_template_A_inverted, flux_template_B
 
 
 # # Limit data-set to specified area (wavelength_RV_limit) # #
-unbuffered_res, buffered_res = spf.limit_wavelength_interval(wavelength_RV_limit, wavelength, flux_collection_inverted,
-                                                             buffer_size=wavelength_buffer_size, even_length=True)
-(wavelength_new, flux_collection_inverted) = unbuffered_res
-(wavelength_buffered, flux_collection_inverted_buffered, buffer_mask_new, buffer_mask) = buffered_res
-# buffer_mask_new is for use with wavelength_buffered and flux_coll... buffer_mask is for use with input data
-
-unbuffered_res, buffered_res = spf.limit_wavelength_interval(wavelength_RV_limit, wavelength, flux_template_A_inverted,
-                                                             buffer_mask=buffer_mask, even_length=True)
-flux_template_A_inverted = unbuffered_res[1]
-flux_template_A_inverted_buffered = buffered_res[1]
-
-unbuffered_res, buffered_res = spf.limit_wavelength_interval(wavelength_RV_limit, wavelength, flux_template_B_inverted,
-                                                             buffer_mask=buffer_mask, even_length=True)
-flux_template_B_inverted = unbuffered_res[1]
-flux_template_B_inverted_buffered = buffered_res[1]
-
-wavelength = wavelength_new
-buffer_mask = buffer_mask_new
+wavelength, flux_unbuffered_list, wavelength_buffered, flux_buffered_list, buffer_mask = \
+    spf.limit_wavelength_interval_multiple_spectra(
+        wavelength_RV_limit, wavelength, flux_collection_inverted, flux_template_A_inverted, flux_template_B_inverted,
+        buffer_size=wavelength_buffer_size, even_length=True
+    )
+[flux_collection_inverted, flux_template_A_inverted, flux_template_B_inverted] = flux_unbuffered_list
+[flux_collection_inverted_buffered, flux_template_A_inverted_buffered, flux_template_B_inverted_buffered] = \
+    flux_buffered_list
 
 
 # # Plot all spectra # #
@@ -282,12 +272,12 @@ RV_guesses_B = -RV_guesses_A * (mass_A_estimate / mass_B_estimate)
 RV_guess_collection[:, 1] = RV_guesses_B
 
 # # Separate component spectra and calculate RVs iteratively # #
-RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B, wavelength, iteration_errors, ifitpars = \
+RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B, wavelength, ifitpars = \
     ssr.spectral_separation_routine(
         flux_collection_inverted_buffered, flux_template_A_inverted_buffered, flux_template_B_inverted_buffered,
         delta_v, ifitpar_A, ifitpar_B, wavelength_buffered, bjdtdb, period=orbital_period_estimate,
         iteration_limit=10, RV_guess_collection=RV_guess_collection, convergence_limit=5E-2, buffer_mask=buffer_mask,
-        rv_lower_limit=rv_lower_limit, suppress_print='scs', plot=True, estimate_error=False, return_unbuffered=False,
+        rv_lower_limit=rv_lower_limit, suppress_print='scs', plot=True, return_unbuffered=False,
         ignore_component_B=True
     )
 # plt.show(block=True)
