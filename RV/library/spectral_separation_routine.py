@@ -19,7 +19,6 @@ based on previous implementations by J. Jessen Hansen and others.
 from RV.library.calculate_radial_velocities import radial_velocity_single_component
 from RV.library.broadening_function_svd import *
 from RV.library.initial_fit_parameters import InitialFitParameters
-from lmfit.minimizer import MinimizerResult
 import RV.library.spectrum_processing_functions as spf
 from copy import deepcopy
 import matplotlib
@@ -194,9 +193,10 @@ def update_bf_plot(plot_ax, model, index):
 def recalculate_RVs(
         inv_flux_collection: np.ndarray, separated_flux_A: np.ndarray, separated_flux_B: np.ndarray,
         RV_collection_A: np.ndarray, RV_collection_B: np.ndarray, inv_flux_templateA: np.ndarray,
-        inv_flux_templateB: np.ndarray, delta_v: float, ifitparamsA:InitialFitParameters,
-        ifitparamsB:InitialFitParameters, buffer_mask: np.ndarray, iteration_limit=10, convergence_limit=1e-5,
-        plot_ax_A=None, plot_ax_B=None, plot_ax_d1=None, plot_ax_d2=None, rv_lower_limit=0.0
+        inv_flux_templateB: np.ndarray, delta_v: float, ifitparamsA: InitialFitParameters,
+        ifitparamsB: InitialFitParameters, buffer_mask: np.ndarray, iteration_limit=10, convergence_limit=1e-5,
+        plot_ax_A=None, plot_ax_B=None, plot_ax_d1=None, plot_ax_d2=None, rv_lower_limit=0.0, period=None,
+        time_values=None
 ):
     """
     This part of the spectral separation routine corrects the spectra for the separated spectra found by
@@ -256,15 +256,20 @@ def recalculate_RVs(
         plot_ax_d2.set_xlabel('Velocity shift [km/s]')
         plot_ax_d2.set_title('Component B, spectrum 16 and 19')
 
-    fits_A = np.empty(shape=(n_spectra,), dtype=MinimizerResult)
-    fits_B = np.empty(shape=(n_spectra,), dtype=MinimizerResult)
+    bf_fitres_A = np.empty(shape=(n_spectra,), dtype=tuple)
+    bf_fitres_B = np.empty(shape=(n_spectra,), dtype=tuple)
 
     for i in range(0, n_spectra):
         iterations = 0
         while True:
             iterations += 1
             RMS_RV_A = -RV_collection_A[i]
+
             corrected_flux_A = inv_flux_collection[:, i] - shift_spectrum(separated_flux_B, RV_collection_B[i], delta_v)
+
+            if period is not None and ifitparamsB.ignore_at_phase is not None and time_values is not None:
+                if _check_for_total_eclipse(time_values[i], period, ifitparamsB.ignore_at_phase) is True:
+                    corrected_flux_A = inv_flux_collection[:, i]
 
             corrected_flux_A = corrected_flux_A[~buffer_mask]
             ifitparamsA.RV = RV_collection_A[i]
@@ -282,7 +287,13 @@ def recalculate_RVs(
         while True:
             iterations += 1
             RMS_RV_B = -RV_collection_B[i]
-            corrected_flux_B = inv_flux_collection[:, i] -shift_spectrum(separated_flux_A, RV_collection_A[i], delta_v)
+
+            corrected_flux_B = inv_flux_collection[:, i] - shift_spectrum(separated_flux_A, RV_collection_A[i], delta_v)
+
+            if period is not None and ifitparamsA.ignore_at_phase is not None and time_values is not None:
+                if _check_for_total_eclipse(time_values[i], period, ifitparamsA.ignore_at_phase) is True:
+                    corrected_flux_B = inv_flux_collection[:, i]
+
             corrected_flux_B = corrected_flux_B[~buffer_mask]
             ifitparamsB.RV = RV_collection_B[i]
 
@@ -297,7 +308,7 @@ def recalculate_RVs(
                               category=Warning)
                 break
 
-        fits_A[i], fits_B[i] = model_A[0], model_B[0]
+        bf_fitres_A[i], bf_fitres_B[i] = model_A, model_B
 
         if plot_ax_A is not None and i < 20:
             update_bf_plot(plot_ax_A, model_A, i)
@@ -314,7 +325,20 @@ def recalculate_RVs(
         if plot_ax_d2 is not None and (i==19 or i==16):
             update_bf_plot(plot_ax_d2, model_B, i)
 
-    return RV_collection_A, RV_collection_B, (fits_A, fits_B)
+    return RV_collection_A, RV_collection_B, (bf_fitres_A, bf_fitres_B)
+
+
+def _check_for_total_eclipse(time_value, period, eclipse_phase_area):
+    phase = np.mod(time_value, period)/period
+    lower = eclipse_phase_area[0]
+    upper = eclipse_phase_area[1]
+    if lower < upper:
+        condition = (phase > lower) & (phase < upper)
+    elif lower > upper:
+        condition = (phase > lower) | (phase < upper)
+    else:
+        raise ValueError('eclipse_phase_area must comprise of a lower and an upper value that are separate.')
+    return condition
 
 
 def initialize_ssr_plots():
@@ -398,11 +422,11 @@ def save_multi_image(filename):
 
 def spectral_separation_routine(
         inv_flux_collection: np.ndarray, inv_flux_templateA: np.ndarray, inv_flux_templateB: np.ndarray, delta_v: float,
-        ifitparamsA:InitialFitParameters, ifitparamsB:InitialFitParameters, wavelength: np.ndarray,
+        ifitparamsA: InitialFitParameters, ifitparamsB: InitialFitParameters, wavelength: np.ndarray,
         time_values: np.ndarray, RV_guess_collection: np.ndarray, convergence_limit=1E-5, iteration_limit=10, plot=True,
         period=None, buffer_mask=None, rv_lower_limit=0.0, rv_proximity_limit=0.0, suppress_print=False,
         convergence_limit_scs=1E-7, return_unbuffered=True, save_plot_path=None,
-        ignore_component_B=False
+        ignore_component_B=False, save_extras=True
 ):
     """
     Routine that separates component spectra and calculates radial velocities by iteratively calling
@@ -501,7 +525,7 @@ def spectral_separation_routine(
     if plot:
         f1_ax1, f1_ax2, f1_ax3, f2_ax1, f2_ax2, f3_ax1, f4_ax1 = initialize_ssr_plots()
     else:
-        f2_ax1=None; f2_ax2=None; f3_ax1 = None; f4_ax1 = None
+        f2_ax1 = None; f2_ax2=None; f3_ax1 = None; f4_ax1 = None
 
     # Iterative loop that repeatedly separates the spectra from each other in order to calculate new RVs (Gonzales 2005)
     iterations = 0
@@ -520,10 +544,11 @@ def spectral_separation_routine(
             rv_lower_limit=rv_lower_limit, ignore_component_B=ignore_component_B
         )
 
-        RV_collection_A, RV_collection_B, (fits_A, fits_B) = recalculate_RVs(
+        RV_collection_A, RV_collection_B, (bf_fitres_A, bf_fitres_B) = recalculate_RVs(
             inv_flux_collection, separated_flux_A, separated_flux_B, RV_collection_A, RV_collection_B,
             inv_flux_templateA, inv_flux_templateB, delta_v, ifitparamsA, ifitparamsB, buffer_mask, plot_ax_A=f3_ax1,
-            plot_ax_B=f4_ax1, plot_ax_d1=f2_ax1, plot_ax_d2=f2_ax2, rv_lower_limit=rv_lower_limit
+            plot_ax_B=f4_ax1, plot_ax_d1=f2_ax1, plot_ax_d2=f2_ax2, rv_lower_limit=rv_lower_limit, period=period,
+            time_values=time_values
         )
 
         if plot:
@@ -534,10 +559,10 @@ def spectral_separation_routine(
             )
 
         # Average vsini values for future fit guess and limit allowed fit area
-        vsini_A, vsini_B = np.empty(shape=fits_A.shape), np.empty(shape=fits_B.shape)
+        vsini_A, vsini_B = np.empty(shape=bf_fitres_A.shape), np.empty(shape=bf_fitres_B.shape)
         for i in range(0, vsini_A.size):
-            _, _, vsini_A[i], _, _, _ = get_fit_parameter_values(fits_A[i].params)
-            _, _, vsini_B[i], _, _, _ = get_fit_parameter_values(fits_B[i].params)
+            _, _, vsini_A[i], _, _, _ = get_fit_parameter_values(bf_fitres_A[i][0].params)
+            _, _, vsini_B[i], _, _, _ = get_fit_parameter_values(bf_fitres_B[i][0].params)
         ifitparamsA.vsini = np.mean(vsini_A)
         ifitparamsB.vsini = np.mean(vsini_B)
         ifitparamsA.vsini_vary_limit = 0.5
@@ -556,26 +581,82 @@ def spectral_separation_routine(
             break
         if iterations >= iteration_limit:
             warnings.warn(f'RV convergence limit of {convergence_limit} not reached in {iterations} iterations.',
-                            category=Warning)
+                          category=Warning)
             print('Spectral separation routine terminates.')
             break
 
     ifitparams = (ifitparamsA, ifitparamsB)
+
+    RVb_flags = np.zeros(RV_collection_B.shape)
+    RVb_flags[RV_mask] = 1.0
+
+    if save_extras is True:
+        save_separation_data(
+            'Data/additionals/separation_routine/', wavelength[~buffer_mask], time_values, RV_collection_A,
+            RV_collection_B, separated_flux_A[~buffer_mask], separated_flux_B[~buffer_mask], bf_fitres_A, bf_fitres_B,
+            RVb_flags
+        )
 
     if save_plot_path is not None:
         save_multi_image(save_plot_path)
 
     if return_unbuffered:
         return RV_collection_A, RV_collection_B, separated_flux_A[~buffer_mask], separated_flux_B[~buffer_mask], \
-               wavelength[~buffer_mask], ifitparams
+               wavelength[~buffer_mask], ifitparams, RVb_flags
     else:
-        return RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B, wavelength, ifitparams
+        return RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B, wavelength, ifitparams, RVb_flags
 
 
-def estimate_errors(
+def save_separation_data(
+        location, wavelength, time_values, RVs_A, RVs_B, separated_flux_A, separated_flux_B, bf_fitres_A, bf_fitres_B, 
+        RVb_flags
+):
+    filename_bulk = str(int(np.min(wavelength))) + '_' + str(int(np.max(wavelength)))
+    
+    rvA_array = np.empty((RVs_A.size, 2))
+    rvA_array[:, 0], rvA_array[:, 1] = time_values, RVs_A
+    
+    rvB_array = np.empty((RVs_B.size, 3))
+    rvB_array[:, 0], rvB_array[:, 1], rvB_array[:, 2] = time_values, RVs_B, RVb_flags
+    
+    sep_array = np.empty((wavelength.size, 3))
+    sep_array[:, 0], sep_array[:, 1], sep_array[:, 2] = wavelength, separated_flux_A, separated_flux_B
+
+    np.savetxt(location + filename_bulk + 'rvA.txt', rvA_array)
+    np.savetxt(location + filename_bulk + 'rvB.txt', rvB_array)
+    np.savetxt(location + filename_bulk + 'sep_flux.txt', sep_array)
+
+    vel_array = np.empty((bf_fitres_A.size, bf_fitres_A[0][1].size))
+    bf_array = np.empty((bf_fitres_A.size, bf_fitres_A[0][1].size))
+    bf_smooth_array = np.empty((bf_fitres_A.size, bf_fitres_A[0][1].size))
+    model_array = np.empty((bf_fitres_A.size, bf_fitres_A[0][1].size))
+    for i in range(0, bf_fitres_A.size):
+        model_vals_A, bf_velocity_A, bf_vals_A, bf_smooth_vals_A = bf_fitres_A[i][1:]
+        vel_array[i, :] = bf_velocity_A
+        bf_array[i, :] = bf_vals_A
+        bf_smooth_array[i, :] = bf_smooth_vals_A
+        model_array[i, :] = model_vals_A
+    np.savetxt(location + filename_bulk + 'velocities_A.txt', vel_array)
+    np.savetxt(location + filename_bulk + 'bfvals_A.txt', bf_array)
+    np.savetxt(location + filename_bulk + 'bfsmooth_A.txt', bf_smooth_array)
+    np.savetxt(location + filename_bulk + 'models_A.txt', model_array)
+
+    for i in range(0, bf_fitres_B.size):
+        model_vals_B, bf_velocity_B, bf_vals_B, bf_smooth_vals_B = bf_fitres_B[i][1:]
+        vel_array[i, :] = bf_velocity_B
+        bf_array[i, :] = bf_vals_B
+        bf_smooth_array[i, :] = bf_smooth_vals_B
+        model_array[i, :] = model_vals_B
+    np.savetxt(location + filename_bulk + 'velocities_B.txt', vel_array)
+    np.savetxt(location + filename_bulk + 'bfvals_B.txt', bf_array)
+    np.savetxt(location + filename_bulk + 'bfsmooth_B.txt', bf_smooth_array)
+    np.savetxt(location + filename_bulk + 'models_B.txt', model_array)
+
+
+def estimate_errors_rv_only(
         wavelength_interval_size: float, inv_flux_collection: np.ndarray, inv_flux_templateA: np.ndarray,
         inv_flux_templateB: np.ndarray, separated_flux_A: np.ndarray, separated_flux_B: np.ndarray, delta_v: float,
-        ifitparamsA:InitialFitParameters, ifitparamsB:InitialFitParameters, wavelength: np.ndarray,
+        ifitparamsA: InitialFitParameters, ifitparamsB: InitialFitParameters, wavelength: np.ndarray,
         RV_collection_A: np.ndarray, RV_collection_B: np.ndarray, times: np.ndarray, wavelength_buffer_size=100.0,
         plot=False, period=1.0
 ):
@@ -739,7 +820,7 @@ def estimate_errors_2(
         else:
             save_plot_path = None
 
-        RV_A_temp, RV_B_temp, _, _, _, _ = spectral_separation_routine(
+        RV_A_temp, RV_B_temp, _, _, _, _, _ = spectral_separation_routine(
             current_fl, current_fltA, current_fltB, delta_v, ifitparamsA, ifitparamsB, current_wl, time_values,
             RV_collection, convergence_limit, iteration_limit, plot, period, buffer_mask=current_buffer,
             rv_lower_limit=rv_lower_limit, suppress_print=suppress_print, convergence_limit_scs=convergence_limit_scs,

@@ -8,7 +8,8 @@ class InitialFitParameters:
             limbd_coef=0.68,
             smooth_sigma=4.0,
             bf_velocity_span=200,
-            use_for_spectral_separation=None
+            use_for_spectral_separation=None,
+            ignore_at_phase=None
     ):
         # Value for vsini, and whether or not to fit it
         self.vsini = vsini_guess
@@ -31,4 +32,6 @@ class InitialFitParameters:
         self.bf_velocity_span = bf_velocity_span
         # Which spectra indices that should be used when calculating the separated component spectrum
         self.use_for_spectral_separation = use_for_spectral_separation
+        # Use if component should not be subtracted in a specific phase-area (fx. (0.7, 0.9)), if it is totally eclipsed
+        self.ignore_at_phase = ignore_at_phase
 

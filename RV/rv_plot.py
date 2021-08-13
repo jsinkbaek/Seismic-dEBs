@@ -1,9 +1,10 @@
 from matplotlib import pyplot as plt; import numpy as np
 from scipy.interpolate import interp1d
 from scipy.optimize import minimize
+import matplotlib
 
-filename_1A = 'Data/processed/RV_results/rvA_not_8430105_4700_5400_100_shift1.txt'
-filename_1B = 'Data/processed/RV_results/rvB_not_8430105_4700_5400_100_shift1.txt'
+filename_1A = 'Data/processed/RV_results/rvA_not_8430105_4700_5400_100.txt'
+filename_1B = 'Data/processed/RV_results/rvB_not_8430105_4700_5400_100.txt'
 # filename_1A = 'Data/processed/RV_results/rvA_not_8430105_4500_6700_100errors2_clipped.txt'
 # filename_1B = 'Data/processed/RV_results/rvB_not_8430105_4500_6700_100errors2_clipped.txt'
 #filename_2A = 'Data/processed/RV_results/rvA_not_8430105_4700_5400_100_3errors2.txt'
@@ -58,5 +59,5 @@ plt.plot(phase_model, rv_Am-system_rv-system_rv_new, 'k-')
 plt.plot(phase_model, rv_Bm-system_rv-system_rv_new, 'k-')
 plt.xlabel('Orbital Phase')
 plt.ylabel(f'Radial Velocity - {system_rv_new} [km/s]')
-plt.show()
+plt.show(block=True)
 
