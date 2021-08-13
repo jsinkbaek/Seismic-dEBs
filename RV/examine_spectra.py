@@ -57,7 +57,7 @@ times.out_subfmt = 'long'
 bjdtdb, _, _ = utc_tdb.JDUTC_to_BJDTDB(times, ra=RA, dec=DEC, starname=stellar_target, obsname=observatory_name)
 
 # # Extra observation date
-time_extra = Time('2021-08-06T23:03:19', scale='utc', location=observatory_location)
+time_extra = Time('2021-08-02T23:03:19', scale='utc', location=observatory_location)
 time_extra.format = 'jd'
 time_extra.out_subfmt = 'long'
 bjd_extra, _, _ = utc_tdb.JDUTC_to_BJDTDB(time_extra, ra=RA, dec=DEC, starname=stellar_target, obsname=observatory_name)

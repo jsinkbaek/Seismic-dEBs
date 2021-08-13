@@ -13,6 +13,7 @@ import RV.library.broadening_function_svd as bfsvd
 import matplotlib.pyplot as plt
 import matplotlib
 from copy import deepcopy
+import RV.library.calculate_radial_velocities as cRV
 
 matplotlib.rcParams.update({'font.size': 25})
 
@@ -26,7 +27,7 @@ observatory_location = EarthLocation.of_site("lapalma")
 observatory_name = "lapalma"
 stellar_target = "kic8430105"
 wavelength_normalization_limit = (4450, 7000)   # Ångström, limit to data before performing continuum normalization
-wavelength_RV_limit = (4500, 6900)              # Ångström, the actual spectrum area used for analysis
+wavelength_RV_limit = (4500, 5800)              # Ångström, the actual spectrum area used for analysis
 wavelength_buffer_size = 25                     # Ångström, padding included at ends of spectra. Useful when doing
                                                 # wavelength shifts with np.roll()
 wavelength_intervals_error_estimate = 150       # Ångström, size of the intervals used for error estimation on RVs
@@ -264,7 +265,7 @@ if plot:
     plt.savefig(fname='../figures/report/RV/bf_cc.png', dpi=400)
     plt.close()
 
-"""
+
 # # Calculate broadening function RVs to use as initial guesses # #
 RV_guesses_A, _ = cRV.radial_velocities_of_multiple_spectra(
     flux_collection_inverted, flux_template_A_inverted, delta_v, ifitpar_A, number_of_parallel_jobs=4,
@@ -317,7 +318,7 @@ save_data[:, 0] = bjdtdb_B
 save_data[:, 1] = RV_collection_B[~bad_data_mask] + system_RV_estimate
 save_data[:, 2] = RV_errors_B[~bad_data_mask]
 np.savetxt('Data/processed/RV_results/rvB_not_8430105_4700_5400_100.txt', save_data)
-"""
+
 
 _, RV_A_from_previous, _ = np.loadtxt('Data/processed/RV_results/rvA_not_8430105_4700_5400_100.txt',
                                       unpack=True)
