@@ -24,7 +24,7 @@ import RV.library.spectrum_processing_functions as spf
 from copy import deepcopy
 import matplotlib
 import RV.library.broadening_function_svd as bfsvd
-# from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d
 import scipy.constants as scc
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -486,13 +486,13 @@ def spectral_separation_routine(
                 separated_flux_A.size = inv_flux_templateA[buffer_mask].size. Same for the returned wavelength.
                 This can be disabled by setting return_unbuffered=False.
     """
-
     suppress_scs = False; suppress_ssr = False
     if suppress_print == 'scs': suppress_scs = True
     elif suppress_print == 'ssr': suppress_ssr = True
     elif suppress_print == 'all': suppress_scs = True; suppress_ssr = True
 
-    RV_collection_A, RV_collection_B = RV_guess_collection[:, 0], RV_guess_collection[:, 1]
+    RV_collection_A, RV_collection_B = deepcopy(RV_guess_collection[:, 0]), deepcopy(RV_guess_collection[:, 1])
+    ifitparamsA, ifitparamsB = deepcopy(ifitparamsA), deepcopy(ifitparamsB)
 
     if buffer_mask is None:
         buffer_mask = np.zeros(wavelength.shape, dtype=bool)
@@ -579,53 +579,13 @@ def estimate_errors(
         RV_collection_A: np.ndarray, RV_collection_B: np.ndarray, times: np.ndarray, wavelength_buffer_size=100.0,
         plot=False, period=1.0
 ):
-    wavelength_interval_collection = []
-    flux_interval_collection = []
-    templateA_interval_collection = []
-    templateB_interval_collection = []
-    sep_flux_A_interval_collection = []
-    sep_flux_B_interval_collection = []
-    interval_buffer_mask = []
-    w_interval_start = wavelength[0] + wavelength_buffer_size
-
-    # # Splits the spectra into intervals of length wavelength_interval_size # #
-    while True:
-        if w_interval_start + wavelength_interval_size > wavelength[-1] - wavelength_buffer_size:
-            w_interval_end = wavelength[-1] - wavelength_buffer_size
-        else:
-            w_interval_end = w_interval_start + wavelength_interval_size
-
-        if w_interval_end - w_interval_start < wavelength_interval_size // 2:
-            break
-
-        wavelength_interval = (w_interval_start, w_interval_end)
-
-        _, (wavelength_buffered, flux_buffered, buffer_mask, buffer_mask_internal) = \
-            spf.limit_wavelength_interval(wavelength_interval, wavelength, inv_flux_collection,
-                                          buffer_size=wavelength_buffer_size, even_length=True)
-
-        _, (_, templateA_buffered, _, _) = \
-            spf.limit_wavelength_interval(wavelength_interval, wavelength, inv_flux_templateA,
-                                          buffer_mask=buffer_mask_internal, even_length=True)
-        _, (_, templateB_buffered, _, _) = \
-            spf.limit_wavelength_interval(wavelength_interval, wavelength, inv_flux_templateB,
-                                          buffer_mask=buffer_mask_internal, even_length=True)
-        _, (_, sep_flux_A_buffered, _, _) = \
-            spf.limit_wavelength_interval(wavelength_interval, wavelength, separated_flux_A,
-                                          buffer_mask=buffer_mask_internal, even_length=True)
-        _, (_, sep_flux_B_buffered, _, _) = \
-            spf.limit_wavelength_interval(wavelength_interval, wavelength, separated_flux_B,
-                                          buffer_mask=buffer_mask_internal, even_length=True)
-
-        wavelength_interval_collection.append(wavelength_buffered)
-        flux_interval_collection.append(flux_buffered)
-        templateA_interval_collection.append(templateA_buffered)
-        templateB_interval_collection.append(templateB_buffered)
-        sep_flux_A_interval_collection.append(sep_flux_A_buffered)
-        sep_flux_B_interval_collection.append(sep_flux_B_buffered)
-        interval_buffer_mask.append(buffer_mask)
-
-        w_interval_start = w_interval_end
+    interval_results = _create_wavelength_intervals(
+        wavelength, wavelength_interval_size, inv_flux_collection, inv_flux_templateA, inv_flux_templateB,
+        wavelength_buffer_size, separated_flux_A=separated_flux_A, separated_flux_B=separated_flux_B
+    )
+    (wavelength_interval_collection, flux_interval_collection, templateA_interval_collection,
+     templateB_interval_collection, sep_flux_A_interval_collection, sep_flux_B_interval_collection, interval_buffer_mask
+     ) = interval_results
 
     RV_estimates_A = np.empty((RV_collection_A.size, len(wavelength_interval_collection)))
     RV_estimates_B = np.empty((RV_collection_B.size, len(wavelength_interval_collection)))
@@ -641,12 +601,12 @@ def estimate_errors(
             f1_ax3 = fig_1.add_subplot(gs_1[1, 1])
 
             # Broadening function fits A
-            fig_2 = plt.figure(figsize=(16, 9))
+            fig_2 = plt.figure(figsize=(8, 9))
             gs_2 = fig_2.add_gridspec(1, 1)
             f2_ax1 = fig_2.add_subplot(gs_2[:, :])
 
             # Broadening function fits B
-            fig_3 = plt.figure(figsize=(16, 9))
+            fig_3 = plt.figure(figsize=(8, 9))
             gs_3 = fig_3.add_gridspec(1, 1)
             f3_ax1 = fig_3.add_subplot(gs_3[:, :])
         else:
@@ -679,20 +639,17 @@ def estimate_errors(
     return (errors_RV_A, errors_RV_B), (RV_estimates_A, RV_estimates_B)
 
 
-def estimate_errors_2(
-        wavelength_interval_size: int, inv_flux_collection: np.ndarray,
-        inv_flux_templateA: np.ndarray, inv_flux_templateB: np.ndarray, delta_v: float,
-        ifitparamsA: InitialFitParameters, ifitparamsB: InitialFitParameters, wavelength: np.ndarray,
-        time_values: np.ndarray, RV_collection: np.ndarray, convergence_limit=1E-5,
-        iteration_limit=10, plot=True, period=None, wavelength_buffer_size=100, rv_lower_limit=0.0,
-        suppress_print=False, convergence_limit_scs=1E-7, save_bf_plots=False, ignore_component_B=False
+def _create_wavelength_intervals(
+        wavelength, wavelength_interval_size, inv_flux_collection, inv_flux_templateA, inv_flux_templateB,
+        wavelength_buffer_size, separated_flux_A: np.ndarray = None, separated_flux_B: np.ndarray = None
 ):
-
     wavelength_interval_collection = []
     flux_interval_collection = []
     templateA_interval_collection = []
     templateB_interval_collection = []
     interval_buffer_mask = []
+    separated_A_interval_collection = []
+    separated_B_interval_collection = []
     w_interval_start = wavelength[0] + wavelength_buffer_size
     while True:
         if w_interval_start + wavelength_interval_size > wavelength[-1] - wavelength_buffer_size:
@@ -704,12 +661,20 @@ def estimate_errors_2(
             break
 
         w_interval = (w_interval_start, w_interval_end)
-
-        _, _, wl_buffered, flux_buffered_list, buffer_mask = spf.limit_wavelength_interval_multiple_spectra(
-            w_interval, wavelength, inv_flux_collection, inv_flux_templateA, inv_flux_templateB,
-            buffer_size=wavelength_buffer_size, even_length=True
-        )
-        [fl_buffered, flA_buffered, flB_buffered] = flux_buffered_list
+        if separated_flux_A is not None and separated_flux_B is not None:
+            _, _, wl_buffered, flux_buffered_list, buffer_mask = spf.limit_wavelength_interval_multiple_spectra(
+                w_interval, wavelength, inv_flux_collection, inv_flux_templateA, inv_flux_templateB, separated_flux_A,
+                separated_flux_B, buffer_size=wavelength_buffer_size, even_length=True
+            )
+            [fl_buffered, flA_buffered, flB_buffered, sflA_buffered, sflB_buffered] = flux_buffered_list
+            separated_A_interval_collection.append(sflA_buffered)
+            separated_B_interval_collection.append(sflB_buffered)
+        else:
+            _, _, wl_buffered, flux_buffered_list, buffer_mask = spf.limit_wavelength_interval_multiple_spectra(
+                w_interval, wavelength, inv_flux_collection, inv_flux_templateA, inv_flux_templateB,
+                buffer_size=wavelength_buffer_size, even_length=True
+            )
+            [fl_buffered, flA_buffered, flB_buffered] = flux_buffered_list
 
         wavelength_interval_collection.append(wl_buffered)
         flux_interval_collection.append(fl_buffered)
@@ -718,6 +683,28 @@ def estimate_errors_2(
         interval_buffer_mask.append(buffer_mask)
 
         w_interval_start = w_interval_end
+    if separated_flux_A is not None and separated_flux_B is not None:
+        return (wavelength_interval_collection, flux_interval_collection, templateA_interval_collection,
+                templateB_interval_collection, separated_A_interval_collection, separated_B_interval_collection,
+                interval_buffer_mask)
+    else:
+        return (wavelength_interval_collection, flux_interval_collection, templateA_interval_collection,
+                templateB_interval_collection, interval_buffer_mask)
+
+
+def estimate_errors_2(
+        wavelength_interval_size: int, inv_flux_collection: np.ndarray,
+        inv_flux_templateA: np.ndarray, inv_flux_templateB: np.ndarray, delta_v: float,
+        ifitparamsA: InitialFitParameters, ifitparamsB: InitialFitParameters, wavelength: np.ndarray,
+        time_values: np.ndarray, RV_collection: np.ndarray, convergence_limit=1E-5,
+        iteration_limit=10, plot=True, period=None, wavelength_buffer_size=100, rv_lower_limit=0.0,
+        suppress_print=False, convergence_limit_scs=1E-7, save_bf_plots=False, ignore_component_B=False
+):
+    (wavelength_interval_collection, flux_interval_collection, templateA_interval_collection,
+     templateB_interval_collection, interval_buffer_mask) = _create_wavelength_intervals(
+        wavelength, wavelength_interval_size, inv_flux_collection, inv_flux_templateA, inv_flux_templateB,
+        wavelength_buffer_size
+    )
 
     RV_A_interval_values = np.empty((RV_collection[:, 0].size, len(wavelength_interval_collection)))
     RV_B_interval_values = np.empty((RV_collection[:, 0].size, len(wavelength_interval_collection)))
@@ -746,20 +733,13 @@ def estimate_errors_2(
                 plt.tight_layout()
                 plt.savefig(fname=f'../figures/BF_plots/{k}/{current_wl_unbuffered[0]}_{current_wl_unbuffered[-1]}.png', dpi=400)
                 plt.close()
-                plt.figure(figsize=(16, 9))
-                plt.plot(current_wl_unbuffered, 1-current_fl_unbuffered[:, k])
-                plt.xlabel('Wavelength [Å]')
-                plt.ylabel('Normalized Flux')
-                plt.tight_layout()
-                plt.savefig(fname=f'../figures/spectrum_plots/{k}/{current_wl_unbuffered[0]}_{current_wl_unbuffered[-1]}.png', dpi=400)
-                plt.close()
 
         if plot:
             save_plot_path = f'../figures/spectrum_plots/group_plots/{current_wl[~current_buffer][0]}_{current_wl[~current_buffer][1]}_multi.pdf'
         else:
             save_plot_path = None
 
-        RV_A_temp, RV_B_temp, _, _, _, _, _ = spectral_separation_routine(
+        RV_A_temp, RV_B_temp, _, _, _, _ = spectral_separation_routine(
             current_fl, current_fltA, current_fltB, delta_v, ifitparamsA, ifitparamsB, current_wl, time_values,
             RV_collection, convergence_limit, iteration_limit, plot, period, buffer_mask=current_buffer,
             rv_lower_limit=rv_lower_limit, suppress_print=suppress_print, convergence_limit_scs=convergence_limit_scs,

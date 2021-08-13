@@ -33,7 +33,8 @@ def _resample_multiple_spectra(wavelength_template: np.ndarray, wavelength_list:
 
     flux_resampled_collection = np.empty(shape=(wavelength_template.size, len(flux_list)))
     for i in range(0, len(flux_list)):
-        flux_resampled_collection[:, i] = np.interp(wavelength_template, wavelength_list[i], flux_list[i])
+        flux_resampled_collection[:, i] = interp1d(wavelength_list[i], flux_list[i], kind='linear')(wavelength_template)
+        # flux_resampled_collection[:, i] = np.interp(wavelength_template, wavelength_list[i], flux_list[i])
 
     return flux_resampled_collection
 
@@ -96,13 +97,34 @@ def resample_to_equal_velocity_steps(
             flux_resampled_collection = _resample_multiple_spectra(wavelength_template, wavelength, flux)
             return wavelength_template, flux_resampled_collection
         elif isinstance(flux, np.ndarray) and isinstance(wavelength, np.ndarray):
-            flux_resampled = np.interp(wavelength_template, wavelength, flux)
+            flux_resampled = interp1d(wavelength, flux, kind='linear')(wavelength_template)
+            # flux_resampled = np.interp(wavelength_template, wavelength, flux)
             return wavelength_template, flux_resampled
         else:
             raise ValueError("flux and wavelength is neither a list (of arrays), an array, or None "
                              "(they must be the same type).")
     else:
         return wavelength_template
+
+
+def resample_multiple_spectra(
+        delta_v: float, *spectra, wavelength_template: np.ndarray = None, wavelength_a=None, wavelength_b=None,
+        resampled_len_even=True
+):
+    """
+    Resamples multiple spectra. Expects *spectra (traditionally *args in python) to be a collection of tuples with
+    (wavelength, flux) for each. It is allowed to include multiple spectra in one of the tuples if done with
+    ([wl_1, wl_2, ...], [flux_1, flux_2, ...]) since this function calls resample_to_equal_velocity_steps(). As such
+    this function is purely a wrapper for convenience.
+    :return: wavelength, (flux_1, flux_2, flux_3, ...)
+    """
+    flux_list = []
+    for (wl, fl) in spectra:
+        wavelength_template, flux_ = resample_to_equal_velocity_steps(
+            wl, delta_v, fl, wavelength_template, wavelength_a, wavelength_b, resampled_len_even
+        )
+        flux_list.append(flux_)
+    return wavelength_template, tuple(flux_list)
 
 
 def interpolate_to_equal_velocity_steps(wavelength_collector_list: list, flux_collector_list: list, delta_v: float):
@@ -300,10 +322,10 @@ def simple_normalizer(wavelength, flux, reduce_em_lines=True, plot=False):
     filtered_flux = moving_median_filter(flux, flux.size//25)
 
     selection_mask_1 = flux/filtered_flux > 0.85
-    polynomial_1 = Polynomial.fit(wavelength[selection_mask_1], flux[selection_mask_1], deg=2)
+    polynomial_1 = Polynomial.fit(wavelength[selection_mask_1], flux[selection_mask_1], deg=3)
 
     selection_mask_2 = (flux/polynomial_1(wavelength) > 0.95) & (flux/polynomial_1(wavelength) < 1.1)
-    polynomial_2 = Polynomial.fit(wavelength[selection_mask_2], flux[selection_mask_2], deg=3)
+    polynomial_2 = Polynomial.fit(wavelength[selection_mask_2], flux[selection_mask_2], deg=4)
 
     normalized_flux = flux / polynomial_2(wavelength)
 

@@ -36,8 +36,7 @@ def radial_velocity_2_components(
     return (RV_A, RV_B), (model_values_A, fit_A, model_values_B, fit_B), (bf, bf_smooth)
 
 
-def _pull_results_mspectra_2comp(broadening_function_template: BroadeningFunction, res_par, n_spectra, plot,
-                                 spectrum_size):
+def _pull_results_mspectra_2comp(broadening_function_template: BroadeningFunction, res_par, n_spectra, plot):
     RVs_A = np.empty((n_spectra,))
     RVs_B = np.empty((n_spectra,))
     broadening_function_vals = np.empty((broadening_function_template.velocity.size, n_spectra))
@@ -65,8 +64,7 @@ def _pull_results_mspectra_2comp(broadening_function_template: BroadeningFunctio
     return RVs_A, RVs_B, extra_results
 
 
-def _pull_results_mspectra_1comp(broadening_function_template: BroadeningFunction, res_par, n_spectra, plot,
-                                 spectrum_size):
+def _pull_results_mspectra_1comp(broadening_function_template: BroadeningFunction, res_par, n_spectra, plot):
     RVs = np.empty((n_spectra, ))
     broadening_function_vals = np.empty((broadening_function_template.velocity.size, n_spectra))
     broadening_function_vals_smoothed = np.empty((broadening_function_template.velocity.size, n_spectra))
@@ -137,13 +135,13 @@ def radial_velocities_of_multiple_spectra(
     # Pull results from call
     if ifitparamsB is not None:
         RVs_A, RVs_B, extra_results = _pull_results_mspectra_2comp(
-            broadening_function_template, res_par, n_spectra, plot, spectrum_size=inv_flux_collection[:, 0].size
+            broadening_function_template, res_par, n_spectra, plot
         )
         bf_velocity, bf_vals, bf_vals_smooth, model_vals_A, model_vals_B = extra_results
         return RVs_A, RVs_B, (bf_velocity, bf_vals, bf_vals_smooth, model_vals_A, model_vals_B)
     else:
         RVs, (bf_velocity, bf_vals, bf_vals_smooth, model_vals) = _pull_results_mspectra_1comp(
-            broadening_function_template, res_par, n_spectra, plot, spectrum_size=inv_flux_collection[:, 0].size
+            broadening_function_template, res_par, n_spectra, plot
         )
         return RVs, (bf_velocity, bf_vals, bf_vals_smooth, model_vals)
 
