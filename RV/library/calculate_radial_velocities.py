@@ -6,7 +6,8 @@ from RV.library.initial_fit_parameters import InitialFitParameters
 
 
 def radial_velocity_2_components(
-        inv_flux, broadening_function_template:BroadeningFunction, ifitparamsA:InitialFitParameters,
+        inv_flux, broadening_function_template:BroadeningFunction,
+        ifitparamsA: InitialFitParameters,
         ifitparamsB:InitialFitParameters
 ):
     BFsvd = copy(broadening_function_template)
@@ -87,8 +88,12 @@ def _pull_results_mspectra_1comp(broadening_function_template: BroadeningFunctio
 
 
 def radial_velocities_of_multiple_spectra(
-        inv_flux_collection: np.ndarray, inv_flux_template: np.ndarray, delta_v: float,
-        ifitparamsA:InitialFitParameters, ifitparamsB: InitialFitParameters = None, number_of_parallel_jobs=4,
+        inv_flux_collection: np.ndarray,
+        inv_flux_template: np.ndarray,
+        delta_v: float,
+        ifitparamsA: InitialFitParameters,
+        ifitparamsB: InitialFitParameters = None,
+        number_of_parallel_jobs=4,
         plot=False
 ):
     """
@@ -147,7 +152,9 @@ def radial_velocities_of_multiple_spectra(
 
 
 def radial_velocity_single_component(
-        inv_flux: np.ndarray, broadening_function_template: BroadeningFunction, ifitparams: InitialFitParameters
+        inv_flux: np.ndarray,
+        broadening_function_template: BroadeningFunction,
+        ifitparams: InitialFitParameters
 ):
     """
     Calculates the broadening function of a spectrum and fits a single rotational broadening function profile to it.

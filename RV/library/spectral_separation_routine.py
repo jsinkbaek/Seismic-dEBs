@@ -9,11 +9,6 @@ Karsten Frank Brogaard named "dis_real_merged_8430105_2021.pro", and a similar p
 same author. Both follows the formula layout of the article:
 'Separation of composite spectra: the spectroscopic detecton of an eclipsing binary star'
         by J.F. Gonzalez and H. Levato ( A&A 448, 283-292(2006) )
-
-Other module files which this code uses are also adapted from other sources, including the shazam library for the
-SONG telescope (written by Emil Knudstrup).
-However, multiple people have been over shazam.py, including Karsten Frank Brogaard and Frank Grundahl, and it itself is
-based on previous implementations by J. Jessen Hansen and others.
 """
 
 from RV.library.calculate_radial_velocities import radial_velocity_single_component
@@ -177,16 +172,16 @@ def separate_component_spectra(
     return separated_flux_A, separated_flux_B
 
 
-def update_bf_plot(plot_ax, model, index):
+def _update_bf_plot(plot_ax, model, index):
     fit = model[0]
     model_values = model[1]
     velocity_values = model[2]
     bf_smooth_values = model[4]
-    amplitude, RV, _, _, _, _ = get_fit_parameter_values(fit.params)
+    _, RV, _, _, _, _ = get_fit_parameter_values(fit.params)
     plot_ax.plot(velocity_values, 1+0.02*bf_smooth_values/np.max(bf_smooth_values)-0.05*index)
     plot_ax.plot(velocity_values, 1+0.02*model_values/np.max(bf_smooth_values)-0.05*index, 'k--')
-    plot_ax.plot(np.ones(shape=(2,))*RV, [1-0.05*index-0.005,
-                                          1+0.025*np.max(model_values)/np.max(bf_smooth_values)-0.05*index],
+    plot_ax.plot(np.ones(shape=(2,))*RV,
+                 [1-0.05*index-0.005, 1+0.025*np.max(model_values)/np.max(bf_smooth_values)-0.05*index],
                  color='grey')
 
 
@@ -311,19 +306,19 @@ def recalculate_RVs(
         bf_fitres_A[i], bf_fitres_B[i] = model_A, model_B
 
         if plot_ax_A is not None and i < 20:
-            update_bf_plot(plot_ax_A, model_A, i)
+            _update_bf_plot(plot_ax_A, model_A, i)
             if rv_lower_limit != 0.0:
                 plot_ax_A.plot([rv_lower_limit, rv_lower_limit], [0, 1.1], 'k', linewidth=0.3)
                 plot_ax_A.plot([-rv_lower_limit, -rv_lower_limit], [0, 1.1], 'k', linewidth=0.3)
         if plot_ax_B is not None and i < 20:
-            update_bf_plot(plot_ax_B, model_B, i)
+            _update_bf_plot(plot_ax_B, model_B, i)
             if rv_lower_limit != 0.0:
                 plot_ax_B.plot([rv_lower_limit, rv_lower_limit], [0, 1.1], 'k', linewidth=0.3)
                 plot_ax_B.plot([-rv_lower_limit, -rv_lower_limit], [0, 1.1], 'k', linewidth=0.3)
         if plot_ax_d1 is not None and (i==19 or i==16):
-            update_bf_plot(plot_ax_d1, model_A, i)
+            _update_bf_plot(plot_ax_d1, model_A, i)
         if plot_ax_d2 is not None and (i==19 or i==16):
-            update_bf_plot(plot_ax_d2, model_B, i)
+            _update_bf_plot(plot_ax_d2, model_B, i)
 
     return RV_collection_A, RV_collection_B, (bf_fitres_A, bf_fitres_B)
 
@@ -341,7 +336,7 @@ def _check_for_total_eclipse(time_value, period, eclipse_phase_area):
     return condition
 
 
-def initialize_ssr_plots():
+def _initialize_ssr_plots():
     # RVs and separated spectra
     fig_1 = plt.figure(figsize=(16, 9))
     gs_1 = fig_1.add_gridspec(2, 2)
@@ -367,15 +362,14 @@ def initialize_ssr_plots():
     return f1_ax1, f1_ax2, f1_ax3, f2_ax1, f2_ax2, f3_ax1, f4_ax1
 
 
-def plot_ssr_iteration(
+def _plot_ssr_iteration(
         f1_ax1, f1_ax2, f1_ax3, separated_flux_A, separated_flux_B, wavelength, flux_template_A,
-        flux_template_B, RV_A, RV_B, time, period, flux_collection, buffer_mask, rv_lower_limit, rv_proximity_limit
+        flux_template_B, RV_A, RV_B, time, period, buffer_mask, rv_lower_limit, rv_proximity_limit
 ):
     f1_ax1.clear(); f1_ax2.clear(); f1_ax3.clear()
     separated_flux_A, separated_flux_B = separated_flux_A[~buffer_mask], separated_flux_B[~buffer_mask]
     wavelength = wavelength[~buffer_mask]
     flux_template_A, flux_template_B = flux_template_A[~buffer_mask], flux_template_B[~buffer_mask]
-    flux_collection = flux_collection[~buffer_mask, :]
 
     if period is None:
         xval = time
@@ -523,7 +517,7 @@ def spectral_separation_routine(
 
     # Initialize plot figures
     if plot:
-        f1_ax1, f1_ax2, f1_ax3, f2_ax1, f2_ax2, f3_ax1, f4_ax1 = initialize_ssr_plots()
+        f1_ax1, f1_ax2, f1_ax3, f2_ax1, f2_ax2, f3_ax1, f4_ax1 = _initialize_ssr_plots()
     else:
         f2_ax1 = None; f2_ax2=None; f3_ax1 = None; f4_ax1 = None
 
@@ -552,9 +546,9 @@ def spectral_separation_routine(
         )
 
         if plot:
-            plot_ssr_iteration(
+            _plot_ssr_iteration(
                 f1_ax1, f1_ax2, f1_ax3, separated_flux_A, separated_flux_B, wavelength, inv_flux_templateA,
-                inv_flux_templateB, RV_collection_A, RV_collection_B, time_values, period, inv_flux_collection,
+                inv_flux_templateB, RV_collection_A, RV_collection_B, time_values, period,
                 buffer_mask, rv_lower_limit, rv_proximity_limit
             )
 
@@ -593,8 +587,8 @@ def spectral_separation_routine(
     if save_extras is True:
         save_separation_data(
             'Data/additionals/separation_routine/', wavelength[~buffer_mask], time_values, RV_collection_A,
-            RV_collection_B, separated_flux_A[~buffer_mask], separated_flux_B[~buffer_mask], bf_fitres_A, bf_fitres_B,
-            RVb_flags
+            RV_collection_B, RV_guess_collection, separated_flux_A[~buffer_mask], separated_flux_B[~buffer_mask],
+            bf_fitres_A, bf_fitres_B, RVb_flags, inv_flux_templateA, inv_flux_templateB
         )
 
     if save_plot_path is not None:
@@ -608,8 +602,8 @@ def spectral_separation_routine(
 
 
 def save_separation_data(
-        location, wavelength, time_values, RVs_A, RVs_B, separated_flux_A, separated_flux_B, bf_fitres_A, bf_fitres_B, 
-        RVb_flags
+        location, wavelength, time_values, RVs_A, RVs_B, RVs_initial, separated_flux_A, separated_flux_B, bf_fitres_A,
+        bf_fitres_B, RVb_flags, template_flux_A, template_flux_B
 ):
     filename_bulk = str(int(np.min(wavelength))) + '_' + str(int(np.max(wavelength)))
     
@@ -619,10 +613,12 @@ def save_separation_data(
     rvB_array = np.empty((RVs_B.size, 3))
     rvB_array[:, 0], rvB_array[:, 1], rvB_array[:, 2] = time_values, RVs_B, RVb_flags
     
-    sep_array = np.empty((wavelength.size, 3))
+    sep_array = np.empty((wavelength.size, 5))
     sep_array[:, 0], sep_array[:, 1], sep_array[:, 2] = wavelength, separated_flux_A, separated_flux_B
+    sep_array[:, 3], sep_array[:, 4] = template_flux_A, template_flux_B
 
     np.savetxt(location + filename_bulk + 'rvA.txt', rvA_array)
+    np.savetxt(location + filename_bulk + 'rv_initial.txt', RVs_initial)
     np.savetxt(location + filename_bulk + 'rvB.txt', rvB_array)
     np.savetxt(location + filename_bulk + 'sep_flux.txt', sep_array)
 

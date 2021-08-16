@@ -4,10 +4,7 @@ First tested edition on May 04, 2021.
 Supervisor: Assistant Professor Karsten Frank Brogaard.
 
 Purpose of this file is broadening function calculation using a Singular Value Decomposition of a template spectrum.
-Code is primarily adapted from http://www.astro.utoronto.ca/~rucinski/SVDcookbook.html and
-functions in the shazam.py library for the SONG telescope (written by Emil Knudstrup), which also has a long history
-of adaptations from previous work by eg. J. Jessen-Hansen, and modifications by various authors including Frank Grundahl
-and Karsten Frank Brogaard.
+Code is primarily adapted from http://www.astro.utoronto.ca/~rucinski/SVDcookbook.html.
 The primary class to create objects from for broadening function calculation is BroadeningFunction. The rest are
 convenience classes for that one.
 Some of the import statements lacking below are imported from rotational_broadening_function_fitting.py.
@@ -222,7 +219,7 @@ class BroadeningFunction:
 
     def fit_rotational_profile(
             self,
-            ifitparams:InitialFitParameters,
+            ifitparams: InitialFitParameters,
             fitting_routine=fitting_routine_rotational_broadening_profile
     ):
         """
@@ -243,8 +240,9 @@ class BroadeningFunction:
         if self.bf_smooth is None:
             raise TypeError('self.bf_smooth. self.smooth() must be run prior to fitting')
 
-        self.fit, self.model_values = fitting_routine(self.velocity, self.bf_smooth, ifitparams, self.smooth_sigma,
-                                                      self.dv)
+        self.fit, self.model_values = fitting_routine(
+            self.velocity, self.bf_smooth, ifitparams, self.smooth_sigma, self.dv
+        )
         return self.fit, self.model_values
 
 
