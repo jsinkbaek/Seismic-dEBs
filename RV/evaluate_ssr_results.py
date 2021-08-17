@@ -46,58 +46,36 @@ class RoutineResults:
             self.interval_results = []
 
     @property
-    def time_values_A(self, index=None):
-        if index is not None:
-            return self.interval_results[index].time_values_A
-        else:
-            return [x.time_values_A for x in self.interval_results]
+    def time_values_A(self):
+        return [x.time_values_A for x in self.interval_results]
 
     @property
-    def time_values_B(self, index=None):
-        if index is not None:
-            return self.interval_results[index].time_values_B
-        else:
-            return [x.time_values_B for x in self.interval_results]
+    def time_values_B(self):
+        return [x.time_values_B for x in self.interval_results]
 
     @property
-    def RV_A(self, index=None):
-        if index is not None:
-            return self.interval_results[index].RV_A
-        else:
-            return [x.RV_A for x in self.interval_results]
+    def RV_A(self):
+        return [x.RV_A for x in self.interval_results]
 
     @property
-    def RV_B(self, index=None):
-        if index is not None:
-            return self.interval_results[index].RV_B
-        else:
-            return [x.RV_B for x in self.interval_results]
-
-    def RV_B_flags(self, index=None):
-        if index is not None:
-            return self.interval_results[index].RV_B_flags
-        else:
-            return [x.RV_B_flags for x in self.interval_results]
+    def RV_B(self):
+        return [x.RV_B for x in self.interval_results]
 
     @property
-    def RV_A_initial(self, index=None):
-        if index is not None:
-            return self.interval_results[index].RV_A_initial
-        else:
-            return [x.RV_A_initial for x in self.interval_results]
+    def RV_B_flags(self):
+        return [x.RV_B_flags for x in self.interval_results]
 
     @property
-    def RV_B_initial(self, index=None):
-        if index is not None:
-            return self.interval_results[index].RV_B_initial
-        else:
-            return [x.RV_B_initial for x in self.interval_results]
+    def RV_A_initial(self):
+        return [x.RV_A_initial for x in self.interval_results]
 
     @property
-    def wavelengths(self, interval=None, index=None):
-        if index is not None:
-            return self.interval_results[index].wavelength
-        elif interval is not None:
+    def RV_B_initial(self):
+        return [x.RV_B_initial for x in self.interval_results]
+
+    @property
+    def wavelengths(self, interval=None):
+        if interval is not None:
             res = None
             for interval_result in self.interval_results:
                 if interval_result.wavelength_a == interval[0] and interval_result.wavelength_b == interval[1]:
@@ -105,63 +83,42 @@ class RoutineResults:
             if res is None:
                 raise ValueError('No interval found with the same wavelength_a and wavelength_B.')
         else:
-            interval_wavelengths = [x.wavelength for x in self.interval_results]
-            return interval_wavelengths
+            return [x.wavelength for x in self.interval_results]
 
     @property
-    def wavelength_a(self, index=None):
-        if index is not None:
-            return self.interval_results[index].wavelength_a
-        else:
-            return [x.wavelength_a for x in self.interval_results]
+    def wavelength_a(self):
+        return [x.wavelength_a for x in self.interval_results]
 
     @property
-    def wavelength_b(self, index=None):
-        if index is not None:
-            return self.interval_results[index].wavelength_b
-        else:
-            return [x.wavelength_b for x in self.interval_results]
+    def wavelength_b(self):
+        return [x.wavelength_b for x in self.interval_results]
 
     @property
-    def interval(self, index=None):
-        if index is not None:
-            return self.wavelength_a(index), self.wavelength_b(index)
-        else:
-            return [(x.wavelength_a, x.wavelength_b) for x in self.interval_results]
+    def interval(self):
+        return [(x.wavelength_a, x.wavelength_b) for x in self.interval_results]
 
     @property
-    def separated_spectra_A(self, index=None):
-        if index is not None:
-            return self.interval_results[index].separated_spectrum_A
-        else:
-            return [x.separated_spectrum_A for x in self.interval_results]
+    def separated_spectra_A(self):
+        return [x.separated_spectrum_A for x in self.interval_results]
 
     @property
-    def separated_spectra_B(self, index=None):
-        if index is not None:
-            return self.interval_results[index].separated_spectrum_B
-        else:
-            return [x.separated_spectrum_B for x in self.interval_results]
+    def separated_spectra_B(self):
+        return [x.separated_spectrum_B for x in self.interval_results]
 
     @property
-    def template_flux_A(self, index=None):
-        if index is not None:
-            return self.interval_results[index].template_flux_A
-        else:
-            return [x.template_flux_A for x in self.interval_results]
+    def template_flux_A(self):
+        return [x.template_flux_A for x in self.interval_results]
 
     @property
-    def template_flux_B(self, index=None):
-        if index is not None:
-            return self.interval_results[index].template_flux_B
-        else:
-            return [x.template_flux_B for x in self.interval_results]
+    def template_flux_B(self):
+        return [x.template_flux_B for x in self.interval_results]
 
     @property
     def bf_results(self):
-        return [(
-            x.bf_velocity_A, x.bf_vals_A, x.bf_smooth_A, x.bf_model_vals_A, x.bf_velocity_B, x.bf_vals_B, x.bf_smooth_B,
-            x.bf_model_vals_B) for x in self.interval_results
+        return [
+            [x.bf_velocity_A, x.bf_vals_A, x.bf_smooth_A, x.bf_model_vals_A, x.bf_velocity_B, x.bf_vals_B,
+             x.bf_smooth_B, x.bf_model_vals_B]
+            for x in self.interval_results
         ]
 
     def append_interval(self, new_result: IntervalResult):
@@ -199,7 +156,7 @@ def load_routine_results(folder_path: str, filename_bulk_list: list):
     return routine_results
 
 
-def plot_rv_and_separated_spectra(evaluation_data: RoutineResults, period: float):
+def plot_rv_and_separated_spectra(evaluation_data: RoutineResults, period: float, block=True):
     matplotlib.rcParams.update({'font.size': 25})
     for i in range(0, len(evaluation_data.interval_results)):
         fig = plt.figure(figsize=(16, 9))
@@ -208,41 +165,84 @@ def plot_rv_and_separated_spectra(evaluation_data: RoutineResults, period: float
         ax2 = fig.add_subplot(gspec[1, 0])
         ax3 = fig.add_subplot(gspec[1, 1])
 
-        phase_A = np.mod(evaluation_data.time_values_A(i), period) / period
-        phase_B = np.mod(evaluation_data.time_values_B(i), period) / period
+        phase_A = np.mod(evaluation_data.time_values_A[i], period) / period
+        phase_B = np.mod(evaluation_data.time_values_B[i], period) / period
 
-        flag_mask = evaluation_data.RV_B_flags(i).astype(bool)
+        flag_mask = evaluation_data.RV_B_flags[i].astype(bool)
 
-        ax1.plot(phase_A, evaluation_data.RV_A(i), 'b*')
-        ax1.plot(phase_B[~flag_mask], evaluation_data.RV_B(i)[~flag_mask], 'r*')
-        ax1.plot(phase_B[flag_mask], evaluation_data.RV_B(i)[flag_mask], 'rx')
+        ax1.plot(phase_A, evaluation_data.RV_A[i], 'b*')
+        ax1.plot(phase_B[flag_mask], evaluation_data.RV_B[i][flag_mask], 'r*')
+        ax1.plot(phase_B[~flag_mask], evaluation_data.RV_B[i][~flag_mask], 'rx')
         ax1.set_xlabel('Orbital Phase')
         ax1.set_ylabel('Radial Velocity - system velocity (km/s)')
 
-        ax2.plot(evaluation_data.wavelengths(i), 1-evaluation_data.separated_spectra_A(i), 'b', linewidth=2)
-        ax2.plot(evaluation_data.wavelengths(i), 1-evaluation_data.template_flux_A(i), '--', color='grey', linewidth=0.5)
+        ax2.plot(evaluation_data.wavelengths[i], 1-evaluation_data.separated_spectra_A[i], 'b', linewidth=2)
+        ax2.plot(evaluation_data.wavelengths[i], 1-evaluation_data.template_flux_A[i], '--', color='grey', linewidth=0.5)
         ax2.set_xlabel('Wavelength (Å)')
-        ax2.setl_ylabel('Normalized Separated Flux')
+        ax2.set_ylabel('Normalized Separated Flux')
 
-        ax3.plot(evaluation_data.wavelengths(i), 1-evaluation_data.separated_spectra_B(i), 'r', linewidth=2)
-        ax3.plot(evaluation_data.wavelengths(i), 1-evaluation_data.template_flux_B(i), '--', color='grey', linewidth=0.5)
+        ax3.plot(evaluation_data.wavelengths[i], 1-evaluation_data.separated_spectra_B[i], 'r', linewidth=2)
+        ax3.plot(evaluation_data.wavelengths[i], 1-evaluation_data.template_flux_B[i], '--', color='grey', linewidth=0.5)
         ax2.set_xlabel('Wavelength (Å)')
+        fig.suptitle(f'Interval results {evaluation_data.wavelength_a[i]}-{evaluation_data.wavelength_b[i]} Å ')
         plt.tight_layout()
-        fig.suptitle(f'Interval results {evaluation_data.wavelength_a(i)}-{evaluation_data.wavelength_b(i)} Å ')
 
-    plt.show(block=True)
+    plt.show(block=block)
 
 
-def plot_smoothed_broadening_functions(evaluation_data: RoutineResults):
+def plot_smoothed_broadening_functions(evaluation_data: RoutineResults, block=True):
     matplotlib.rcParams.update({'font.size': 25})
     for i in range(0, len(evaluation_data.interval_results)):
         fig = plt.figure(figsize=(16, 9))
         gspec = fig.add_gridspec(1, 2)
         ax1 = fig.add_subplot(gspec[0, 0])
-        ax2 = fig.add_gridspec(gspec[0, 1])
+        ax2 = fig.add_subplot(gspec[0, 1])
 
         bf_results = evaluation_data.bf_results[i]
-        test = evaluation_data.separated_spectra_A[i]
+        vel_A, bf_smooth_A, models_A = bf_results[0], bf_results[2], bf_results[3]
+        vel_B, bf_smooth_B, models_B = bf_results[4], bf_results[6], bf_results[7]
+        RV_A = evaluation_data.RV_A[i]
+        RV_B = evaluation_data.RV_B[i]
+        flag_mask = evaluation_data.RV_B_flags[i].astype(bool)
+
+        ax1.set_xlim([np.min(vel_A), np.max(vel_A)])
+        ax2.set_xlim([np.min(vel_A), np.max(vel_A)])
+
+        for k in range(0, vel_A[:, 0].size):
+            offset = k/vel_A[:, 0].size
+            scale = (0.5/vel_A[:, 0].size)/np.max(bf_smooth_A[k, :])
+            ax1.plot(vel_A[k, :], 1 + scale*bf_smooth_A[k, :] - offset)
+            ax1.plot(vel_A[k, :], 1 + scale*models_A[k, :] - offset, 'k--')
+            ax1.plot(np.ones(shape=(2,))*RV_A[k], [1-offset*1.01, 1+5/4 * scale*np.max(models_A[k, :])-offset],
+                     color='grey')
+
+            scale = (0.5/vel_B[:, 0].size)/np.max(bf_smooth_B[k, :])
+            ax2.plot(vel_B[k, :], 1 + scale*bf_smooth_B[k, :] - offset)
+            ax2.plot(vel_B[k, :], 1 + scale*models_B[k, :] - offset, 'k--')
+            if ~flag_mask[k]:
+                ax2.plot(np.ones(shape=(2,))*RV_B[k], [1-offset*1.01, 1+5/4 * scale*np.max(models_B[k, :])-offset],
+                         color='red')
+            else:
+                ax2.plot(np.ones(shape=(2,)) * RV_B[k], [1-offset*1.01, 1+5/4 * scale*np.max(models_B[k, :])-offset],
+                         color='grey')
+            ax1.set_ylabel('Normalized, smoothed Broadening Function')
+            ax1.set_xlabel('Velocity Shift (km/s)')
+            ax2.set_xlabel('Velocity Shift (km/s)')
+            fig.suptitle(f'Interval results {evaluation_data.wavelength_a[i]}-{evaluation_data.wavelength_b[i]} Å ')
+            ax1.tick_params(
+                axis='y',  # changes apply to the x-axis
+                which='both',  # both major and minor ticks are affected
+                right=False,  # ticks along the bottom edge are off
+                left=False,  # ticks along the top edge are off
+                labelleft=False)  # labels along the bottom edge are off
+            ax2.tick_params(
+                axis='y',  # changes apply to the x-axis
+                which='both',  # both major and minor ticks are affected
+                right=False,  # ticks along the bottom edge are off
+                left=False,  # ticks along the top edge are off
+                labelleft=False)  # labels along the bottom edge are off
+            plt.tight_layout()
+    plt.show(block=block)
 
 
 def compare_interval_results(evaluation_data: RoutineResults):

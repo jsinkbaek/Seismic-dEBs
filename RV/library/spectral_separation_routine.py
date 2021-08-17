@@ -588,7 +588,7 @@ def spectral_separation_routine(
         save_separation_data(
             'Data/additionals/separation_routine/', wavelength[~buffer_mask], time_values, RV_collection_A,
             RV_collection_B, RV_guess_collection, separated_flux_A[~buffer_mask], separated_flux_B[~buffer_mask],
-            bf_fitres_A, bf_fitres_B, RVb_flags, inv_flux_templateA, inv_flux_templateB
+            bf_fitres_A, bf_fitres_B, RVb_flags, inv_flux_templateA[~buffer_mask], inv_flux_templateB[~buffer_mask]
         )
 
     if save_plot_path is not None:
@@ -605,7 +605,7 @@ def save_separation_data(
         location, wavelength, time_values, RVs_A, RVs_B, RVs_initial, separated_flux_A, separated_flux_B, bf_fitres_A,
         bf_fitres_B, RVb_flags, template_flux_A, template_flux_B
 ):
-    filename_bulk = str(int(np.min(wavelength))) + '_' + str(int(np.max(wavelength)))
+    filename_bulk = str(int(np.round(np.min(wavelength)))) + '_' + str(int(np.round(np.max(wavelength)))) + '_'
     
     rvA_array = np.empty((RVs_A.size, 2))
     rvA_array[:, 0], rvA_array[:, 1] = time_values, RVs_A

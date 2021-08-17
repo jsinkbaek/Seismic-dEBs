@@ -284,7 +284,7 @@ RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B, wavelength
         delta_v, ifitpar_A, ifitpar_B, wavelength_buffered, bjdtdb - (2400000 + 54976.6348),
         period=orbital_period_estimate,
         iteration_limit=2, RV_guess_collection=RV_guess_collection, convergence_limit=1E-2, buffer_mask=buffer_mask,
-        rv_lower_limit=rv_lower_limit, suppress_print='scs', plot=True, return_unbuffered=False,
+        rv_lower_limit=rv_lower_limit, suppress_print='scs', plot=False, return_unbuffered=False,
         ignore_component_B=False
     )
 # plt.show(block=True)
