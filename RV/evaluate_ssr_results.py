@@ -251,8 +251,63 @@ def plot_smoothed_broadening_functions(evaluation_data: RoutineResults, block=Tr
     plt.show(block=block)
 
 
-def compare_interval_results(evaluation_data: RoutineResults):
-    pass
+def _create_telluric_spectrum(wavelength_a=4000.0, wavelength_b=9500.0):
+    path_telluric = 'RV/Data/template_spectra/telluric_noheader.txt'
+
+    def gaussian(x, amp, center, fwhm_):
+        return amp * np.exp(-(x-center)**2 / (2*(fwhm_/2.35482)**2))
+
+    wavelength = np.linspace(wavelength_a, wavelength_b, 5000)
+    flux = np.ones(shape=wavelength.shape)
+    telluric_data = np.loadtxt(path_telluric)
+
+    for i in range(0, telluric_data[:, 0].size):
+        w1, w2 = telluric_data[i, 0], telluric_data[i, 1]
+        fwhm = w2 - w1
+        mask = (wavelength > w1-2*fwhm) & (wavelength < w2+2*fwhm)
+        residual_intensity, line_center = telluric_data[i, 2], telluric_data[i, 3]
+        if mask.size != 0:
+            flux[mask] -= gaussian(wavelength[mask], 1-residual_intensity, line_center, fwhm)
+
+    return wavelength, flux
+
+
+def compare_interval_result(evaluation_data: RoutineResults, spectrum_number: int, block=True, ax=None):
+    if ax is None:
+        matplotlib.rcParams.update({'font.size': 25})
+        fig, ax_ = plt.subplots(figsize=(16, 9))
+    else:
+        ax_ = ax
+
+    w_a = np.empty((len(evaluation_data.interval_results), ))
+    w_b = np.empty((len(evaluation_data.interval_results), ))
+    RV_B = np.empty((len(evaluation_data.interval_results), ))
+    for i in range(0, len(evaluation_data.interval_results)):
+        w_a[i] = evaluation_data.wavelength_a[i]
+        w_b[i] = evaluation_data.wavelength_b[i]
+        RV_B[i] = evaluation_data.RV_B[i][spectrum_number]
+
+    ax_.errorbar(w_a + (w_b-w_a)/2, RV_B, xerr=(w_b-w_a)/2, fmt='*')
+    telluric_wl, telluric_fl = _create_telluric_spectrum(np.min(w_a), np.max(w_b))
+    ax_.plot(telluric_wl, telluric_fl, '--', color='grey', linewidth=0.5)
+
+    if ax is None:
+        ax_.set_xlabel('Wavelength (Å)')
+        ax_.set_ylabel('Component B RV - SV (km/s)')
+        plt.show(block=block)
+
+
+def compare_interval_results_multiple_spectra(evaluation_data: RoutineResults, block=True):
+    matplotlib.rcParams.update({'font.size': 25})
+    fig, ax = plt.subplots(figsize=(16, 9))
+
+    for i in range(0, evaluation_data.RV_B[0].size):
+        compare_interval_result(evaluation_data, spectrum_number=i, ax=ax)
+
+    ax.set_xlabel('Wavelength (Å)')
+    ax.set_ylabel('Component B RV - SV (km/s)')
+
+    plt.show(block=block)
 
 
 def compare_separated_spectra_with(evaluation_data: RoutineResults):
