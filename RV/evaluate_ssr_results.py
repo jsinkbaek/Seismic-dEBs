@@ -128,18 +128,18 @@ class RoutineResults:
 def load_routine_results(folder_path: str, filename_bulk_list: list):
     routine_results = RoutineResults()
     for filename_bulk in filename_bulk_list:
-        rvA_array = np.loadtxt(folder_path+filename_bulk+'rvA.txt')
-        rvB_array = np.loadtxt(folder_path+filename_bulk+'rvB.txt')
-        sep_array = np.loadtxt(folder_path+filename_bulk+'sep_flux.txt')
-        velA_array = np.loadtxt(folder_path+filename_bulk+'velocities_A.txt')
-        bfA_array = np.loadtxt(folder_path+filename_bulk+'bfvals_A.txt')
-        bfA_smooth_array = np.loadtxt(folder_path+filename_bulk+'bfsmooth_A.txt')
-        modelA_array = np.loadtxt(folder_path+filename_bulk+'models_A.txt')
-        velB_array = np.loadtxt(folder_path+filename_bulk+'velocities_B.txt')
-        bfB_array = np.loadtxt(folder_path+filename_bulk+'bfvals_B.txt')
-        bfB_smooth_array = np.loadtxt(folder_path+filename_bulk+'bfsmooth_B.txt')
-        modelB_array = np.loadtxt(folder_path+filename_bulk+'models_B.txt')
-        rvs_initial = np.loadtxt(folder_path+filename_bulk+'rv_initial.txt')
+        rvA_array = np.loadtxt(folder_path+filename_bulk+'_rvA.txt')
+        rvB_array = np.loadtxt(folder_path+filename_bulk+'_rvB.txt')
+        sep_array = np.loadtxt(folder_path+filename_bulk+'_sep_flux.txt')
+        velA_array = np.loadtxt(folder_path+filename_bulk+'_velocities_A.txt')
+        bfA_array = np.loadtxt(folder_path+filename_bulk+'_bfvals_A.txt')
+        bfA_smooth_array = np.loadtxt(folder_path+filename_bulk+'_bfsmooth_A.txt')
+        modelA_array = np.loadtxt(folder_path+filename_bulk+'_models_A.txt')
+        velB_array = np.loadtxt(folder_path+filename_bulk+'_velocities_B.txt')
+        bfB_array = np.loadtxt(folder_path+filename_bulk+'_bfvals_B.txt')
+        bfB_smooth_array = np.loadtxt(folder_path+filename_bulk+'_bfsmooth_B.txt')
+        modelB_array = np.loadtxt(folder_path+filename_bulk+'_models_B.txt')
+        rvs_initial = np.loadtxt(folder_path+filename_bulk+'_rv_initial.txt')
 
         wavelength, separated_flux_A, separated_flux_B = sep_array[:, 0], sep_array[:, 1], sep_array[:, 2]
         template_flux_A, template_flux_B = sep_array[:, 3], sep_array[:, 4]
@@ -157,7 +157,7 @@ def load_routine_results(folder_path: str, filename_bulk_list: list):
 
 
 def plot_rv_and_separated_spectra(evaluation_data: RoutineResults, period: float, block=True):
-    matplotlib.rcParams.update({'font.size': 25})
+    matplotlib.rcParams.update({'font.size': 20})
     for i in range(0, len(evaluation_data.interval_results)):
         fig = plt.figure(figsize=(16, 9))
         gspec = fig.add_gridspec(2, 2)
@@ -174,16 +174,17 @@ def plot_rv_and_separated_spectra(evaluation_data: RoutineResults, period: float
         ax1.plot(phase_B[flag_mask], evaluation_data.RV_B[i][flag_mask], 'r*')
         ax1.plot(phase_B[~flag_mask], evaluation_data.RV_B[i][~flag_mask], 'rx')
         ax1.set_xlabel('Orbital Phase')
-        ax1.set_ylabel('Radial Velocity - system velocity (km/s)')
+        ax1.set_ylabel('Radial Velocity - system velocity (km/s)', fontsize=15)
 
         ax2.plot(evaluation_data.wavelengths[i], 1-evaluation_data.separated_spectra_A[i], 'b', linewidth=2)
         ax2.plot(evaluation_data.wavelengths[i], 1-evaluation_data.template_flux_A[i], '--', color='grey', linewidth=0.5)
         ax2.set_xlabel('Wavelength (Å)')
-        ax2.set_ylabel('Normalized Separated Flux')
+        ax2.set_ylabel('Normalized Separated Flux', fontsize=15)
 
         ax3.plot(evaluation_data.wavelengths[i], 1-evaluation_data.separated_spectra_B[i], 'r', linewidth=2)
         ax3.plot(evaluation_data.wavelengths[i], 1-evaluation_data.template_flux_B[i], '--', color='grey', linewidth=0.5)
         ax2.set_xlabel('Wavelength (Å)')
+        ax3.set_xlabel('Wavelength (Å)')
         fig.suptitle(f'Interval results {evaluation_data.wavelength_a[i]}-{evaluation_data.wavelength_b[i]} Å ')
         plt.tight_layout()
 
@@ -204,17 +205,20 @@ def plot_smoothed_broadening_functions(evaluation_data: RoutineResults, block=Tr
         RV_A = evaluation_data.RV_A[i]
         RV_B = evaluation_data.RV_B[i]
         flag_mask = evaluation_data.RV_B_flags[i].astype(bool)
+        RV_B_initial = evaluation_data.RV_B_initial[i]
 
         ax1.set_xlim([np.min(vel_A), np.max(vel_A)])
         ax2.set_xlim([np.min(vel_A), np.max(vel_A)])
 
+        ax1.plot(np.zeros(shape=(2,)), [0.0, 1.05], '--', color='grey')
+        ax2.plot(np.zeros(shape=(2,)), [0.0, 1.05], '--', color='grey')
         for k in range(0, vel_A[:, 0].size):
             offset = k/vel_A[:, 0].size
             scale = (0.5/vel_A[:, 0].size)/np.max(bf_smooth_A[k, :])
             ax1.plot(vel_A[k, :], 1 + scale*bf_smooth_A[k, :] - offset)
             ax1.plot(vel_A[k, :], 1 + scale*models_A[k, :] - offset, 'k--')
             ax1.plot(np.ones(shape=(2,))*RV_A[k], [1-offset*1.01, 1+5/4 * scale*np.max(models_A[k, :])-offset],
-                     color='grey')
+                     color='blue')
 
             scale = (0.5/vel_B[:, 0].size)/np.max(bf_smooth_B[k, :])
             ax2.plot(vel_B[k, :], 1 + scale*bf_smooth_B[k, :] - offset)
@@ -224,7 +228,9 @@ def plot_smoothed_broadening_functions(evaluation_data: RoutineResults, block=Tr
                          color='red')
             else:
                 ax2.plot(np.ones(shape=(2,)) * RV_B[k], [1-offset*1.01, 1+5/4 * scale*np.max(models_B[k, :])-offset],
-                         color='grey')
+                         color='blue')
+            ax2.plot(np.ones(shape=(2,)) * RV_B_initial[k], [1-offset*1.01, 1+5/4*scale*np.max(models_B[k, :])-offset],
+                     color='grey')
             ax1.set_ylabel('Normalized, smoothed Broadening Function')
             ax1.set_xlabel('Velocity Shift (km/s)')
             ax2.set_xlabel('Velocity Shift (km/s)')

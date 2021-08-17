@@ -59,7 +59,7 @@ estimate_RVb_from_RVa = True        # defines if a guess on RVb should be made i
                                     # initial fitting
 mass_A_estimate = 1.31
 mass_B_estimate = 0.83
-system_RV_estimate = 16.053  # 16.053 19.44
+system_RV_estimate = 12.61  # 16.053 19.44
 orbital_period_estimate = 63.33  # only for plotting
 
 # # Stellar parameter estimates (relevant for limb darkening calculation) # #
