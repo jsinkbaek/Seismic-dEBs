@@ -27,10 +27,17 @@ observatory_location = EarthLocation.of_site("lapalma")
 observatory_name = "lapalma"
 stellar_target = "kic8430105"
 wavelength_normalization_limit = (4450, 7000)   # Ångström, limit to data before performing continuum normalization
-wavelength_RV_limit = (5000, 5600)              # Ångström, the actual spectrum area used for analysis
+wavelength_RV_limit = (4500, 7000)              # Ångström, the actual spectrum area used for analysis
 wavelength_buffer_size = 25                     # Ångström, padding included at ends of spectra. Useful when doing
                                                 # wavelength shifts with np.roll()
-wavelength_intervals_error_estimate = 150       # Ångström, size of the intervals used for error estimation on RVs
+wavelength_intervals = [(4500, 4800), (4800, 5000), (5000, 5300), (5300, 5600),
+                        (5600, 5825), (5825, 6000), (6000, 6225), (6225, 6350),
+                        (6350, 6450), (6450, 6600), (6600, 6800)]
+combine_intervals = [(8, 10)]
+# telluric lines: 5885-5970, 6266-6330, 6465-6525, 6850-7050
+# relevant balmer lines: 6563 (H alpha), 4861 (H beta)
+
+# wavelength_intervals_error_estimate = 150       # Ångström, size of the intervals used for error estimation on RVs
 load_data = True      # Defines if normalized spectrum should be loaded from earlier, or done with AFS_algorithm
 plot = False
 file_exclude_list = []  # ['FIBl060068_step011_merge.fits']
@@ -278,6 +285,14 @@ RV_guesses_B = -RV_guesses_A * (mass_A_estimate / mass_B_estimate)
 RV_guess_collection[:, 1] = RV_guesses_B
 
 # # Separate component spectra and calculate RVs iteratively # #
+interval_results = ssr.spectral_separation_routine_multiple_intervals(
+    wavelength_buffered, wavelength_intervals, flux_collection_inverted_buffered, flux_template_A_inverted_buffered,
+    flux_template_B_inverted_buffered, delta_v, ifitpar_A, ifitpar_B, RV_guess_collection, bjdtdb-(2400000+54976.6348),
+    combine_intervals, wavelength_buffer_size, rv_lower_limit, convergence_limit=1E-2, iteration_limit=4,
+    period=orbital_period_estimate, plot=False, return_unbuffered=True, save_additional_results=True,
+    suppress_print='scs'
+)
+"""
 RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B, wavelength, ifitpars, RVb_flags = \
     ssr.spectral_separation_routine(
         flux_collection_inverted_buffered, flux_template_A_inverted_buffered, flux_template_B_inverted_buffered,
@@ -289,6 +304,7 @@ RV_collection_A, RV_collection_B, separated_flux_A, separated_flux_B, wavelength
     )
 # plt.show(block=True)
 plt.close('all')
+"""
 """
 # plt.figure()
 bad_data_mask = np.abs(RV_collection_A) < rv_lower_limit

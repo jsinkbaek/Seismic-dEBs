@@ -251,7 +251,7 @@ def plot_smoothed_broadening_functions(evaluation_data: RoutineResults, block=Tr
     plt.show(block=block)
 
 
-def _create_telluric_spectrum(wavelength_a=4000.0, wavelength_b=9500.0):
+def _create_telluric_spectrum(wavelength_a=4000.0, wavelength_b=9500.0, plot=False):
     path_telluric = 'RV/Data/template_spectra/telluric_noheader.txt'
 
     def gaussian(x, amp, center, fwhm_):
@@ -269,10 +269,15 @@ def _create_telluric_spectrum(wavelength_a=4000.0, wavelength_b=9500.0):
         if mask.size != 0:
             flux[mask] -= gaussian(wavelength[mask], 1-residual_intensity, line_center, fwhm)
 
+    if plot:
+        plt.figure()
+        plt.plot(wavelength, flux)
+        plt.show(block=True)
+
     return wavelength, flux
 
 
-def compare_interval_result(evaluation_data: RoutineResults, spectrum_number: int, block=True, ax=None):
+def compare_interval_result(evaluation_data: RoutineResults, spectrum_number: int, block=True, ax=None, hide_bad=False):
     if ax is None:
         matplotlib.rcParams.update({'font.size': 25})
         fig, ax_ = plt.subplots(figsize=(16, 9))
@@ -282,14 +287,20 @@ def compare_interval_result(evaluation_data: RoutineResults, spectrum_number: in
     w_a = np.empty((len(evaluation_data.interval_results), ))
     w_b = np.empty((len(evaluation_data.interval_results), ))
     RV_B = np.empty((len(evaluation_data.interval_results), ))
+    w_a[:] = np.nan
+    w_b[:] = np.nan
+    RV_B[:] = np.nan
     for i in range(0, len(evaluation_data.interval_results)):
-        w_a[i] = evaluation_data.wavelength_a[i]
-        w_b[i] = evaluation_data.wavelength_b[i]
-        RV_B[i] = evaluation_data.RV_B[i][spectrum_number]
+        if hide_bad is True and evaluation_data.RV_B_flags[i][spectrum_number] == 0.0:
+            pass
+        else:
+            w_a[i] = evaluation_data.wavelength_a[i]
+            w_b[i] = evaluation_data.wavelength_b[i]
+            RV_B[i] = evaluation_data.RV_B[i][spectrum_number]
 
     ax_.errorbar(w_a + (w_b-w_a)/2, RV_B, xerr=(w_b-w_a)/2, fmt='*')
     telluric_wl, telluric_fl = _create_telluric_spectrum(np.min(w_a), np.max(w_b))
-    ax_.plot(telluric_wl, telluric_fl, '--', color='grey', linewidth=0.5)
+    ax_.plot(telluric_wl, telluric_fl*30-55, '--', color='grey', linewidth=0.5)
 
     if ax is None:
         ax_.set_xlabel('Wavelength (Å)')
@@ -297,12 +308,12 @@ def compare_interval_result(evaluation_data: RoutineResults, spectrum_number: in
         plt.show(block=block)
 
 
-def compare_interval_results_multiple_spectra(evaluation_data: RoutineResults, block=True):
+def compare_interval_results_multiple_spectra(evaluation_data: RoutineResults, block=True, hide_bad=True):
     matplotlib.rcParams.update({'font.size': 25})
     fig, ax = plt.subplots(figsize=(16, 9))
 
     for i in range(0, evaluation_data.RV_B[0].size):
-        compare_interval_result(evaluation_data, spectrum_number=i, ax=ax)
+        compare_interval_result(evaluation_data, spectrum_number=i, ax=ax, hide_bad=hide_bad)
 
     ax.set_xlabel('Wavelength (Å)')
     ax.set_ylabel('Component B RV - SV (km/s)')

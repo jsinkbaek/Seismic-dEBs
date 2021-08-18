@@ -133,7 +133,7 @@ def interpolate_to_equal_velocity_steps(wavelength_collector_list: list, flux_co
     :param wavelength_collector_list:   list of arrays, one array for each spectrum
     :param flux_collector_list:         list of arrays, one array for each spectrum
     :param delta_v:                     interpolation resolution for spectrum in km/s
-    :return: wavelength, flux_collector_array
+    :return: wavelength, flux_collection_array
     """
     speed_of_light = scc.c / 1000       # in km/s
 
@@ -144,12 +144,12 @@ def interpolate_to_equal_velocity_steps(wavelength_collector_list: list, flux_co
     wavelength = wavelength_a * (1.0 + delta_v / speed_of_light) ** (np.linspace(1, step_amnt, step_amnt))
 
     # # Interpolate to unified wavelength grid # #
-    flux_collector_array = np.empty(shape=(wavelength.size, len(flux_collector_list)))
+    flux_collection_array = np.empty(shape=(wavelength.size, len(flux_collector_list)))
     for i in range(0, len(flux_collector_list)):
         flux_interpolator = interp1d(wavelength_collector_list[i], flux_collector_list[i], kind='linear')
-        flux_collector_array[:, i] = flux_interpolator(wavelength)
+        flux_collection_array[:, i] = flux_interpolator(wavelength)
 
-    return wavelength, flux_collector_array
+    return wavelength, flux_collection_array
 
 
 def _create_buffer_mask(wavelength: np.ndarray, wavelength_limits: tuple, buffer_size: float):
@@ -160,7 +160,7 @@ def _create_buffer_mask(wavelength: np.ndarray, wavelength_limits: tuple, buffer
 
 
 def limit_wavelength_interval(
-        wavelength_limits:tuple, wavelength:np.ndarray, flux:np.ndarray, buffer_size=None, buffer_mask=None,
+        wavelength_limits: tuple, wavelength: np.ndarray, flux: np.ndarray, buffer_size=None, buffer_mask=None,
         even_length=False
 ):
     selection_mask = (wavelength > wavelength_limits[0]) & (wavelength < wavelength_limits[1])
@@ -205,11 +205,11 @@ def limit_wavelength_interval(
 
 
 def limit_wavelength_interval_multiple_spectra(
-        wavelength_limits:tuple, wavelength:np.ndarray, *args, buffer_size=None, even_length=True
+        wavelength_limits: tuple, wavelength: np.ndarray, *args, buffer_size=None, even_length=True
 ):
     """
     Expects all *args to be fluxes, either a collection of spectral fluxes (np.ndarray with ndims 2) or a single
-    spectrum each (np.ndarray with ndims 2). They must all have been resampled to the same wavelength grid beforehand.
+    spectrum each (np.ndarray with ndims 1). They must all have been resampled to the same wavelength grid beforehand.
     :return: lists of wavelength limited spectra, including their wavelength values. Will also return buffered versions
               (with padding in the ends) if buffer_size is given, as well as a buffer mask that can be used to access
               the buffer or the unbuffered data from it.
