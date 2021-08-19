@@ -116,7 +116,7 @@ def calculate_light_curve(time_stamps: np.ndarray, params: ParameterValues, limb
                           limbd_B: LimbDarkeningCoeffs, verbose=1):
     lc_flux = ellc.lc(
         time_stamps, params.radius_A, params.radius_B, params.sb_ratio, params.inclination, params.third_light,
-        params.t_0, params.period, params.semi_major_axis, params.mass_fraction, params.ecosw, params.esinw,
+        params.t_0, params.period, params.semi_major_axis, params.mass_fraction, params.secosw, params.sesinw,
         limbd_A.coeffs, limbd_B.coeffs, params.grav_dark_exponent_A, params.grav_dark_exponent_B,
         params.incl_change_rate, params.apsidal_motion_rate, params.async_rot_factor_A, params.async_rot_factor_B,
         params.hf_A, params.hf_B, params.boosting_factor_A, params.boosting_factor_B, params.heat_reflection_A,
@@ -174,7 +174,7 @@ def calculate_rv_model(
 
     rv_A_model, rv_B_model = ellc.rv(
         time_stamps, params.radius_A, params.radius_B, params.sb_ratio, params.inclination, params.t_0,
-        params.period, params.semi_major_axis, params.mass_fraction, params.ecosw, params.esinw, ldc_A, ldc_B,
+        params.period, params.semi_major_axis, params.mass_fraction, params.secosw, params.sesinw, ldc_A, ldc_B,
         params.grav_dark_exponent_A, params.grav_dark_exponent_B, params.incl_change_rate, params.apsidal_motion_rate,
         params.async_rot_factor_A, params.async_rot_factor_B, params.hf_A, params.hf_B, params.boosting_factor_A,
         params.boosting_factor_B, params.heat_reflection_A, params.heat_reflection_B, params.proj_obliquity_A,
@@ -195,9 +195,9 @@ def evaluate_rv_model(
         rv_A_model, rv_B_model = calculate_rv_model(
             time_stamps, params, grid_A_overwrite, grid_B_overwrite, limbd_A, limbd_B, verbose
         )
-        if A_timestamp_indices is not None:
+        if A_timestamp_mask is not None:
             rv_A_model = rv_A_model[A_timestamp_mask]
-        if B_timestamp_indices is not None:
+        if B_timestamp_mask is not None:
             rv_B_model = rv_B_model[B_timestamp_mask]
         difference_A = rv_A.values - rv_A_model
         difference_B = rv_B.values - rv_B_model

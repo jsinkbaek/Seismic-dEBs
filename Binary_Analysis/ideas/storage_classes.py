@@ -33,27 +33,27 @@ class LightCurve:
 
 class ParameterValues:
     def __init__(
-            self, radius_A, radius_B, surface_brightness_ratio, inclination,
+            self, radius_A, radius_B, sb_ratio, inclination,
             third_light=0,
             t_0=0, period=10,
             semi_major_axis=None,
-            mass_fraction_q=1.0,
-            sqrte_cosw=None,
-            sqrte_sinw=None,
+            mass_fraction=1.0,
+            secosw=None,
+            sesinw=None,
             grav_dark_exponent_A=None, grav_dark_exponent_B=None,
             inclination_change_rate=None, apsidal_motion_rate=None,
             async_rot_factor_A=1.0, async_rot_factor_B=1.0,
-            hf_2love_number_A=1.5, hf_2love_number_B=1.5,
-            doppler_boosting_factor_A=None,
-            doppler_boosting_factor_B=None,
+            hf_A=1.5, hf_B=1.5,
+            boosting_factor_A=None,
+            boosting_factor_B=None,
             heat_reflection_model_A=None, heat_reflection_model_B=None,
-            projected_obliquity_A=None, projected_obliquity_B=None,
+            proj_obliquity_A=None, proj_obliquity_B=None,
             vsini_A=None, vsini_B=None,
             exposure_time=None,
             finite_exptime_integration_points=None,
             gridsize_A="default", gridsize_B="default",
             stellar_shape_A="sphere", stellar_shape_B="sphere",
-            spot_parameters_A=None, spot_parameters_B=None,
+            spot_params_A=None, spot_params_B=None,
             exact_grav=False,
             flux_weighted_rv=True
     ):
@@ -64,29 +64,29 @@ class ParameterValues:
         """
         self.radius_A = radius_A
         self.radius_B = radius_B
-        self.sb_ratio = surface_brightness_ratio
+        self.sb_ratio = sb_ratio
         self.inclination = inclination
         self.third_light = third_light
         self.t_0 = t_0
         self.period = period
         self.semi_major_axis = semi_major_axis
-        self.mass_fraction = mass_fraction_q
-        self.ecosw = sqrte_cosw
-        self.esinw = sqrte_sinw
+        self.mass_fraction = mass_fraction
+        self.secosw = secosw
+        self.sesinw = sesinw
         self.grav_dark_exponent_A = grav_dark_exponent_A
         self.grav_dark_exponent_B = grav_dark_exponent_B
         self.incl_change_rate = inclination_change_rate
         self.apsidal_motion_rate = apsidal_motion_rate
         self.async_rot_factor_A = async_rot_factor_A
         self.async_rot_factor_B = async_rot_factor_B
-        self.hf_A = hf_2love_number_A
-        self.hf_B = hf_2love_number_B
-        self.boosting_factor_A = doppler_boosting_factor_A
-        self.boosting_factor_B = doppler_boosting_factor_B
+        self.hf_A = hf_A
+        self.hf_B = hf_B
+        self.boosting_factor_A = boosting_factor_A
+        self.boosting_factor_B = boosting_factor_B
         self.heat_reflection_A = heat_reflection_model_A
         self.heat_reflection_B = heat_reflection_model_B
-        self.proj_obliquity_A = projected_obliquity_A
-        self.proj_obliquity_B = projected_obliquity_B
+        self.proj_obliquity_A = proj_obliquity_A
+        self.proj_obliquity_B = proj_obliquity_B
         self.vsini_A = vsini_A
         self.vsini_B = vsini_B
         self.exp_time = exposure_time
@@ -95,8 +95,8 @@ class ParameterValues:
         self.gridsize_B = gridsize_B
         self.shape_A = stellar_shape_A
         self.shape_B = stellar_shape_B
-        self.spot_params_A = spot_parameters_A
-        self.spot_params_B = spot_parameters_B
+        self.spot_params_A = spot_params_A
+        self.spot_params_B = spot_params_B
         self.exact_grav = exact_grav
         self.flux_weighted_rv = flux_weighted_rv
 

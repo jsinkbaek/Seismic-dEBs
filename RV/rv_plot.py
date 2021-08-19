@@ -41,3 +41,15 @@ plt.errorbar(phase_B, rv_B, yerr=error_B, fmt='*', color='red')
 # plt.plot(phase_model, rv_Bm - 3.443, 'k--')
 plt.show()
 
+save_array = np.empty((time_A.size, 3))
+save_array[:, 0] = time_A + 54976.6348
+save_array[:, 1] = rv_A
+save_array[:, 2] = error_A
+np.savetxt('rvA_combined.txt', save_array)
+
+save_array = np.empty((time_B.size, 3))
+save_array[:, 0] = time_B + 54976.6348
+save_array[:, 1] = rv_B
+save_array[:, 2] = error_B
+np.savetxt('rvB_combined.txt', save_array)
+
