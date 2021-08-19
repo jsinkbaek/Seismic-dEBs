@@ -1,63 +1,43 @@
-from matplotlib import pyplot as plt; import numpy as np
-from scipy.interpolate import interp1d
-from scipy.optimize import minimize
+import numpy as np
+import matplotlib.pyplot as plt
+import os
 import matplotlib
 
-filename_1A = 'Data/processed/RV_results/rvA_not_8430105_4700_5400_100.txt'
-filename_1B = 'Data/processed/RV_results/rvB_not_8430105_4700_5400_100.txt'
-# filename_1A = 'Data/processed/RV_results/rvA_not_8430105_4500_6700_100errors2_clipped.txt'
-# filename_1B = 'Data/processed/RV_results/rvB_not_8430105_4500_6700_100errors2_clipped.txt'
-#filename_2A = 'Data/processed/RV_results/rvA_not_8430105_4700_5400_100_3errors2.txt'
-#filename_2B = 'Data/processed/RV_results/rvB_not_8430105_4700_5400_100_3errors2.txt'
-# filename_karsten_A = '../../../temp/8430105_RV_G_9.dat'
-# filename_karsten_B = '../../../temp/8430105_RV_MS_9.dat'
-filename_karsten_A = 'Data/processed/RV_results/rvA_not_8430105_4700_5400_100_ignoreB.txt'
-filename_karsten_B = 'Data/processed/RV_results/rvB_not_8430105_4700_5400_100_ignoreB.txt'
-model_filename = '../Binary_Analysis/JKTEBOP/kepler_LTF/model.out'
+matplotlib.rcParams.update({'font.size': 25})
+os.chdir('/home/sinkbaek/PycharmProjects/Seismic-dEBs/RV/Data/additionals/separation_routine/')
 
-times_1A, rv_1A, err_1A = np.loadtxt(filename_1A, unpack=True)
-times_1B, rv_1B, err_1B = np.loadtxt(filename_1B, unpack=True)
-#times_2A, rv_2A, err_2A = np.loadtxt(filename_2A, unpack=True)
-#times_2B, rv_2B, err_2B = np.loadtxt(filename_2B, unpack=True)
-times_kA, rv_kA, err_kA = np.loadtxt(filename_karsten_A, unpack=True)
-times_kB, rv_kB, err_kB = np.loadtxt(filename_karsten_B, unpack=True)
+model_filename = '/home/sinkbaek/PycharmProjects/Seismic-dEBs/Binary_Analysis/JKTEBOP/kepler_LTF/model.out'
+phase_model, rv_Bm, rv_Am = np.loadtxt(model_filename, usecols=(0, 6, 7), unpack=True)
+
+time_A, rv_A = np.loadtxt('4500_6825_rvA.txt', unpack=True)
+time_B, rv_B, _ = np.loadtxt('4500_6825_rvB.txt', unpack=True)
+index_B, _, mean_rv_B, error_B = np.loadtxt('approx_500_width/mean_std_B.txt', unpack=True)
+_, mean_rv_A, error_A = np.loadtxt('approx_500_width/mean_std_A.txt', unpack=True)
+
+index_B = index_B.astype(int)
+print(index_B)
+
+time_B = time_B[index_B]
+rv_B = rv_B[index_B]
+
+systemic_rv_estimate = 12.61
+rv_A += systemic_rv_estimate
+rv_B += systemic_rv_estimate
+mean_rv_A += systemic_rv_estimate
+mean_rv_B += systemic_rv_estimate
 
 period = 63.33
-system_rv = 16.053
-
-times_1A -= 2400000 + 54976.6348
-times_1B -= 2400000 + 54976.6348
-#times_2A -= 2400000 + 54976.6348
-#times_2B -= 2400000 + 54976.6348
-times_kA -= 2400000 + 54976.6348
-times_kB -= 2400000 + 54976.6348
-
-phase_model, rv_Bm, rv_Am = np.loadtxt(model_filename, usecols=(0, 6, 7), unpack=True)
-interp_Am = interp1d(phase_model, rv_Am)
-phase_1A = np.mod(times_1A, period)/period
-phase_1B = np.mod(times_1B, period)/period
-rvA_model_interp_vals =  interp_Am(phase_1A)
-
-
-def rv_eval_plus_constant(rv_constant):
-    return np.sum(np.abs(rv_1A - (rvA_model_interp_vals + rv_constant)))
-
-
-system_rv_new = -minimize(rv_eval_plus_constant, x0=np.array([0])).x
-print(system_rv_new)
+phase_A = np.mod(time_A, period)/period
+phase_B = np.mod(time_B, period)/period
 
 plt.figure(figsize=(16, 9))
-#plt.errorbar(np.mod(times_2A, period)/period, rv_2A, yerr=err_2A, fmt='g*')
-#plt.errorbar(np.mod(times_2B, period)/period, rv_2B, yerr=err_2B, fmt='y*')
-plt.errorbar(np.mod(times_1A, period)/period, rv_1A-system_rv, yerr=err_1A, fmt='b*')
-plt.errorbar(np.mod(times_1B, period)/period, rv_1B-system_rv, yerr=err_1B, fmt='r*')
-plt.errorbar(np.mod(times_kA, period)/period, rv_kA-system_rv, yerr=err_kA, fmt='g*')
-plt.errorbar(np.mod(times_kB, period)/period, rv_kB-system_rv, yerr=err_kB, fmt='y*')
-#plt.legend(['Component A errors by full split', 'Component B', 'Component A errors retain sep spectrum', 'Component B'])
-plt.legend(['Component A', 'Component B', 'Component A ignoreB', 'Component B'])
-plt.plot(phase_model, rv_Am-system_rv-system_rv_new, 'k-')
-plt.plot(phase_model, rv_Bm-system_rv-system_rv_new, 'k-')
 plt.xlabel('Orbital Phase')
-plt.ylabel(f'Radial Velocity - {system_rv_new} [km/s]')
-plt.show(block=True)
+plt.ylabel('Radial Velocity (km/s)')
+plt.errorbar(phase_A, rv_A, yerr=error_A, fmt='*', color='blue')
+# plt.errorbar(phase_A, mean_rv_A, yerr=error_A, fmt='x', color='blue')
+plt.errorbar(phase_B, rv_B, yerr=error_B, fmt='*', color='red')
+# plt.errorbar(phase_B, mean_rv_B, yerr=error_B, fmt='x', color='red')
+# plt.plot(phase_model, rv_Am - 3.443, 'k--')
+# plt.plot(phase_model, rv_Bm - 3.443, 'k--')
+plt.show()
 

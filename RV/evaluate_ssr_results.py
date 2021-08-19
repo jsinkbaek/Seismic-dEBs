@@ -2,6 +2,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 
+"""
+This file is meant to be used with the additional data results provided by the spectral separation routine
+(can be turned on by using the save_additional_results switch in spectral_separation_routine()). Default location for
+these files are in RV/Data/additionals/spectral_separation/.
+
+Two storage classes are provided, IntervalResult (where loaded data is stored) and RoutineResults (where multiple
+IntervalResult objects are accessed). Datafiles from the separation routine can be loaded into these objects using 
+load_routine_results(), which provides a RoutineResults instance that can be fed into the plotting functions.
+load_routine_results() requests a folder path, as well as a list of "bulk" filenames, e.g. the wavelength-intervals. An
+example would be:
+load_routine_results(RV/Data/additionals/spectral_separation/, ['4500_5000', '5000_5500'])
+"""
+
 
 class IntervalResult:
     def __init__(
