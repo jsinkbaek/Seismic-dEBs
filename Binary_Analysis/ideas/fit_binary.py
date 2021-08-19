@@ -2,28 +2,76 @@ import ellc
 import numpy as np
 import matplotlib.pyplot as plt
 from storage_classes import LightCurve, RadialVelocities, LimbDarkeningCoeffs, ParameterValues
+from copy import deepcopy
+import lmfit
+from scipy.optimize import minimize
 
 
 def fit_binary(
         light_curves: list or LightCurve,
-        radial_velocities_A: RadialVelocities,
-        radial_velocities_B: RadialVelocities,
-        fit_parameters: list, initial_values: ParameterValues,
-        limbd_A: list or LimbDarkeningCoeffs,
-        limbd_B: list or LimbDarkeningCoeffs
+        radial_velocities_A: RadialVelocities, radial_velocities_B: RadialVelocities,
+        fit_parameter_names: np.ndarray, initial_values: ParameterValues,
+        limbd_A: list or LimbDarkeningCoeffs, limbd_B: list or LimbDarkeningCoeffs,
+        limbd_A_rv: LimbDarkeningCoeffs = None, limbd_B_rv: LimbDarkeningCoeffs = None,
+        grid_A_rv=None, grid_B_rv=None,
+        time_stamps_rv_model: np.ndarray = None,
+        rvA_timestamp_mask: np.ndarray = None, rvB_timestamp_mask: np.ndarray = None,
+        verbose=1, fit_bounds: tuple = None, tol: float = None
 ):
     """
     :param light_curves:
     :param radial_velocities_A:
     :param radial_velocities_B:
-    :param fit_parameters:      list of strings. Indicates the names of the parameters to fit.
+    :param fit_parameter_names:      array of strings. Indicates the names of the parameters to fit.
     :param initial_values:
     :return:
     """
-    pass
+    if time_stamps_rv_model is None:
+        time_stamps_rv_model = radial_velocities_A.times
+
+    x0 = np.empty((fit_parameter_names.size, ))
+    for i in range(0, x0.size):
+        x0[i] = getattr(initial_values, fit_parameter_names[i])
+
+    all_parameters = deepcopy(initial_values)
+
+    args = (
+        fit_parameter_names, all_parameters, light_curves, radial_velocities_A, radial_velocities_B,
+        time_stamps_rv_model, limbd_A, limbd_B, limbd_A_rv, limbd_B_rv, grid_A_rv, grid_B_rv, rvA_timestamp_mask,
+        rvB_timestamp_mask, verbose
+    )
+    fit_res = minimize(fit_stepper, x0, args, method='Nelder-Mead', tol=tol, bounds=fit_bounds)
+    return fit_res
 
 
 def fit_stepper(
+        fit_parameter_values: np.ndarray,
+        fit_parameter_names: np.ndarray,
+        current_parameters: ParameterValues,
+        light_curves: list or LightCurve,
+        radial_velocities_A: RadialVelocities,
+        radial_velocities_B: RadialVelocities,
+        time_stamps_rv_model: np.ndarray,
+        limbd_A: list or LimbDarkeningCoeffs,
+        limbd_B: list or LimbDarkeningCoeffs,
+        limbd_A_rv: LimbDarkeningCoeffs = None,
+        limbd_B_rv: LimbDarkeningCoeffs = None,
+        grid_A_rv=None,
+        grid_B_rv=None,
+        rvA_timestamp_mask: np.ndarray = None,
+        rvB_timestamp_mask: np.ndarray = None,
+        verbose=1
+):
+    for i in range(0, len(fit_parameter_values)):
+        setattr(current_parameters, fit_parameter_names[i], fit_parameter_values[i])
+
+    return evaluate_rv_and_lc(
+        light_curves, radial_velocities_A, radial_velocities_B, time_stamps_rv_model, current_parameters, limbd_A,
+        limbd_B, limbd_A_rv, limbd_B_rv, grid_A_rv, grid_B_rv, rvA_timestamp_mask, rvB_timestamp_mask, verbose
+    )
+
+
+def evaluate_rv_and_lc(
         light_curves: list or LightCurve,
         radial_velocities_A: RadialVelocities,
         radial_velocities_B: RadialVelocities,
@@ -62,8 +110,6 @@ def fit_stepper(
 
     chisqr = chisqr_lc + chisqr_rv
     return chisqr
-
-
 
 
 def calculate_light_curve(time_stamps: np.ndarray, params: ParameterValues, limbd_A: LimbDarkeningCoeffs,
