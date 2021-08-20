@@ -23,12 +23,14 @@ class RadialVelocities:
 
 
 class LightCurve:
-    def __init__(self, time_values: np.ndarray, flux_values: np.ndarray, error_values: np.ndarray):
+    def __init__(self, time_values: np.ndarray, flux_values: np.ndarray, error_values: np.ndarray,
+                 fit_scale: float = 1.0):
         self.times = time_values
         self.flux = flux_values
         self.error = error_values
         self.magnitude = - 2.5*np.log10(flux_values)
         self.mag_err = np.abs(-2.5/np.log(10) * (error_values/flux_values))
+        self.fit_scale = fit_scale
 
 
 class ParameterValues:
@@ -40,6 +42,7 @@ class ParameterValues:
             mass_fraction=1.0,
             secosw=None,
             sesinw=None,
+            system_rv=0.0,
             grav_dark_exponent_A=None, grav_dark_exponent_B=None,
             inclination_change_rate=None, apsidal_motion_rate=None,
             async_rot_factor_A=1.0, async_rot_factor_B=1.0,
@@ -55,7 +58,7 @@ class ParameterValues:
             stellar_shape_A="sphere", stellar_shape_B="sphere",
             spot_params_A=None, spot_params_B=None,
             exact_grav=False,
-            flux_weighted_rv=True
+            flux_weighted_rv=True,
     ):
         """
         See ellc lc.py for descriptions of the individual parameters:
@@ -73,6 +76,7 @@ class ParameterValues:
         self.mass_fraction = mass_fraction
         self.secosw = secosw
         self.sesinw = sesinw
+        self.system_rv = system_rv
         self.grav_dark_exponent_A = grav_dark_exponent_A
         self.grav_dark_exponent_B = grav_dark_exponent_B
         self.incl_change_rate = inclination_change_rate
