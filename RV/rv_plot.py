@@ -4,6 +4,19 @@ import os
 import matplotlib
 import matplotlib.ticker as ticker
 from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
+import math
+
+
+def weighted_avg_and_std(values, weights):
+    """
+    Return the weighted average and standard deviation.
+
+    values, weights -- Numpy ndarrays with the same shape.
+    """
+    average = np.average(values, weights=weights)
+    # Fast and numerically precise:
+    variance = np.average((values-average)**2, weights=weights)
+    return average, math.sqrt(variance)
 
 
 matplotlib.rcParams.update({'font.size': 25})
@@ -99,9 +112,13 @@ ax2.errorbar(rva[:, 3], rva[:, 5], yerr=rva[:, 2], fmt='*', color='blue')
 ax3.errorbar(rvb[:, 3], rvb[:, 5], yerr=rvb[:, 2], fmt='*', color='red')
 ax2.plot([0, 1], [0, 0], '--', color='black', alpha=0.8)
 ax3.plot([0, 1], [0, 0], '--', color='black', alpha=0.8)
-ax2.fill_between([0.0, 1.0], [np.std(rva[:, 5]), np.std(rva[:, 5])], [-np.std(rva[:, 5]), -np.std(rva[:, 5])],
+# _, wstd_a = weighted_avg_and_std(rva[:, 5], 1/rva[:, 2]**2)
+# _, wstd_b = weighted_avg_and_std(rvb[:, 5], 1/rvb[:, 2]**2)
+wstd_a = np.std(rva[:, 5])
+wstd_b = np.std(rvb[:, 5])
+ax2.fill_between([0.0, 1.0], [wstd_a, wstd_a], [-wstd_a, -wstd_a],
                  color='grey', alpha=0.4)
-ax3.fill_between([0.0, 1.0], [np.std(rvb[:, 5]), np.std(rvb[:, 5])], [-np.std(rvb[:, 5]), -np.std(rvb[:, 5])],
+ax3.fill_between([0.0, 1.0], [wstd_b, wstd_b], [-wstd_b, -wstd_b],
                  color='grey', alpha=0.4)
 plt.tight_layout()
 plt.subplots_adjust(wspace=0, hspace=0)
