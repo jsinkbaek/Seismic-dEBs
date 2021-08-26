@@ -11,6 +11,7 @@ outfile_row = {'sb_ratio': 184, 'sum_radii': 185, 'ratio_radii': 186, 'limbd_A1'
                'integration_ring': 200, 'period': 201, 'ephemeris_tbase': 202, 'limbd_A2': 203, 'limbd_B2': 204,
                'rv_amp_A': 205, 'rv_amp_B': 206, 'system_rv_A': 207, 'system_rv_B': 208, 'sma_rsun': 236,
                'mass_A': 239, 'mass_B': 240, 'radius_A': 241, 'radius_B': 242, 'logg_A': 243, 'logg_B': 244}
+
 outfile_col = {'sb_ratio': 4, 'sum_radii': 5, 'ratio_radii': 5, 'limbd_A1': 4, 'limbd_B1': 4, 'incl': 3,
                'ecc': 2, 'perilong': 2, 'grav_dark_A': 3, 'grav_dark_B': 3, 'refl_light_A': 4, 'refl_light_B': 4,
                'phot_mass_ratio': 4, '3_light': 4, 'phase_corr': 3, 'light_scale_factor': 4, 'integration_ring': 3,
@@ -33,8 +34,10 @@ def pull_parameters_from_outfile(folder: str, parameter_names: List[str]):
                     parameter_values[index] = float(split[cols[index]])
                 except ValueError as ve:
                     print(ve)
+                    print('folder:', folder)
                     print('Column index:', cols[index])
                     print('Current row:', i)
+                    return None
     return parameter_values
 
 
