@@ -20,8 +20,9 @@ def draw_sample(
     :return:
     """
     rng = default_rng()
-    block_indices = rng.integers(low=0, high=lc_blocks[0, 0, :].size, size=lc_blocks[0, 0, :].size)
-    drawn_blocks = lc_blocks[:, :, block_indices]
+    drawn_blocks = np.copy(lc_blocks)
+
+    # Draw random mid_times to assign to each block
     if block_midtime is None:
         pass
     elif isinstance(block_midtime, list):
@@ -43,6 +44,10 @@ def draw_sample(
             new_midtime = block_midtime[midtime_indices[k]]
             drawn_blocks[:, 0, k] = relative_time + new_midtime
 
+    # Draw random blocks to add to light curve sample
+    block_indices = rng.integers(low=0, high=lc_blocks[0, 0, :].size, size=lc_blocks[0, 0, :].size)
+    drawn_blocks = drawn_blocks[:, :, block_indices]
+
     # Concatenate the blocks from axis=2 to produce a single light curve (shape (nblocks*blocksize, 3)) from the draw
     lc_sample_list = []
     for i in range(0, drawn_blocks[0, 0, :].size):
@@ -52,12 +57,14 @@ def draw_sample(
 
     lc_sample = np.concatenate(lc_sample_list, axis=0)
 
+    # Draw random rvs for sample
     rvA_draw_indices = rng.integers(low=0, high=rvA.shape[0], size=rvA.shape[0])
     rvA_sample = rvA[rvA_draw_indices, :]
 
     rvB_draw_indices = rng.integers(low=0, high=rvB.shape[0], size=rvB.shape[0])
     rvB_sample = rvB[rvB_draw_indices, :]
 
+    # Generate synthetic rv data from model + random residual
     if rvA_model is not None:
         residual_A = rvA[:, 1] - rvA_model
         residual_B = rvB[:, 1] - rvB_model
