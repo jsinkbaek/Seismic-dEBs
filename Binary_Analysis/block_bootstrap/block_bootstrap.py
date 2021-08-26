@@ -5,7 +5,9 @@ from joblib import Parallel, delayed
 from typing import List
 
 
-def draw_sample(lc_blocks: np.ndarray, rvA, rvB, block_midtime: List[np.ndarray] or np.ndarray):
+def draw_sample(
+        lc_blocks: np.ndarray, rvA, rvB, block_midtime: List[np.ndarray] or np.ndarray, rvA_model, rvB_model
+):
     """
 
     :param lc_blocks: required shape (:, 3, nblocks). 1st column must be time values, 2nd lc flux magnitude,
@@ -13,6 +15,8 @@ def draw_sample(lc_blocks: np.ndarray, rvA, rvB, block_midtime: List[np.ndarray]
     :param rvA:       required shape (:, 3). 1st column time values, 2nd rv values, 3rd error on rv
     :param rvB:
     :param block_midtime:
+    :param rvA_model:
+    :param rvB_model:
     :return:
     """
     rng = default_rng()
@@ -54,12 +58,25 @@ def draw_sample(lc_blocks: np.ndarray, rvA, rvB, block_midtime: List[np.ndarray]
     rvB_draw_indices = rng.integers(low=0, high=rvB.shape[0], size=rvB.shape[0])
     rvB_sample = rvB[rvB_draw_indices, :]
 
+    if rvA_model is not None:
+        residual_A = rvA[:, 1] - rvA_model
+        residual_B = rvB[:, 1] - rvB_model
+
+        residual_indices_A = rng.integers(low=0, high=rvA.shape[0], size=rvA.shape[0])
+        residual_indices_B = rng.integers(low=0, high=rvB.shape[0], size=rvB.shape[0])
+
+        rvA_sample[:, 1] = rvA_model[rvA_draw_indices] + residual_A[residual_indices_A]
+        rvB_sample[:, 1] = rvB_model[rvB_draw_indices] + residual_B[residual_indices_B]
+
+        rvA_sample[:, 2] = rvA[residual_indices_A, 2]
+        rvB_sample[:, 2] = rvB[residual_indices_B, 2]
+
     return lc_sample, rvA_sample, rvB_sample
 
 
 def block_bootstrap(
         lc_blocks, rvA, rvB, repetitions, parameter_names, n_jobs=4,
-        block_midtime: List[np.ndarray] or np.ndarray = None
+        block_midtime: List[np.ndarray] or np.ndarray = None, rvA_model=None, rvB_model=None
 ):
     """
     :param lc_blocks:       required shape (:, 3, nblocks). 1st column must be time values, 2nd lc flux magnitude,
@@ -80,18 +97,29 @@ def block_bootstrap(
             When each block corresponds to 1 eclipse and not 1 period, the primary and secondary eclipse should
             obviously not be swapped around in time.
 
+    :param rvA_model:
+        Model values for best rvA fit. Required shape (:, ), with same length as rvA[:, 0]. Since the amount of RV data
+        points is much smaller than for the light curves, blocks make no reasonable sense. If this parameter and
+        rvB_model is None, random RV data-points will simply be drawn for each sample. If they are provided, residual
+        permutation will instead be performed, where synthetic RV data is generated from the model + a random residual
+        from the component dataset. It will be provided with the same error associated to the residual data point. The
+        drawn sample will still be randomly selected from the time-values available.
+
+    :param rvB_model:
+
     :return:
     """
     clean_work_folder()
     job_results = Parallel(n_jobs=n_jobs)(
-        delayed(_loop_function)(lc_blocks, rvA, rvB, parameter_names, block_midtime, i) for i in range(0, repetitions)
+        delayed(_loop_function)(lc_blocks, rvA, rvB, parameter_names, block_midtime, rvA_model, rvB_model, i)
+        for i in range(0, repetitions)
     )
     return evaluate_runs(job_results)
 
 
-def _loop_function(lc_blocks, rvA, rvB, parameter_names, block_midtime, index):
-    lc_sample, rvA_sample, rvB_sample = draw_sample(lc_blocks, rvA, rvB, block_midtime)
-    parameter_values = run_jktebop_on_sample(lc_sample, rvA, rvB, index, parameter_names)
+def _loop_function(lc_blocks, rvA, rvB, parameter_names, block_midtime, rvA_model, rvB_model, index):
+    lc_sample, rvA_sample, rvB_sample = draw_sample(lc_blocks, rvA, rvB, block_midtime, rvA_model, rvB_model)
+    parameter_values = run_jktebop_on_sample(lc_sample, rvA_sample, rvB_sample, index, parameter_names)
     return parameter_values
 
 

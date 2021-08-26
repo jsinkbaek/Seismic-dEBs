@@ -1,0 +1,11 @@
+all: lc.out model.out param.out rvA.out rvB.out
+
+lc.out model.out param.out rvA.out rvB.out: jktebop
+	./jktebop infile.sample
+
+jktebop: ../../../JKTEBOP/jktebop.f
+	gfortran -o jktebop ../../../JKTEBOP/jktebop.f
+
+.PHONY:clean
+clean:
+	rm -f *.out *.svg

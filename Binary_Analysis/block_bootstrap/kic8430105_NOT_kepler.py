@@ -58,6 +58,11 @@ for i in range(len(sub_arrays_secondary), len(sub_arrays_primary)+len(sub_arrays
 rvA = np.loadtxt('work/rvA.dat')
 rvB = np.loadtxt('work/rvB.dat')
 
+rvA_model = np.loadtxt('work/rvA.model', unpack=True, usecols=4)
+rvB_model = np.loadtxt('work/rvB.model', unpack=True, usecols=4)
+
+print(rvA_model)
+
 midtimes = [midtimes_secondary, midtimes_primary]
 
 
@@ -66,7 +71,7 @@ param_names = ['sb_ratio', 'sum_radii', 'ratio_radii', 'incl', 'ecc', 'perilong'
                'radius_B', 'logg_A', 'logg_B']
 
 mean_vals, std_vals, vals = boot.block_bootstrap(
-    lc_blocks, rvA, rvB, 1000, param_names, n_jobs=12, block_midtime=midtimes
+    lc_blocks, rvA, rvB, 50, param_names, n_jobs=12, block_midtime=midtimes, rvA_model=rvA_model, rvB_model=rvB_model
 )
 
 
