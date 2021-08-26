@@ -20,7 +20,7 @@ def weighted_avg_and_std(values, weights):
 
 
 matplotlib.rcParams.update({'font.size': 25})
-os.chdir('/home/sinkbaek/PycharmProjects/Seismic-dEBs/Binary_Analysis/JKTEBOP/NOT/kepler_LTF/')
+os.chdir('/Binary_Analysis/JKTEBOP/NOT/kepler_LTF/')
 
 model_filename = 'model.out'
 rva = 'rvA.out'

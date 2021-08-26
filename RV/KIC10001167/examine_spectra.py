@@ -6,11 +6,11 @@ from barycorrpy import utc_tdb
 
 observatory_location = EarthLocation.of_site("lapalma")
 observatory_name = "lapalma"
-stellar_target = "kic8430105"
+stellar_target = "kic10001167"
 
 
-spectra_folder_path = 'Data/unprocessed/NOT/KIC8430105/'
-reduced_spectra_folder_path = 'Data/processed/AFS_algorithm/Normalized_Spectrum/'
+spectra_folder_path = '../Data/unprocessed/NOT/KIC10001167/'
+reduced_spectra_folder_path = '../Data/processed/AFS_algorithm/Normalized_Spectrum/'
 filename_identifier = 'merge.fits'
 reduced_filename_identifier = '_reduced_set.dat'
 
@@ -29,7 +29,7 @@ approximate_eclipse_hwidth= 0.02
 
 
 for filename in os.listdir(spectra_folder_path):
-    if filename_identifier in filename and '.lowSN' not in filename:
+    if filename_identifier in filename:
         _, _, date, ra, dec = spf.load_program_spectrum(spectra_folder_path + filename)
 
         filename_bulk = filename[:filename.rfind(".fits")]
@@ -46,7 +46,10 @@ for filename in os.listdir(spectra_folder_path):
         date_array = np.append(date_array, date)
         RA_array = np.append(RA_array, ra * 15.0)  # converts unit
         DEC_array = np.append(DEC_array, dec)
-        filename_list.append(filename[:filename.rfind("_step011_merge.fits")])
+        if "step011" in filename:
+            filename_list.append(filename[:filename.rfind("_step011_merge.fits")])
+        else:
+            filename_list.append(filename[:filename.rfind("_step012_merge.fits")])
 
 
 # # Calculate bjdtdb
@@ -64,7 +67,7 @@ bjd_extra, _, _ = utc_tdb.JDUTC_to_BJDTDB(time_extra, ra=RA, dec=DEC, starname=s
 
 
 # Phases
-model_filename = '../Binary_Analysis/JKTEBOP/gaulme2016/kepler_LTF/model.out'
+model_filename = '../../Binary_Analysis/JKTEBOP/gaulme2016/kepler_LTF/model.out'
 bjdtdb -= 2400000 + 54976.6348
 phase_model, rv_Bm, rv_Am = np.loadtxt(model_filename, usecols=(0, 6, 7), unpack=True)
 phase_spectra = np.mod(bjdtdb, period) / period

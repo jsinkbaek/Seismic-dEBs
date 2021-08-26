@@ -20,7 +20,7 @@ matplotlib.rcParams.update({'font.size': 25})
 # # # # Set variables for script # # # #
 warnings.filterwarnings("ignore", category=UserWarning)
 plt.ion()
-data_path = 'Data/unprocessed/NOT/KIC8430105/'
+data_path = '../Data/unprocessed/NOT/KIC8430105/'
 
 observatory_location = EarthLocation.of_site("lapalma")
 observatory_name = "lapalma"
@@ -84,8 +84,8 @@ ifitpar_B = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, vel
                                  smooth_sigma=4.0, bf_velocity_span=bf_velocity_span, ignore_at_phase=(0.98, 0.02))
 
 # # Template Spectra # #
-template_spectrum_path_A = 'Data/template_spectra/5000_20_m05p00.ms.fits'
-template_spectrum_path_B = 'Data/template_spectra/5500_45_m05p00.ms.fits'
+template_spectrum_path_A = '../Data/template_spectra/5000_20_m05p00.ms.fits'
+template_spectrum_path_B = '../Data/template_spectra/5500_45_m05p00.ms.fits'
 
 # # Computation parameters # #
 number_of_parallel_jobs = 4     # for initial RV guess fits

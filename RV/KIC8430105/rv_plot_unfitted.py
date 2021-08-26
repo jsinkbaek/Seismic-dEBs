@@ -4,7 +4,7 @@ import os
 import matplotlib
 
 matplotlib.rcParams.update({'font.size': 25})
-model_dir = '/home/sinkbaek/PycharmProjects/Seismic-dEBs/Binary_Analysis/JKTEBOP/NOT/kepler_LTF/'
+model_dir = '/Binary_Analysis/JKTEBOP/NOT/kepler_LTF/'
 
 model_filename = 'model.out'
 # rva = 'rvA.out'
@@ -13,7 +13,7 @@ phase_model, rv_Am, rv_Bm = np.loadtxt(model_dir+model_filename, usecols=(0, 6, 
 # rva = np.loadtxt(rva)
 # rvb = np.loadtxt(rvb)
 
-data_dir = '/home/sinkbaek/PycharmProjects/Seismic-dEBs/RV/Data/additionals/separation_routine/'
+data_dir = '/RV/Data/additionals/separation_routine/'
 time_A, rv_A = np.loadtxt(data_dir+'4500_5825_rvA.txt', unpack=True)
 time_B, rv_B, _ = np.loadtxt(data_dir+'4500_5825_rvB.txt', unpack=True)
 index_B, _, mean_rv_B, error_B = np.loadtxt(data_dir+'refitted/mean_std_B.txt', unpack=True)

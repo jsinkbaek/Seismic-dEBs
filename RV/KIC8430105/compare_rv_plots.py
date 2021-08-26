@@ -3,14 +3,14 @@ from scipy.interpolate import interp1d
 from scipy.optimize import minimize
 import matplotlib
 
-filename_1A = 'Data/processed/RV_results/rvA_not_8430105_4700_5400_100.txt'
-filename_1B = 'Data/processed/RV_results/rvB_not_8430105_4700_5400_100.txt'
+filename_1A = '../Data/processed/RV_results/rvA_not_8430105_4700_5400_100.txt'
+filename_1B = '../Data/processed/RV_results/rvB_not_8430105_4700_5400_100.txt'
 
 # filename_karsten_A = '../../../temp/8430105_RV_G_9.dat'
 # filename_karsten_B = '../../../temp/8430105_RV_MS_9.dat'
-filename_karsten_A = 'Data/processed/RV_results/rvA_not_8430105_4700_5400_100_ignoreB.txt'
-filename_karsten_B = 'Data/processed/RV_results/rvB_not_8430105_4700_5400_100_ignoreB.txt'
-model_filename = '../Binary_Analysis/JKTEBOP/gaulme2016/kepler_LTF/model.out'
+filename_karsten_A = '../Data/processed/RV_results/rvA_not_8430105_4700_5400_100_ignoreB.txt'
+filename_karsten_B = '../Data/processed/RV_results/rvB_not_8430105_4700_5400_100_ignoreB.txt'
+model_filename = '../../Binary_Analysis/JKTEBOP/gaulme2016/kepler_LTF/model.out'
 
 times_1A, rv_1A, err_1A = np.loadtxt(filename_1A, unpack=True)
 times_1B, rv_1B, err_1B = np.loadtxt(filename_1B, unpack=True)
