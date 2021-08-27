@@ -2,7 +2,7 @@ import numpy as np
 from numpy.random import default_rng
 from Binary_Analysis.block_bootstrap.jktebop_io_interface import run_jktebop_on_sample, clean_work_folder
 from joblib import Parallel, delayed
-from typing import List
+from typing import List, Tuple
 
 
 def draw_sample(
@@ -19,6 +19,12 @@ def draw_sample(
     :param rvB_model:
     :return:
     """
+    lc_sample = draw_lc_sample(lc_blocks, block_midtime)
+    rvA_sample, rvB_sample = draw_rv_sample(rvA, rvB, rvA_model, rvB_model)
+    return lc_sample, rvA_sample, rvB_sample
+
+
+def draw_lc_sample(lc_blocks: np.ndarray, block_midtime: List[np.ndarray] or np.ndarray):
     rng = default_rng()
     drawn_blocks = np.copy(lc_blocks)
 
@@ -27,16 +33,16 @@ def draw_sample(
         pass
     elif isinstance(block_midtime, list):
         for i in range(0, len(block_midtime)):
-            if i==0:
+            if i == 0:
                 start, rel_end = 0, block_midtime[i].size
             else:
-                start = block_midtime[i-1].size
+                start = block_midtime[i - 1].size
                 rel_end = block_midtime[i].size
             midtime_indices = rng.integers(low=0, high=rel_end, size=rel_end)
             for k in range(0, rel_end):
-                relative_time = drawn_blocks[:, 0, k+start] - block_midtime[i][k]
+                relative_time = drawn_blocks[:, 0, k + start] - block_midtime[i][k]
                 new_midtime = block_midtime[i][midtime_indices[k]]
-                drawn_blocks[:, 0, k+start] = relative_time + new_midtime
+                drawn_blocks[:, 0, k + start] = relative_time + new_midtime
     else:
         midtime_indices = rng.integers(low=0, high=drawn_blocks[0, 0, :].size, size=drawn_blocks[0, 0, :].size)
         for k in range(0, drawn_blocks[0, 0, :].size):
@@ -56,6 +62,11 @@ def draw_sample(
         lc_sample_list.append(current_block[~nan_mask, :])
 
     lc_sample = np.concatenate(lc_sample_list, axis=0)
+    return lc_sample
+
+
+def draw_rv_sample(rvA, rvB, rvA_model, rvB_model):
+    rng = default_rng()
 
     # Draw random rvs for sample
     rvA_draw_indices = rng.integers(low=0, high=rvA.shape[0], size=rvA.shape[0])
@@ -77,8 +88,70 @@ def draw_sample(
 
         rvA_sample[:, 2] = rvA[residual_indices_A, 2]
         rvB_sample[:, 2] = rvB[residual_indices_B, 2]
+    return rvA_sample, rvB_sample
 
-    return lc_sample, rvA_sample, rvB_sample
+
+def _divide_into_subgroups(lc_blocks: np.ndarray, subgroup_divisions: Tuple[int]):
+    # Divide each block into possible subgroups to draw from
+    subgroups_all_lightcurves = []
+    for k in range(0, lc_blocks[0, 0, :].size):
+        current_block = lc_blocks[~np.isnan(lc_blocks[:, 0, k]), :, k]
+        subgroups = []
+        for i in range(0, len(subgroup_divisions)):
+            block_size = current_block[:, 0].size
+            sub_block_size = block_size / subgroup_divisions[i]
+            sub_block_size = int(np.floor(sub_block_size))
+            sub_blocks = np.empty((sub_block_size, 3, block_size - sub_block_size + 1))
+            for j in range(0, block_size - sub_block_size + 1):
+                start = j
+                end = sub_block_size + j
+                sub_blocks[:, :, j] = current_block[start:end, :]
+            subgroups.append(sub_blocks)
+        subgroups_all_lightcurves.append(subgroups)
+    return subgroups_all_lightcurves
+
+
+def draw_lc_sample_variable_moving_blocks(
+        lc_blocks: np.ndarray, subgroups_all_lightcurves: list, period: float, subgroup_divisions: Tuple[int]
+):
+    rng = default_rng()
+
+    # Draw amount of each subgroup (amount of each subgroup is n_draws * subgroup_division to preserve approximate
+    # data size)
+    share = rng.integers(0, len(subgroup_divisions), lc_blocks[0, 0, :].size)
+    bincount = np.bincount(share, minlength=len(subgroup_divisions))
+    draw_amount_groups = bincount * subgroup_divisions
+
+    # Draw sub blocks from lightcurve blocks
+    drawn_sub_blocks = []
+    for i in range(0, len(subgroup_divisions)):
+        share_lcs = rng.integers(0, len(subgroups_all_lightcurves), draw_amount_groups[i])
+        draw_amount_lcs = np.bincount(share_lcs, minlength=len(subgroups_all_lightcurves))
+        for k in range(0, len(subgroups_all_lightcurves)):
+            if draw_amount_lcs[k] != 0:
+                current_sub_blocks = subgroups_all_lightcurves[k][i]
+                sub_block_indices = rng.integers(0, current_sub_blocks[0, 0, :].size, draw_amount_lcs[k])
+                drawn_sub_blocks.append(current_sub_blocks[:, :, sub_block_indices])
+
+    # Draw random timestamps to give drawn sub blocks (while retaining current phase)
+    for i in range(0, len(drawn_sub_blocks)):
+        new_time_indices = rng.integers(0, lc_blocks[0, 0, :].size, drawn_sub_blocks[i][0, 0, :].size)
+        time_startpoints = lc_blocks[0, 0, new_time_indices]
+        phase_startpoints = np.mod(time_startpoints, period)/period
+        for k in range(0, drawn_sub_blocks[i][0, 0, :].size):
+            phase = np.mod(drawn_sub_blocks[i][:, 0, k], period)/period
+            phase_diff = phase - phase_startpoints[k]
+            new_time = time_startpoints[k] + phase_diff*period
+            drawn_sub_blocks[i][:, 0, k] = new_time
+
+    # Combine drawn sub-blocks to light curve sample
+    lc_sample_list = []
+    for i in range(0, len(drawn_sub_blocks)):
+        for k in range(0, drawn_sub_blocks[i][0, 0, :].size):
+            lc_sample_list.append(drawn_sub_blocks[i][:, :, k])
+    lc_sample = np.concatenate(lc_sample_list, axis=0)
+
+    return lc_sample
 
 
 def block_bootstrap(
@@ -124,8 +197,36 @@ def block_bootstrap(
     return evaluate_runs(job_results)
 
 
+def block_bootstrap_variable_moving_blocks(
+        lc_blocks, rvA, rvB, repetitions, parameter_names,
+        subgroup_divisions: Tuple[int, ...], period: float,
+        n_jobs=4,
+        rvA_model=None, rvB_model=None
+):
+    clean_work_folder()
+    subgroups_all_lightcurves = _divide_into_subgroups(lc_blocks, subgroup_divisions)
+    job_results = Parallel(n_jobs=n_jobs)(
+        delayed(_loop_function_variable_moving_blocks)(
+            lc_blocks, subgroups_all_lightcurves, period, subgroup_divisions, rvA, rvB, parameter_names, rvA_model,
+            rvB_model, i) for i in range(0, repetitions)
+        )
+    return evaluate_runs(job_results)
+
+
 def _loop_function(lc_blocks, rvA, rvB, parameter_names, block_midtime, rvA_model, rvB_model, index):
     lc_sample, rvA_sample, rvB_sample = draw_sample(lc_blocks, rvA, rvB, block_midtime, rvA_model, rvB_model)
+    parameter_values = run_jktebop_on_sample(lc_sample, rvA_sample, rvB_sample, index, parameter_names)
+    return parameter_values
+
+
+def _loop_function_variable_moving_blocks(
+        lc_blocks, subgroups_all_lightcurves, period, subgroup_divisions, rvA, rvB, parameter_names,
+        rvA_model, rvB_model, index
+):
+    lc_sample = draw_lc_sample_variable_moving_blocks(
+        lc_blocks, subgroups_all_lightcurves, period, subgroup_divisions
+    )
+    rvA_sample, rvB_sample = draw_rv_sample(rvA, rvB, rvA_model, rvB_model)
     parameter_values = run_jktebop_on_sample(lc_sample, rvA_sample, rvB_sample, index, parameter_names)
     return parameter_values
 

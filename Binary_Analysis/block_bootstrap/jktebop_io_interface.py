@@ -27,6 +27,9 @@ def pull_parameters_from_outfile(folder: str, parameter_names: List[str]):
     with open(folder+'param.out', 'r') as f:
         list_of_lines = f.readlines()
         for i, line in enumerate(list_of_lines):
+            if i == 184 and line == 'The minimisation algorithm cannot go beyond 90 degrees, so the solution has been':
+                rows = [x + 4 for x in rows]
+                print(f'Check if inclination warning is in folder {folder}')
             if i in rows:
                 index = rows.index(i)
                 split = line.split()
