@@ -9,7 +9,7 @@ from numpy.polynomial import Polynomial
 matplotlib.use('Qt5Agg')
 matplotlib.rcParams.update({'font.size': 25})
 # Load data
-with fits.open("Data/unprocessed/kasoc/kplr008430105_kasoc-ts_llc_v1.fits") as hdul:
+with fits.open("../Data/unprocessed/kasoc/kplr008430105_kasoc-ts_llc_v1.fits") as hdul:
     print(hdul.info())
     hdu = hdul[1]
     print(hdu.columns)

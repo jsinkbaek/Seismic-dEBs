@@ -64,7 +64,7 @@ bjd_extra, _, _ = utc_tdb.JDUTC_to_BJDTDB(time_extra, ra=RA, dec=DEC, starname=s
 
 
 # Phases
-model_filename = '../../Binary_Analysis/JKTEBOP/gaulme2016/kepler_LTF/model.out'
+model_filename = '../../Binary_Analysis/JKTEBOP/gaulme2016/KIC8430105/kepler_LTF/model.out'
 bjdtdb -= 2400000 + 54976.6348
 phase_model, rv_Bm, rv_Am = np.loadtxt(model_filename, usecols=(0, 6, 7), unpack=True)
 phase_spectra = np.mod(bjdtdb, period) / period

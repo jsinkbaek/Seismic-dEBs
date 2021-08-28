@@ -2,7 +2,7 @@ import numpy as np
 from astropy.io import fits
 import os
 
-loc_datafiles = 'Data/unprocessed/mast/kepler-kic8430105/'
+loc_datafiles = '../Data/unprocessed/mast/kepler-kic10001167/'
 crowding = np.array([])
 quarter = np.array([])
 tstart = np.array([])

@@ -54,7 +54,7 @@ def poly_plt(fl, tm, fln, tmn, pfit, tm0, tm1, fignr, component, res_mask, fit_m
     plt.xticks(fontsize=13)
     plt.legend(['Uncorrected light curve', 'Data used for fit', 'Data for corrected LC', 'Chosen LTF polynomial'],
                 markerscale=8)
-    plt.savefig(fname='../figures/LTF/fig_'+str(fignr)+component+'1', orientation='landscape', dpi=150)
+    plt.savefig(fname='../../figures/LTF/10001167/fig_'+str(fignr)+component+'1', orientation='landscape', dpi=150)
     plt.close(fig)
 
     fig = plt.figure(figsize=[6.4*1.5, 4.8*1.5])
@@ -70,7 +70,7 @@ def poly_plt(fl, tm, fln, tmn, pfit, tm0, tm1, fignr, component, res_mask, fit_m
     else:
         plt.legend(['LTF corrected light curve'], markerscale=8)
     plt.ticklabel_format(axis='x', style='plain', useOffset=False)
-    plt.savefig(fname='../figures/LTF/fig_'+str(fignr)+component+'2', orientation='landscape', dpi=150)
+    plt.savefig(fname='../../figures/LTF/10001167/fig_'+str(fignr)+component+'2', orientation='landscape', dpi=150)
     plt.close(fig)
 
 
@@ -136,7 +136,7 @@ def inspection_loop(ph, fl, tm, fit_mask, res_mask, deg, tm0, tm1):
     return (phn, fln, tmn), pfit, fit_mask_, res_mask_
 
 
-def save_phase(ph, fl, tm, i_, pfit, component, loc='Data/processed/kepler_local_trendfitting_results/'):
+def save_phase(ph, fl, tm, i_, pfit, component, loc='../Data/processed/KIC10001167/kepler_local_trendfitting_results/'):
     """
 
     :param ph: phase
@@ -153,7 +153,7 @@ def save_phase(ph, fl, tm, i_, pfit, component, loc='Data/processed/kepler_local
     np.savetxt(loc+str(i_)+component+'.pfit', pfit.coef)
 
 
-def load_phase(i_, component, loc='Data/processed/kepler_local_trendfitting_results/'):
+def load_phase(i_, component, loc='../Data/processed/KIC10001167/kepler_local_trendfitting_results/'):
     """
     :param i_: integer designating phase to load
     :param component: string 'A' or 'B' designating first (full) or second eclipse
@@ -170,7 +170,7 @@ def load_phase(i_, component, loc='Data/processed/kepler_local_trendfitting_resu
             print('Datafile '+str(i_)+component+' is missing. Was probably skipped intentionally.')
 
 
-def load_kasoc_lc(loc='Data/processed/lcflux_kasoc_reduced_full.txt'):
+def load_kasoc_lc(loc='../Data/processed/KIC10001167/lcflux_kasoc_reduced_full.txt'):
     """
     Loads a previously corrected lightkurve using parts of KASOC filter (see kepler_lcurve_corr.py).
     """
@@ -181,7 +181,7 @@ def load_kasoc_lc(loc='Data/processed/lcflux_kasoc_reduced_full.txt'):
 
 # # # Start of Script # # #
 # Load data (Either previous trend fitted dataset, or KASOC datafile)
-load_previous = True
+load_previous = False
 if load_previous:
     flux_p1 = np.array([])
     flux_p2 = np.array([])
@@ -210,7 +210,7 @@ if load_previous:
             phase_p12 = np.append(phase_p12, phase2)
             time_p12 = np.append(time_p12, time2)
 else:
-    with fits.open("Data/unprocessed/kasoc/kplr008430105_kasoc-ts_llc_v1.fits") as hdul:
+    with fits.open("../Data/unprocessed/kasoc/kplr010001167_kasoc-ts_llc_v2.fits") as hdul:
         print(hdul.info())
         hdu = hdul[1]
         print(hdu.columns)
@@ -240,7 +240,7 @@ else:
     # Correct flux for transit
     flux_transit = flux / (corr_long + corr_short)
     # Do phase fold
-    period = 63.32713
+    period = 120.3903
     phase = np.mod(time, period) / period
 
     # # # Cut uncorrected light curve down to eclipses and do Local Trend Fitting # # #
@@ -266,6 +266,18 @@ else:
     time_p12 = np.array([])
     p1 = []
     p2 = []
+
+    if False:
+        for i in range(0, len(flux_split)):
+            plt.plot(phase_split[i], flux_split[i] / np.max(flux_split[i]), 'r*', markersize=1)
+        print(flux_transit.shape)
+        plt.plot(phase, flux_transit, 'b*', markersize=1)
+        plt.show(block=False)
+        plt.figure()
+        plt.plot(phase, corr_transit / np.max(np.abs(corr_transit)), 'b*', markersize=1)
+        plt.plot(phase, corr_long / np.max(np.abs(corr_long)), 'g*', markersize=1)
+        plt.plot(phase, corr_short / np.max(np.abs(corr_short)), 'r*', markersize=1)
+        plt.show()
 
     for i in range(0, len(phase_split)):
         current_phases = phase_split[i]
@@ -432,8 +444,8 @@ print(save_data.shape)
 save_data[:, 0] = time_p12
 save_data[:, 1] = m
 save_data[:, 2] = m_err
-np.savetxt('Data/processed/lcmag_kepler_ltf.txt', save_data)
+np.savetxt('../Data/processed/KIC10001167/lcmag_kepler_ltf.txt', save_data)
 save_data[:, 1] = flux_p12
 save_data[:, 2] = np.ones(flux_p12.shape) * error
-np.savetxt('Data/processed/lcflux_kepler_ltf.txt', save_data)
+np.savetxt('../Data/processed/KIC10001167/lcflux_kepler_ltf.txt', save_data)
 
