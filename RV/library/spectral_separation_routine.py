@@ -439,7 +439,7 @@ def spectral_separation_routine(
         time_values: np.ndarray, RV_guess_collection: np.ndarray, convergence_limit=1E-5, iteration_limit=10, plot=True,
         period=None, buffer_mask=None, rv_lower_limit=0.0, rv_proximity_limit=0.0, suppress_print=False,
         convergence_limit_scs=1E-7, return_unbuffered=True, save_plot_path=None,
-        ignore_component_B=False, save_additional_results=True
+        ignore_component_B=False, save_additional_results=True, save_location='../Data/additionals/separation_routine/'
 ):
     """
     Routine that separates component spectra and calculates radial velocities by iteratively calling
@@ -605,7 +605,7 @@ def spectral_separation_routine(
 
     if save_additional_results is True:
         save_separation_data(
-            'Data/additionals/separation_routine/', wavelength[~buffer_mask], time_values, RV_collection_A,
+            save_location, wavelength[~buffer_mask], time_values, RV_collection_A,
             RV_collection_B, RV_guess_collection, separated_flux_A[~buffer_mask], separated_flux_B[~buffer_mask],
             bf_fitres_A, bf_fitres_B, RVb_flags, inv_flux_templateA[~buffer_mask], inv_flux_templateB[~buffer_mask]
         )
@@ -928,7 +928,8 @@ def spectral_separation_routine_multiple_intervals(
         return_unbuffered: bool = True,
         ignore_component_B: bool = False,
         save_additional_results: bool = True,
-        suppress_print: bool or str = False
+        suppress_print: bool or str = False,
+        save_location='../Data/additionals/separation_routine/'
 
 ):
     (wl_interval_coll, flux_interval_coll, templA_interval_coll, templB_interval_coll,
@@ -952,7 +953,7 @@ def spectral_separation_routine_multiple_intervals(
             inv_flux_collection_, templateA_, templateB_, delta_v, ifitparamsA, ifitparamsB,
             wavelength_, time_values, RV_guess_collection, convergence_limit, iteration_limit, plot, period,
             buffer_mask_, rv_lower_limit, rv_proximity_limit, suppress_print, convergence_limit_scs, return_unbuffered,
-            save_plot_path, ignore_component_B, save_additional_results
+            save_plot_path, ignore_component_B, save_additional_results, save_location=save_location
         )
         results.append([RV_A, RV_B, sep_flux_A, sep_flux_B, wl_temp, ifitparams, RVb_flags])
     return results

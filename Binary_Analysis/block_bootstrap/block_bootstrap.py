@@ -129,7 +129,7 @@ def draw_lc_sample_variable_moving_blocks(
         draw_amount_lcs = np.bincount(share_lcs, minlength=len(subgroups_all_lightcurves))
         for k in range(0, len(subgroups_all_lightcurves)):
             if draw_amount_lcs[k] != 0:
-                current_sub_blocks = subgroups_all_lightcurves[k][i]
+                current_sub_blocks = np.copy(subgroups_all_lightcurves[k][i])
                 sub_block_indices = rng.integers(0, current_sub_blocks[0, 0, :].size, draw_amount_lcs[k])
                 drawn_sub_blocks.append(current_sub_blocks[:, :, sub_block_indices])
 

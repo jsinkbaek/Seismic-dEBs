@@ -43,6 +43,20 @@ flux_transit = flux / (corr_long + corr_short)
 period = 120.3903
 phase = np.mod(time, period) / period
 
+# Clip out thermal relaxation part
+mask = (time > 55068) & (time < 55110)
+time = time[~mask]
+flux_seism = flux_seism[~mask]
+err_seism = err_seism[~mask]
+corr_long = corr_long[~mask]
+corr_transit = corr_transit[~mask]
+corr_short = corr_short[~mask]
+corr_full = corr_full[~mask]
+corr_pos = corr_pos[~mask]
+flux = flux[~mask]
+flux_transit = flux_transit[~mask]
+phase = phase[~mask]
+
 
 if False:
     plt.figure()
@@ -137,7 +151,9 @@ if False:
 # # # Convert to magnitudes # # #
 m = -2.5*np.log10(flux_transit)
 # Measure spread within full eclipse as estimator of flux error
-rmse_measure_mask = (phase > 0.126) & (phase < 0.149)
+plt.plot(phase, flux_transit)
+plt.show()
+rmse_measure_mask = (phase > 0.483) & (phase < 0.5088)
 rmse_used_vals = flux_transit[rmse_measure_mask]
 mean_val = np.mean(rmse_used_vals)
 error = np.sqrt(np.sum((mean_val - rmse_used_vals)**2) / rmse_used_vals.size)
@@ -205,3 +221,7 @@ save_data[:, 0] = time
 save_data[:, 1] = m
 save_data[:, 2] = m_err
 np.savetxt('../Data/processed/KIC10001167/lcmag_kasoc_full.txt', save_data, header='Time\tMagnitude\tError', delimiter='\t')
+save_data[:, 1] = flux_transit
+save_data[:, 2] = error
+np.savetxt('../Data/processed/KIC10001167/lcflux_kasoc_full.txt', save_data, header='Time\tMagnitude\tError', delimiter='\t')
+

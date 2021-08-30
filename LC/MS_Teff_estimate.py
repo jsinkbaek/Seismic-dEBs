@@ -103,7 +103,7 @@ def luminosity_ratio(R1, R2, T1, T2, spectral_response, dw=0.001):
     """
     integrated_radiance_1 = fold_summation(dw, T1, spectral_response)
     integrated_radiance_2 = fold_summation(dw, T2, spectral_response)
-    return (R1/R2)**2 * (integrated_radiance_1/integrated_radiance_2)
+    return (R2/R1)**2 * (integrated_radiance_2/integrated_radiance_1)
 
 
 def find_T2(R1, R2, T1, L_ratio, spectral_response):
@@ -142,11 +142,11 @@ def read_jktebop_output(identifiers, loc='JKTEBOP/tess/param.out'):
             if isinstance(lsplit, list):
                 try:
                     for ident in identifiers:
-                        if lsplit[0] == ident and ident not in used_id:
+                        if ident in lsplit[0] and ident not in used_id:
                             used_id = np.append(used_id, ident)
                             name = np.append(name, lsplit[0])
                             val = np.append(val, np.double(lsplit[-1]))
-                        elif lsplit[0] == ident and ident in used_id:
+                        elif ident in lsplit[0] and ident in used_id:
                             replace_idx = np.argwhere(name == ident)
                             val[replace_idx] = np.double(lsplit[-1])
                 except IndexError:
@@ -262,7 +262,7 @@ def interpolated_LD_param(logg, Teff, MH, mTurb, logg_range=np.array([0, 7]), Tr
         raise IOError("Unknown datafile structure or wrongly defined location.")
 
     eval_points = np.reshape(eval_points, (1, eval_points.size))
-    res = interp.griddata(points, vals, eval_points, method='cubic')
+    res = interp.griddata(points, vals, eval_points, method='linear')
 
     return res[0, :]
 
@@ -273,27 +273,13 @@ def save_LD_to_infile(LD_param_MS=None, LD_param_RG=None, loc_infile='JKTEBOP/te
     One or both components can be filled at a time.
     """
     if isinstance(LD_param_MS, np.ndarray) and isinstance(LD_param_RG, np.ndarray):
-        LD_a = np.array([LD_param_MS[0], LD_param_RG[0]])
-        LD_b = np.array([LD_param_MS[1], LD_param_RG[1]])
+        LD_a = np.array([LD_param_RG[0], LD_param_MS[0]])
+        LD_b = np.array([LD_param_RG[1], LD_param_MS[1]])
         with open(loc_infile, "r") as f:
             list_of_lines = f.readlines()
             list_of_lines[7] = " " + str(LD_a[0]) + " " + str(LD_a[1]) \
                                + "    LD star A (linear coeff)   LD star B (linear coeff)\n"
             list_of_lines[8] = " " + str(LD_b[0]) + " " + str(LD_b[1]) \
-                               + "    LD star A (nonlin coeff)   LD star B (nonlin coeff)\n"
-    elif isinstance(LD_param_MS, np.ndarray):
-        with open(loc_infile, "r") as f:
-            list_of_lines = f.readlines()
-            list_of_lines[7] = " " + str(LD_param_MS[0]) + " " + list_of_lines[7].split()[1] \
-                               + "    LD star A (linear coeff)   LD star B (linear coeff)\n"
-            list_of_lines[8] = " " + str(LD_param_MS[1]) + " " + list_of_lines[8].split()[1] \
-                               + "    LD star A (nonlin coeff)   LD star B (nonlin coeff)\n"
-    elif isinstance(LD_param_RG, np.ndarray):
-        with open(loc_infile, "r") as f:
-            list_of_lines = f.readlines()
-            list_of_lines[7] = " " + list_of_lines[7].split()[0] + " " + str(LD_param_RG[0])\
-                               + "    LD star A (linear coeff)   LD star B (linear coeff)\n"
-            list_of_lines[8] = " " + list_of_lines[8].split()[0] + " " + str(LD_param_RG[1]) \
                                + "    LD star A (nonlin coeff)   LD star B (nonlin coeff)\n"
     else:
         raise ValueError("No LD parameters to update were given.")
@@ -302,7 +288,7 @@ def save_LD_to_infile(LD_param_MS=None, LD_param_RG=None, loc_infile='JKTEBOP/te
         f.writelines(list_of_lines)
 
 
-def jktebop_iterator(n_iter=4, loc_infile='JKTEBOP/tess/infile.TESS', loc_jktebop='JKTEBOP/tess/',
+def jktebop_iterator(T_RG, MH, mTurb, n_iter=4,  loc_infile='JKTEBOP/tess/infile.TESS', loc_jktebop='JKTEBOP/tess/',
                      loc_ld_table='Data/tables/tess_ldquad_table25.dat'):
     """
     Calls JKTEBOP to perform fit, extracts key parameters, calculates MS effective temperature,
@@ -313,29 +299,24 @@ def jktebop_iterator(n_iter=4, loc_infile='JKTEBOP/tess/infile.TESS', loc_jktebo
     :param loc_ld_table: location of Limb darkening table
     """
     print('JKTEBOP folder:      ', loc_jktebop)
-    T_RG = 5042
-    MH = -0.5
-    mTurb = 2.0
-    for i in range(0, n_iter+1):
+    for i in range(0, n_iter):
         print("")
         print("Iteration ", i)
         subprocess.run("cd " + loc_jktebop + " && make clean -s && make -s", shell=True)
         _, jktebop_vals = read_jktebop_output(['Log surface gravity of star A (cgs):',
                                                'Log surface gravity of star B (cgs):', 'Radius of star A (Rsun)',
-                                               'Radius of star B (Rsun)', 'Stellar light ratio (phase 0.1706):'],
+                                               'Radius of star B (Rsun)', 'Stellar light ratio'],
                                                loc=loc_jktebop+'param.out')
-        [L_ratio, R_MS, R_RG, loggMS, loggRG] = jktebop_vals
+        [L_ratio, R_RG, R_MS, loggRG, loggMS] = jktebop_vals
         print("Using T_RG=", T_RG, "  MH=", MH, "  mTurb=", mTurb)
         print("log g MS         ", loggMS)
         print("log g RG         ", loggRG)
         print("Radius MS        ", R_MS)
         print("Radius RG        ", R_RG)
         print("L_ratio          ", L_ratio)
-        if loc_jktebop=='../Binary_Analysis/JKTEBOP/tess/' or loc_jktebop=='../Binary_Analysis/JKTEBOP/tess_ltf':
+        if 'tess' in loc_jktebop or 'TESS' in loc_infile:
             spectral_response=tess_spectral_response
-        elif loc_jktebop=='../Binary_Analysis/JKTEBOP/kepler_kasfit/' \
-                or loc_jktebop=='../Binary_Analysis/JKTEBOP/kepler_kasoc/' \
-                or loc_jktebop=='../Binary_Analysis/JKTEBOP/kepler_LTF/':
+        elif 'kepler' in loc_jktebop or 'KEPLER' in loc_infile:
             spectral_response=kepler_spectral_response
         else:
             raise AttributeError("Unknown spectral response")
@@ -350,12 +331,18 @@ def jktebop_iterator(n_iter=4, loc_infile='JKTEBOP/tess/infile.TESS', loc_jktebo
 
 def main():
     # T2 = find_T2(7.513, 0.727, 5042, 61.16, kepler_spectral_response)
-    # print(T2)
+    T_MS = find_T2(12.78589, 0.97445, 4700, 0.01892, kepler_spectral_response)
+    print(T_MS)
     # print(interpolated_LD_param(4.62640, T2, -0.5, 2.0, loc='Data/tables/kepler_sing_table.dat'))
     # print(interpolated_LD_param(2.80835, 5042, -0.5, 2.0, loc='Data/tables/kepler_sing_table.dat'))
-    jktebop_iterator(n_iter=1, loc_infile='../Binary_Analysis/JKTEBOP/tess/infile.TESS',
-                     loc_jktebop='../Binary_Analysis/JKTEBOP/tess/',
-                     loc_ld_table='Data/tables/tess_ldquad_table25.dat')
+    # jktebop_iterator(n_iter=1, loc_infile='../Binary_Analysis/JKTEBOP/tess/infile.TESS',
+    #                  loc_jktebop='../Binary_Analysis/JKTEBOP/tess/',
+    #                  loc_ld_table='Data/tables/tess_ldquad_table25.dat')
+    # jktebop_iterator(
+    #     4700, -0.69, 2.0, n_iter=4,
+    #     loc_infile='../Binary_Analysis/JKTEBOP/gaulme2016/KIC10001167/kepler_kasoc/infile.KEPLER',
+    #     loc_jktebop='../Binary_Analysis/JKTEBOP/gaulme2016/KIC10001167/kepler_kasoc/',
+    #     loc_ld_table='Data/tables/kepler_sing_table.dat')
     # jktebop_iterator(n_iter=1, loc_infile='JKTEBOP/kepler_LTF/infile.KEPLER', loc_jktebop='JKTEBOP/kepler_LTF/',
     #                  loc_ld_table='Data/tables/kepler_sing_table.dat')
 

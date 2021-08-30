@@ -16,6 +16,7 @@ from copy import deepcopy
 import RV.library.calculate_radial_velocities as cRV
 
 matplotlib.rcParams.update({'font.size': 25})
+print(os.getcwd())
 
 # # # # Set variables for script # # # #
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -42,28 +43,26 @@ plot = False
 file_exclude_list = []  # ['FIBl060068_step011_merge.fits']
 
 use_for_spectral_separation_A = [
-    'FIBi230039_step011_merge.fits', 'FIBi240074_step011_merge.fits',
-    'FIBi240077_step011_merge.fits', 'FIBi300035_step011_merge.fits', 'FIBj010039_step011_merge.fits',
-    'FIBj040096_step011_merge.fits', 'FIBj150077_step011_merge.fits', 'FIBk030040_step011_merge.fits',
+    'FIBi240074_step011_merge.fits', 'FIBi230039_step011_merge.fits', 'FIDh160097_step011_merge.fits',
+    'FIBi240077_step011_merge.fits', 'FIDh200065_step011_merge.fits', 'FIDh170096_step011_merge.fits',
+    'FIBj150077_step011_merge.fits', 'FIBk030040_step011_merge.fits',
     'FIBk040034_step011_merge.fits', 'FIBk050060_step011_merge.fits', 'FIBk060008_step011_merge.fits',
-    'FIBk140072_step011_merge.fits', 'FIBk230065_step011_merge.fits', 'FIBl010111_step011_merge.fits',
     'FIBl050130_step011_merge.fits', 'FIBl080066_step011_merge.fits', 'FIDg070066_step011_merge.fits',
     'FIDg080034_step011_merge.fits', 'FIDh100076_step011_merge.fits', 'FIDh150097_step011_merge.fits',
-    'FIDh160097_step011_merge.fits', 'FIDh170096_step011_merge.fits', 'FIDh200065_step011_merge.fits',
-    'FIEh020096_step012_merge.fits', 'FIEh060100_step012_merge.fits'
+    'FIEh020096_step012_merge.fits', 'FIEh060100_step012_merge.fits', 'FIBk140072_step011_merge.fits'
     ]
+# not used: FIBk230065, FIBj040096, FIBi300035, FIBj010039, FIBl010111. See examine_spectra.py for reasons
 
 use_for_spectral_separation_B = [
-    'FIBi230039_step011_merge.fits', 'FIBi240074_step011_merge.fits',
-    'FIBi240077_step011_merge.fits', 'FIBi300035_step011_merge.fits', 'FIBj010039_step011_merge.fits',
-    'FIBj040096_step011_merge.fits', 'FIBj150077_step011_merge.fits', 'FIBk030040_step011_merge.fits',
+    'FIBi240074_step011_merge.fits', 'FIBi230039_step011_merge.fits', 'FIDh160097_step011_merge.fits',
+    'FIBi240077_step011_merge.fits', 'FIDh200065_step011_merge.fits', 'FIDh170096_step011_merge.fits',
+    'FIBj150077_step011_merge.fits', 'FIBk030040_step011_merge.fits',
     'FIBk040034_step011_merge.fits', 'FIBk050060_step011_merge.fits', 'FIBk060008_step011_merge.fits',
-    'FIBk140072_step011_merge.fits', 'FIBk230065_step011_merge.fits', 'FIBl010111_step011_merge.fits',
     'FIBl050130_step011_merge.fits', 'FIBl080066_step011_merge.fits', 'FIDg070066_step011_merge.fits',
     'FIDg080034_step011_merge.fits', 'FIDh100076_step011_merge.fits', 'FIDh150097_step011_merge.fits',
-    'FIDh160097_step011_merge.fits', 'FIDh170096_step011_merge.fits', 'FIDh200065_step011_merge.fits',
-    'FIEh020096_step012_merge.fits', 'FIEh060100_step012_merge.fits'
+    'FIEh020096_step012_merge.fits', 'FIEh060100_step012_merge.fits', 'FIBk140072_step011_merge.fits'
     ]
+
 delta_v = 1.0          # interpolation resolution for spectrum in km/s
 speed_of_light = scc.c / 1000       # in km/s
 estimate_RVb_from_RVa = True        # defines if a guess on RVb should be made in case it cannot be picked up during
@@ -86,7 +85,8 @@ limbd_B = estimate_linear_limbd(wavelength_RV_limit, logg_B, Teff_B, MH_B, mTur_
 ifitpar_A = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=100, limbd_coef=limbd_A,
                                  smooth_sigma=2.0, bf_velocity_span=bf_velocity_span)
 ifitpar_B = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=20, limbd_coef=limbd_B,
-                                 smooth_sigma=4.0, bf_velocity_span=bf_velocity_span)
+                                 smooth_sigma=4.0, bf_velocity_span=bf_velocity_span,
+                                 ignore_at_phase=(0.4152-0.02, 0.4152+0.02))
 
 # # Template Spectra # #
 template_spectrum_path_A = '../Data/template_spectra/4750_25_m05p00.ms.fits'
@@ -144,42 +144,25 @@ for filename in os.listdir(data_path):
         flux_collection_list.append(flux)
         i += 1
 
-# Override:
-# spectral_separation_array_B = np.array([2, 3, 4, 6, 8, 10, 13, 14, 18, 20])
-
 
 ifitpar_A.use_for_spectral_separation = spectral_separation_array_A
 ifitpar_B.use_for_spectral_separation = spectral_separation_array_B
-
-
-# # Verify RA and DEC # #
-RA, DEC = RA_array[0], DEC_array[0]
-for i in range(0, len(RA_array)):
-    if RA_array[i] == RA and DEC_array[i] == DEC:
-        pass
-    else:
-        warnings.warn("Warning: Either not all RA values equal, or not all DEC values equal")
-        print('RA_array:  ', RA_array)
-        print('DEC_array: ', DEC_array)
 
 # # # Calculate Barycentric RV Corrections # # #
 times = Time(date_array, scale='utc', location=observatory_location)
 times.format = 'jd'
 times.out_subfmt = 'long'
-print()
-print("RV correction")
-bc_rv_cor, warning, _ = get_BC_vel(times, ra=RA, dec=DEC, starname=stellar_target, ephemeris='de432s',
-                                   obsname=observatory_name)
+bc_rv_cor = np.empty((times.size, ))
+for i in range(0, bc_rv_cor.size):
+    bc_rv_cor[i], _, _ = get_BC_vel(JDUTC=times[i], ra=RA_array[i], dec=DEC_array[i], starname=stellar_target, ephemeris='de432s',
+                                    obsname=observatory_name)
 bc_rv_cor = bc_rv_cor/1000      # from m/s to km/s
-print(bc_rv_cor)
-print(warning)
 
 # # # Calculate JDUTC to BJDTDB correction # # #
-print()
-print("Time conversion to BJDTDB")
-bjdtdb, warning, _ = utc_tdb.JDUTC_to_BJDTDB(times, ra=RA, dec=DEC, starname=stellar_target, obsname=observatory_name)
-print(bjdtdb)
-print(warning)
+bjdtdb = np.empty((times.size, ))
+for i in range(0, bjdtdb.size):
+    bjdtdb[i], _, _ = utc_tdb.JDUTC_to_BJDTDB(JDUTC=times[i], ra=RA_array[i], dec=DEC_array[i], starname=stellar_target, ephemeris='de432s',
+                                              obsname=observatory_name)
 
 # # Plot # #
 if plot:
@@ -297,16 +280,16 @@ if True:
         wavelength_buffered, wavelength_intervals_full, flux_collection_inverted_buffered,
         flux_template_A_inverted_buffered,
         flux_template_B_inverted_buffered, delta_v, ifitpar_A, ifitpar_B, RV_guess_collection,
-        bjdtdb - (2400000 + 54976.6348),
+        bjdtdb - (2400000 + 55028.0908),
         combine_intervals, wavelength_buffer_size, rv_lower_limit, convergence_limit=1E-2, iteration_limit=8,
         period=orbital_period_estimate, plot=True, return_unbuffered=False, save_additional_results=True,
-        suppress_print='scs'
+        suppress_print='scs', save_location='../Data/additionals/separation_routine/10001167/'
     )
 
 # # # Calculate error # # #
 # RV_A, RV_B, separated_flux_A_buffered, separated_flux_B_buffered, _, _, _ = interval_results[0]
-_, RV_A = np.loadtxt('Data/additionals/separation_routine/4500_5825_rvA.txt', unpack=True)
-_, RV_B, _ = np.loadtxt('Data/additionals/separation_routine/4500_5825_rvB.txt', unpack=True)
+_, RV_A = np.loadtxt('../Data/additionals/separation_routine/10001167/4500_5825_rvA.txt', unpack=True)
+_, RV_B, _ = np.loadtxt('../Data/additionals/separation_routine/10001167/4500_5825_rvB.txt', unpack=True)
 
 # # Separate component spectra and calculate RVs for each interval # #
 RV_guess_collection[:, 0] = RV_A
@@ -314,8 +297,8 @@ RV_guess_collection[:, 1] = RV_B
 interval_results = ssr.spectral_separation_routine_multiple_intervals(
      wavelength_buffered, wavelength_intervals, flux_collection_inverted_buffered,
      flux_template_A_inverted_buffered,
-     flux_template_B_inverted_buffered, delta_v, ifitpar_A, ifitpar_B, RV_guess_collection, bjdtdb-(2400000+54976.6348),
+     flux_template_B_inverted_buffered, delta_v, ifitpar_A, ifitpar_B, RV_guess_collection, bjdtdb-(2400000+55028.0908),
      combine_intervals, wavelength_buffer_size, rv_lower_limit, convergence_limit=2E-2, iteration_limit=8,
      period=orbital_period_estimate, plot=False, return_unbuffered=False, save_additional_results=True,
-     suppress_print='scs'
+     suppress_print='scs', save_location='../Data/additionals/separation_routine/10001167/'
 )

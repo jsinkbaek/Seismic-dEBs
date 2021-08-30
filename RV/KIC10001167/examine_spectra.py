@@ -10,9 +10,9 @@ stellar_target = "kic10001167"
 
 
 spectra_folder_path = '../Data/unprocessed/NOT/KIC10001167/'
-reduced_spectra_folder_path = '../Data/processed/AFS_algorithm/Normalized_Spectrum/'
+# reduced_spectra_folder_path = '../Data/processed/AFS_algorithm/Normalized_Spectrum/'
 filename_identifier = 'merge.fits'
-reduced_filename_identifier = '_reduced_set.dat'
+# reduced_filename_identifier = '_reduced_set.dat'
 
 filename_list = []
 flux_collection_list = []
@@ -21,10 +21,10 @@ date_array = []
 RA_array = np.array([])
 DEC_array = np.array([])
 
-period = 63.33
+period = 120.3903
 
 eclipse_primary = 0.0
-eclipse_secondary = 0.341
+eclipse_secondary = 0.4152032
 approximate_eclipse_hwidth= 0.02
 
 
@@ -33,6 +33,7 @@ for filename in os.listdir(spectra_folder_path):
         _, _, date, ra, dec = spf.load_program_spectrum(spectra_folder_path + filename)
 
         filename_bulk = filename[:filename.rfind(".fits")]
+        """
         wavelength, flux = np.loadtxt(reduced_spectra_folder_path+filename_bulk+reduced_filename_identifier,
                                       unpack=True)
 
@@ -43,9 +44,11 @@ for filename in os.listdir(spectra_folder_path):
 
         wavelength_collection_list.append(wavelength)
         flux_collection_list.append(flux)
+        """
         date_array = np.append(date_array, date)
         RA_array = np.append(RA_array, ra * 15.0)  # converts unit
         DEC_array = np.append(DEC_array, dec)
+
         if "step011" in filename:
             filename_list.append(filename[:filename.rfind("_step011_merge.fits")])
         else:
@@ -57,25 +60,23 @@ RA, DEC = RA_array[0], DEC_array[0]
 times = Time(date_array, scale='utc', location=observatory_location)
 times.format = 'jd'
 times.out_subfmt = 'long'
-bjdtdb, _, _ = utc_tdb.JDUTC_to_BJDTDB(times, ra=RA, dec=DEC, starname=stellar_target, obsname=observatory_name)
-
-# # Extra observation date
-time_extra = Time('2021-08-02T23:03:19', scale='utc', location=observatory_location)
-time_extra.format = 'jd'
-time_extra.out_subfmt = 'long'
-bjd_extra, _, _ = utc_tdb.JDUTC_to_BJDTDB(time_extra, ra=RA, dec=DEC, starname=stellar_target, obsname=observatory_name)
-
+bjdtdb = np.empty((times.size, ))
+for i in range(0, times.size):
+    bjdtdb[i], _, _ = utc_tdb.JDUTC_to_BJDTDB(times[i], ra=RA_array[i], dec=DEC_array[i], starname=stellar_target, obsname=observatory_name)
 
 # Phases
-model_filename = '../../Binary_Analysis/JKTEBOP/gaulme2016/KIC8430105/kepler_LTF/model.out'
-bjdtdb -= 2400000 + 54976.6348
-phase_model, rv_Bm, rv_Am = np.loadtxt(model_filename, usecols=(0, 6, 7), unpack=True)
+model_filename = '../../Binary_Analysis/JKTEBOP/gaulme2016/KIC10001167/kepler_kasoc/model.out'
+ephemeris_timebase = 55028.0908
+system_rv = -103.474
+bjdtdb -= 2400000 + ephemeris_timebase
+phase_model, rv_Am, rv_Bm = np.loadtxt(model_filename, usecols=(0, 6, 7), unpack=True)
 phase_spectra = np.mod(bjdtdb, period) / period
 
 # Sort
 sort_idx = np.argsort(phase_spectra)
 filenames_sorted = np.array(filename_list)[sort_idx]
 phase_spectra_sorted = phase_spectra[sort_idx]
+print(bjdtdb)
 
 # RV plot
 fig_rv = plt.figure(figsize=(16, 9))
@@ -83,8 +84,8 @@ gs_rv = fig_rv.add_gridspec(1, 1)
 ax_rv = fig_rv.add_subplot(gs_rv[:, :])
 
 
-ax_rv.plot(phase_model, rv_Am-16.053, 'b')
-ax_rv.plot(phase_model, rv_Bm-16.053, 'r')
+ax_rv.plot(phase_model, rv_Am-system_rv, 'b')
+ax_rv.plot(phase_model, rv_Bm-system_rv, 'r')
 ax_rv.plot(phase_spectra, np.zeros(phase_spectra.shape), 'k*', markersize=5)
 for i in range(0, filenames_sorted.size):
     ax_rv.annotate(filenames_sorted[i], (phase_spectra_sorted[i], 0),
@@ -103,10 +104,11 @@ ax_rv.plot([eclipse_secondary-approximate_eclipse_hwidth, eclipse_secondary-appr
            '--', color='gray')
 ax_rv.plot([eclipse_secondary+approximate_eclipse_hwidth, eclipse_secondary+approximate_eclipse_hwidth], [-40, 50],
            '--', color='gray')
-ax_rv.plot(np.mod(bjd_extra - 2454976.6348, period)/period, 0, 'g*')
+# ax_rv.plot(np.mod(bjd_extra - 2454976.6348, period)/period, 0, 'g*')
 
 plt.show(block=True)
 
+"""
 # Spectrum plots
 for i in range(0, filenames_sorted.size, 2):
     fig_spectra = plt.figure(figsize=(16, 9))
@@ -127,3 +129,4 @@ for i in range(0, filenames_sorted.size, 2):
     plt.show(block=False)
 
 plt.show(block=True)
+"""

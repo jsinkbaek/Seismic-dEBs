@@ -169,7 +169,7 @@ def load_routine_results(folder_path: str, filename_bulk_list: list):
     return routine_results
 
 
-def plot_rv_and_separated_spectra(evaluation_data: RoutineResults, period: float, block=True):
+def plot_rv_and_separated_spectra(evaluation_data: RoutineResults, period: float, block=False):
     matplotlib.rcParams.update({'font.size': 20})
     for i in range(0, len(evaluation_data.interval_results)):
         fig = plt.figure(figsize=(16, 9))
@@ -180,6 +180,7 @@ def plot_rv_and_separated_spectra(evaluation_data: RoutineResults, period: float
 
         phase_A = np.mod(evaluation_data.time_values_A[i], period) / period
         phase_B = np.mod(evaluation_data.time_values_B[i], period) / period
+        print(evaluation_data.time_values_A[i])
 
         flag_mask = evaluation_data.RV_B_flags[i].astype(bool)
 
@@ -202,9 +203,10 @@ def plot_rv_and_separated_spectra(evaluation_data: RoutineResults, period: float
         plt.tight_layout()
 
     plt.show(block=block)
+    return ax1, ax2, ax3
 
 
-def plot_smoothed_broadening_functions(evaluation_data: RoutineResults, block=True):
+def plot_smoothed_broadening_functions(evaluation_data: RoutineResults, block=False):
     matplotlib.rcParams.update({'font.size': 25})
     for i in range(0, len(evaluation_data.interval_results)):
         fig = plt.figure(figsize=(16, 9))
