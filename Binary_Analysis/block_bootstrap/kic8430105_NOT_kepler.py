@@ -72,7 +72,7 @@ param_names = ['sb_ratio', 'sum_radii', 'ratio_radii', 'incl', 'ecc', 'perilong'
 #     lc_blocks, rvA, rvB, 1000, param_names, n_jobs=10, block_midtime=midtimes, rvA_model=rvA_model, rvB_model=rvB_model
 # )
 mean_vals, std_vals, vals = boot.block_bootstrap_variable_moving_blocks(
-    lc_blocks, rvA, rvB, 2000, param_names,
+    lc_blocks, rvA, rvB, 5000, param_names,
     subgroup_divisions=(1, 2, 3, 4, 5, 6), period=period,
     n_jobs=11,
     rvA_model=rvA_model, rvB_model=rvB_model

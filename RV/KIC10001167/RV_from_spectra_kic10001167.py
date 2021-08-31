@@ -31,8 +31,8 @@ wavelength_RV_limit = (4450, 7000)              # Ångström, the actual spectru
 wavelength_buffer_size = 25                     # Ångström, padding included at ends of spectra. Useful when doing
                                                 # wavelength shifts with np.roll()
 wavelength_intervals_full = [(4500, 5825)]
-wavelength_intervals = [(4500, 4765), (4765, 5030), (5030, 5295), (5295, 5560), (5560, 5825)]
-# wavelength_intervals = [(5985, 6250), (6575, 6840)]
+# wavelength_intervals = [(4500, 4765), (4765, 5030), (5030, 5295), (5295, 5560), (5560, 5825)]
+wavelength_intervals = [(5560, 5825), (5985, 6250), (6575, 6840)]
 combine_intervals = None
 # telluric lines: 5885-5970, 6266-6330, 6465-6525, 6850-7050
 # relevant balmer lines: 6563 (H alpha), 4861 (H beta)
@@ -275,7 +275,7 @@ RV_guesses_B = -RV_guesses_A * 25.9/25.1  # (mass_A_estimate / mass_B_estimate)
 RV_guess_collection[:, 1] = RV_guesses_B
 
 # # #  Separate component spectra and calculate RVs iteratively # # #
-if True:
+if False:
     interval_results = ssr.spectral_separation_routine_multiple_intervals(
         wavelength_buffered, wavelength_intervals_full, flux_collection_inverted_buffered,
         flux_template_A_inverted_buffered,
