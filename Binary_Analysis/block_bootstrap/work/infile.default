@@ -19,7 +19,7 @@
  1  0             Adjust SURFBRIGHT2  or  THIRDLIGHT     (0, 1, 2, 3)
  0  0             Adjust LD-LIN starA or  LD-LIN starB   (0, 1, 2, 3)
  0  0             Adjust LD-NONLIN A  or  LD-NONLIN B    (0, 1, 2, 3)
- -1 -1             Adjust REFLECTION A or  REFLECTION B   (-1,0,1,2,3)
+ 0  0             Adjust REFLECTION A or  REFLECTION B   (-1,0,1,2,3)
  0  1             Adjust PHASESHIFT   or  SCALE FACTOR   (0, 1, 2, 3)
  0  1             Adjust PERIOD       or  T(pri.ecl.)    (0, 1, 2, 3)
  lc.sample        Name of file containing light curve                

@@ -5,12 +5,38 @@ from shutil import copy2
 import subprocess
 from shutil import rmtree
 
-outfile_row = {'sb_ratio': 184, 'sum_radii': 185, 'ratio_radii': 186, 'limbd_A1': 187, 'limbd_B1': 188, 'incl': 189,
-               'ecc': 190, 'perilong': 191, 'grav_dark_A': 192, 'grav_dark_B': 193, 'refl_light_A': 194,
-               'refl_light_B': 195,'phot_mass_ratio': 196, '3_light': 197, 'phase_corr': 198, 'light_scale_factor': 199,
-               'integration_ring': 200, 'period': 201, 'ephemeris_tbase': 202, 'limbd_A2': 203, 'limbd_B2': 204,
-               'rv_amp_A': 205, 'rv_amp_B': 206, 'system_rv_A': 207, 'system_rv_B': 208, 'sma_rsun': 236,
-               'mass_A': 239, 'mass_B': 240, 'radius_A': 241, 'radius_B': 242, 'logg_A': 243, 'logg_B': 244}
+outfile_row = {'sb_ratio': '1  Surf. bright. ratio',
+               'sum_radii': '2  Sum of frac radii',
+               'ratio_radii': '3  Ratio of the radii',
+               'limbd_A1': '4  Limb darkening A1',
+               'limbd_B1': '5  Limb darkening B1',
+               'incl': '6  Orbit inclination',
+               'ecc': '7  Eccentricity',
+               'perilong': '8  Periastronlongitude',
+               'grav_dark_A': '9  Grav darkening A',
+               'grav_dark_B': '10  Grav darkening B',
+               'refl_light_A': '10  Grav darkening B',
+               'refl_light_B': '12  Reflected light B',
+               'phot_mass_ratio': '13  Phot mass ratio',
+               '3_light': '15  Third light (L_3)',
+               'phase_corr': '16  Phase correction',
+               'light_scale_factor': '17  Light scale factor',
+               'integration_ring': '18  Integration ring',
+               'period': '19  Orbital period (P)',
+               'ephemeris_tbase': '20  Ephemeris timebase',
+               'limbd_A2': '21  Limb darkening A2',
+               'limbd_B2': '24  Limb darkening B2',
+               'rv_amp_A': '27  RV amplitude star A',
+               'rv_amp_B': '28  RV amplitude star B',
+               'system_rv_A': '29  Systemic RV star A',
+               'system_rv_B': '30  Systemic RV star B',
+               'sma_rsun': 'Orbital semimajor axis (Rsun):',
+               'mass_A': 'Mass of star A (Msun)',
+               'mass_B': 'Mass of star B (Msun)',
+               'radius_A': 'Radius of star A (Rsun)',
+               'radius_B': 'Radius of star B (Rsun)',
+               'logg_A': 'Log surface gravity of star A (cgs):',
+               'logg_B': 'Log surface gravity of star B (cgs):'}
 
 outfile_col = {'sb_ratio': 4, 'sum_radii': 5, 'ratio_radii': 5, 'limbd_A1': 4, 'limbd_B1': 4, 'incl': 3,
                'ecc': 2, 'perilong': 2, 'grav_dark_A': 3, 'grav_dark_B': 3, 'refl_light_A': 4, 'refl_light_B': 4,
@@ -26,21 +52,18 @@ def pull_parameters_from_outfile(folder: str, parameter_names: List[str]):
     cols = [outfile_col[x] for x in parameter_names]
     with open(folder+'param.out', 'r') as f:
         list_of_lines = f.readlines()
-        for i, line in enumerate(list_of_lines):
-            if i == 184 and line == 'The minimisation algorithm cannot go beyond 90 degrees, so the solution has been':
-                rows = [x + 4 for x in rows]
-                print(f'Check if inclination warning is in folder {folder}')
-            if i in rows:
-                index = rows.index(i)
-                split = line.split()
-                try:
-                    parameter_values[index] = float(split[cols[index]])
-                except ValueError as ve:
-                    print(ve)
-                    print('folder:', folder)
-                    print('Column index:', cols[index])
-                    print('Current row:', i)
-                    return None
+        for line in list_of_lines:
+            for i in range(0, len(rows)):
+                if rows[i] in line:
+                    split = line.split()
+                    try:
+                        parameter_values[i] = float(split[cols[i]])
+                    except ValueError as ve:
+                        print(ve)
+                        print('folder:', folder)
+                        print('Column index:', cols[i])
+                        print('Current parameter:', rows[i])
+                        return None
     return parameter_values
 
 

@@ -66,13 +66,13 @@ midtimes = [midtimes_secondary, midtimes_primary]
 
 param_names = ['sb_ratio', 'sum_radii', 'ratio_radii', 'incl', 'ecc', 'perilong', 'light_scale_factor',
                'ephemeris_tbase', 'rv_amp_A', 'rv_amp_B', 'system_rv_A', 'system_rv_B', 'mass_A', 'mass_B', 'radius_A',
-               'radius_B', 'logg_A', 'logg_B']
+               'radius_B', 'logg_A', 'logg_B', 'sma_rsun']
 
 # mean_vals, std_vals, vals = boot.block_bootstrap(
 #     lc_blocks, rvA, rvB, 1000, param_names, n_jobs=10, block_midtime=midtimes, rvA_model=rvA_model, rvB_model=rvB_model
 # )
 mean_vals, std_vals, vals = boot.block_bootstrap_variable_moving_blocks(
-    lc_blocks, rvA, rvB, 5000, param_names,
+    lc_blocks, rvA, rvB, 1000, param_names,
     subgroup_divisions=(1, 2, 3, 4, 5, 6), period=period,
     n_jobs=11,
     rvA_model=rvA_model, rvB_model=rvB_model
