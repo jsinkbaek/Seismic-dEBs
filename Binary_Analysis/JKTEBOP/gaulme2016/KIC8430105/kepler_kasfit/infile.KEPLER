@@ -1,16 +1,16 @@
  4  5.0           Task to do (from 2 to 9)   Integ. ring size (deg)  
- 0.09532  10.215   Sum of the radii           Ratio of the radii      
- 89.01	 1.0      Orbital inclination (deg)  Mass ratio of system    
- 10.2554  170.73   ecosw or eccentricity      esinw or periastron long
+ 0.097356  0.100116   Sum of the radii           Ratio of the radii      
+ 89.184	 -1.0      Orbital inclination (deg)  Mass ratio of system    
+ 10.2566  349.2488   ecosw or eccentricity      esinw or periastron long
  0.0  0.0         Gravity darkening (star A) Grav darkening (star B) 
- 0.6014  0.0029667      Surface brightness ratio   Amount of third light   
+ 1.63576  0.0029667      Surface brightness ratio   Amount of third light   
  quad  quad       LD law type for star A     LD law type for star B  
- 0.35905591744194604 0.47632855165031573    LD star A (linear coeff)   LD star B (linear coeff)
- 0.2835755424382143 0.21105894459121693    LD star A (nonlin coeff)   LD star B (nonlin coeff)
+ 0.4763346833376144 0.3690316127181351    LD star A (linear coeff)   LD star B (linear coeff)
+ 0.21105572653108595 0.27802136313581255    LD star A (nonlin coeff)   LD star B (nonlin coeff)
  0.0  0.0         Reflection effect star A   Reflection effect star B
  0.0  0.0         Phase of primary eclipse   Light scale factor (mag)
- 63.32713         Orbital period of eclipsing binary system (days) 
- 54976.635        Reference time of primary minimum (HJD)          
+ 63.3270949830      Orbital period of eclipsing binary system (days) 
+ 54998.2349        Reference time of primary minimum (HJD)          
  5.0              Sigma value to reject discrepant observations    
  1  1             Adjust RADII SUM    or  RADII RATIO    (0, 1, 2, 3)
  1  0             Adjust INCLINATION  or  MASSRATIO      (0, 1, 2, 3)
@@ -19,16 +19,16 @@
  1  0             Adjust SURFBRIGHT2  or  THIRDLIGHT     (0, 1, 2, 3)
  0  0             Adjust LD-LIN starA or  LD-LIN starB   (0, 1, 2, 3)
  0  0             Adjust LD-NONLIN A  or  LD-NONLIN B    (0, 1, 2, 3)
- -1 -1             Adjust REFLECTION A or  REFLECTION B   (-1,0,1,2,3)
+ 0  0             Adjust REFLECTION A or  REFLECTION B   (-1,0,1,2,3)
  0  1             Adjust PHASESHIFT   or  SCALE FACTOR   (0, 1, 2, 3)
- 0  1             Adjust PERIOD       or  T(pri.ecl.)    (0, 1, 2, 3)
+ 1  1             Adjust PERIOD       or  T(pri.ecl.)    (0, 1, 2, 3)
  lc.KEPLER        Name of file containing light curve                
  param.out        Name of output parameter file                      
  lc.out           Name of output light curve file                  
  model.out        Name of output model light curve fit file        
  
- rv1 rvA.dat rvA.out 43.668 16.025 1 1
- rv2 rvB.dat rvB.out 27.527 16.025 1 -1
+ rv1 rvA.dat rvA.out 27.6884 16.025 1 1
+ rv2 rvB.dat rvB.out 42.6800 16.025 1 1
 
 NUMI 4 1800
   

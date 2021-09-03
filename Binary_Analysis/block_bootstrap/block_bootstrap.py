@@ -156,7 +156,8 @@ def draw_lc_sample_variable_moving_blocks(
 
 def block_bootstrap(
         lc_blocks, rvA, rvB, repetitions, parameter_names, n_jobs=4,
-        block_midtime: List[np.ndarray] or np.ndarray = None, rvA_model=None, rvB_model=None
+        block_midtime: List[np.ndarray] or np.ndarray = None, rvA_model=None, rvB_model=None,
+        infile_name='infile.default'
 ):
     """
     :param lc_blocks:       required shape (:, 3, nblocks). 1st column must be time values, 2nd lc flux magnitude,
@@ -191,7 +192,7 @@ def block_bootstrap(
     """
     clean_work_folder()
     job_results = Parallel(n_jobs=n_jobs)(
-        delayed(_loop_function)(lc_blocks, rvA, rvB, parameter_names, block_midtime, rvA_model, rvB_model, i)
+        delayed(_loop_function)(lc_blocks, rvA, rvB, parameter_names, block_midtime, rvA_model, rvB_model, infile_name, i)
         for i in range(0, repetitions)
     )
     return evaluate_runs(job_results)
@@ -201,33 +202,36 @@ def block_bootstrap_variable_moving_blocks(
         lc_blocks, rvA, rvB, repetitions, parameter_names,
         subgroup_divisions: Tuple[int, ...], period: float,
         n_jobs=4,
-        rvA_model=None, rvB_model=None
+        rvA_model=None, rvB_model=None,
+        infile_name='infile.default'
 ):
     clean_work_folder()
     subgroups_all_lightcurves = _divide_into_subgroups(lc_blocks, subgroup_divisions)
     job_results = Parallel(n_jobs=n_jobs)(
         delayed(_loop_function_variable_moving_blocks)(
             lc_blocks, subgroups_all_lightcurves, period, subgroup_divisions, rvA, rvB, parameter_names, rvA_model,
-            rvB_model, i) for i in range(0, repetitions)
+            rvB_model, infile_name, i) for i in range(0, repetitions)
         )
     return evaluate_runs(job_results)
 
 
-def _loop_function(lc_blocks, rvA, rvB, parameter_names, block_midtime, rvA_model, rvB_model, index):
+def _loop_function(lc_blocks, rvA, rvB, parameter_names, block_midtime, rvA_model, rvB_model, infile_name, index):
     lc_sample, rvA_sample, rvB_sample = draw_sample(lc_blocks, rvA, rvB, block_midtime, rvA_model, rvB_model)
-    parameter_values = run_jktebop_on_sample(lc_sample, rvA_sample, rvB_sample, index, parameter_names)
+    parameter_values = run_jktebop_on_sample(lc_sample, rvA_sample, rvB_sample, index, parameter_names,
+                                             infile_name=infile_name)
     return parameter_values
 
 
 def _loop_function_variable_moving_blocks(
         lc_blocks, subgroups_all_lightcurves, period, subgroup_divisions, rvA, rvB, parameter_names,
-        rvA_model, rvB_model, index
+        rvA_model, rvB_model, infile_name, index
 ):
     lc_sample = draw_lc_sample_variable_moving_blocks(
         lc_blocks, subgroups_all_lightcurves, period, subgroup_divisions
     )
     rvA_sample, rvB_sample = draw_rv_sample(rvA, rvB, rvA_model, rvB_model)
-    parameter_values = run_jktebop_on_sample(lc_sample, rvA_sample, rvB_sample, index, parameter_names)
+    parameter_values = run_jktebop_on_sample(lc_sample, rvA_sample, rvB_sample, index, parameter_names,
+                                             infile_name=infile_name)
     return parameter_values
 
 

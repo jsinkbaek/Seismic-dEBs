@@ -1,16 +1,16 @@
  4  1.0           Task to do (from 2 to 9)   Integ. ring size (deg)  
- 0.0978  9.9404   Sum of the radii           Ratio of the radii      
+ 0.0978  0.1006   Sum of the radii           Ratio of the radii      
  89.01	 1.0      Orbital inclination (deg)  Mass ratio of system    
- 10.2564  169.3   ecosw or eccentricity      esinw or periastron long
+ 10.2564  349.2488   ecosw or eccentricity      esinw or periastron long
  0.0  0.0         Gravity darkening (star A) Grav darkening (star B) 
- 0.5827  0.075983      Surface brightness ratio   Amount of third light   
+ 0.6113  0.075983      Surface brightness ratio   Amount of third light   
  quad  quad       LD law type for star A     LD law type for star B  
- 0.28752429363284 0.3663200036504677    LD star A (linear coeff)   LD star B (linear coeff)
- 0.28149066493576136 0.24457068096478254    LD star A (nonlin coeff)   LD star B (nonlin coeff)
+ 0.3663200036504677 0.28752429363284   LD star A (linear coeff)   LD star B (linear coeff)
+ 0.24457068096478254 0.28149066493576136     LD star A (nonlin coeff)   LD star B (nonlin coeff)
  0.0  0.0         Reflection effect star A   Reflection effect star B
  0.0  0.0         Phase of primary eclipse   Light scale factor (mag)
- 63.32713         Orbital period of eclipsing binary system (days) 
- 58713.0          Reference time of primary minimum (HJD)          
+ 63.3270949830         Orbital period of eclipsing binary system (days) 
+ 54998.2349          Reference time of primary minimum (HJD)          
  5.0              Sigma value to reject discrepant observations    
  1  1             Adjust RADII SUM    or  RADII RATIO    (0, 1, 2, 3)
  1  0             Adjust INCLINATION  or  MASSRATIO      (0, 1, 2, 3)
@@ -29,8 +29,8 @@
  
 THDL 0.075983 0.01 
 
- rv1 rvA.dat rvA.out 43.7 16.29 1 1
- rv2 rvB.dat rvB.out 27.5 16.29 1 -1
+ rv1 rvA.dat rvA.out 27.5 16.29 1 1
+ rv2 rvB.dat rvB.out 43.7 16.29 1 1
   
 # Enter the appropriate numbers on the left-hand side of each line of this file.
 # Most of the lines require two numerical parameters separated by spaces.       

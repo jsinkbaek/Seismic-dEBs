@@ -5,15 +5,13 @@ from Binary_Analysis.block_bootstrap import block_bootstrap as boot
 
 os.chdir('/home/sinkbaek/PycharmProjects/Seismic-dEBs/Binary_Analysis/block_bootstrap/')
 
-period = 63.3270949830
+period = 63.3271348987
 
 lc = np.loadtxt('work/lc.KEPLER')
 phase = np.mod(lc[:, 0], period)/period
 phase_primary_eclipse = np.mod((54998.2347431865 - 54976.6348) + 54976.6348, period)/period
 phase_secondary_eclipse = (phase_primary_eclipse + 0.6589217480)-1
 
-# Most of this is unnecessary for block_bootstrap_variable_moving_blocks, but I haven't bothered removing the stuff
-# that is
 indices = np.argwhere((np.diff(phase) > 0.2) | (np.diff(phase) < -0.03))[:, 0] + 1
 indices_secondary = np.argwhere((np.diff(phase) > 0.2) | ((np.diff(phase) < -0.03) & (phase[:-1] < 0.3)))[:, 0] + 1
 indices_primary = np.argwhere(((np.diff(phase) < -0.03) & (phase[:-1] > 0.3)))[:, 0] + 1
@@ -57,11 +55,11 @@ for i in range(len(sub_arrays_secondary), len(sub_arrays_primary)+len(sub_arrays
     lc_blocks[0:current_array.shape[0], :, i] = current_array
 
 
-rvA = np.loadtxt('work/rvA.NOT.dat')
-rvB = np.loadtxt('work/rvB.NOT.dat')
+rvA = np.loadtxt('work/rvA.gaulme.dat')
+rvB = np.loadtxt('work/rvB.gaulme.dat')
 
-rvA_model = np.loadtxt('work/rvA.NOT.model', unpack=True, usecols=4)
-rvB_model = np.loadtxt('work/rvB.NOT.model', unpack=True, usecols=4)
+rvA_model = np.loadtxt('work/rvA.gaulme.model', unpack=True, usecols=4)
+rvB_model = np.loadtxt('work/rvB.gaulme.model', unpack=True, usecols=4)
 
 midtimes = [midtimes_secondary, midtimes_primary]
 
@@ -78,11 +76,11 @@ mean_vals, std_vals, vals = boot.block_bootstrap_variable_moving_blocks(
     subgroup_divisions=(1, 2, 3, 4, 5, 6), period=period,
     n_jobs=11,
     rvA_model=rvA_model, rvB_model=rvB_model,
-    infile_name='infile.default.NOT.KEPLER'
+    infile_name='infile.default.gaulme.KEPLER'
 )
 
 
 print('{:>14}'.format('Mean Value'), '\t', '{:>14}'.format('STD'), '\t', '{:<20}'.format('Parameter'))
 for i in range(0, len(param_names)):
     print(f'{mean_vals[i]:14.5f}', '\t', f'{std_vals[i]:14.7f}', '\t',f'{param_names[i]: <20}')
-np.savetxt('vals.NOT.KEPLER', vals)
+np.savetxt('vals.gaulme.KEPLER', vals)
