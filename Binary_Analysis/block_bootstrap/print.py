@@ -9,11 +9,11 @@ param_names = ['sb_ratio', 'sum_radii', 'ratio_radii', 'incl', 'ecc', 'perilong'
                'ephemeris_tbase', 'rv_amp_A', 'rv_amp_B', 'system_rv_A', 'system_rv_B', 'mass_A', 'mass_B', 'radius_A',
                'radius_B', 'logg_A', 'logg_B', 'sma_rsun']
 
-path = 'vals.gaulme.TESS.1'
+path = 'vals.NOT.TESS.1'
 vals = np.loadtxt(path)
-vals = np.append(vals, np.loadtxt('vals.gaulme.TESS.2'), axis=0)
-vals = np.append(vals, np.loadtxt('vals.gaulme.TESS.3'), axis=0)
-# vals = np.append(vals, np.loadtxt('vals.NOT.TESS.4'), axis=0)
+vals = np.append(vals, np.loadtxt('vals.NOT.TESS.2'), axis=0)
+vals = np.append(vals, np.loadtxt('vals.NOT.TESS.3'), axis=0)
+vals = np.append(vals, np.loadtxt('vals.NOT.TESS.4'), axis=0)
 
 vals = vals[~np.isnan(vals[:, -2]), :]      # since they seem to be wack
 clip_mask = np.zeros((vals[:, 0].size, ), dtype=bool)
