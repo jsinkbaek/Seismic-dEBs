@@ -4,10 +4,13 @@ import matplotlib.pyplot as plt
 from scipy.stats import sigmaclip
 
 os.chdir('/home/sinkbaek/PycharmProjects/Seismic-dEBs/Binary_Analysis/block_bootstrap/')
-path = 'vals.NOT.TESS'
+path = 'vals.gaulme.KEPLER.1'
 
 vals = np.loadtxt(path)
-vals = np.append(vals, np.loadtxt('vals.NOT.TESS.1'), axis=0)
+vals = np.append(vals, np.loadtxt('vals.gaulme.KEPLER.2'), axis=0)
+vals = np.append(vals, np.loadtxt('vals.gaulme.KEPLER.3'), axis=0)
+# vals = np.append(vals, np.loadtxt('vals.NOT.KEPLER.4'), axis=0)
+
 vals = vals[~np.isnan(vals[:, -2]), :]      # since they seem to be wack
 clip_mask = np.zeros((vals[:, 0].size, ), dtype=bool)
 for i in range(0, vals[0, :].size):

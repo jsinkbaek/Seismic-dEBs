@@ -39,7 +39,7 @@ mean_vals, std_vals, vals = boot.block_bootstrap_variable_moving_blocks(
                         50, 51, 52, 53, 54, 55, 56, 57, 58, 59,
                         60, 61, 62, 63, 64, 65, 66, 67, 68, 69,
                         70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80), period=period,
-    n_jobs=11,
+    n_jobs=10,
     rvA_model=rvA_model, rvB_model=rvB_model,
     infile_name='infile.default.gaulme.TESS'
 )

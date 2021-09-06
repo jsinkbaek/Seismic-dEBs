@@ -76,7 +76,7 @@ param_names = ['sb_ratio', 'sum_radii', 'ratio_radii', 'incl', 'ecc', 'perilong'
 mean_vals, std_vals, vals = boot.block_bootstrap_variable_moving_blocks(
     lc_blocks, rvA, rvB, 3000, param_names,
     subgroup_divisions=(1, 2, 3, 4, 5, 6), period=period,
-    n_jobs=11,
+    n_jobs=10,
     rvA_model=rvA_model, rvB_model=rvB_model,
     infile_name='infile.default.NOT.KEPLER'
 )
