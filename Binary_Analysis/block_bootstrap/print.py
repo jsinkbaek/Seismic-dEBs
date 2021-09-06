@@ -4,12 +4,16 @@ import matplotlib.pyplot as plt
 from scipy.stats import sigmaclip
 
 os.chdir('/home/sinkbaek/PycharmProjects/Seismic-dEBs/Binary_Analysis/block_bootstrap/')
-path = 'vals.gaulme.KEPLER.1'
 
+param_names = ['sb_ratio', 'sum_radii', 'ratio_radii', 'incl', 'ecc', 'perilong', 'light_scale_factor',
+               'ephemeris_tbase', 'rv_amp_A', 'rv_amp_B', 'system_rv_A', 'system_rv_B', 'mass_A', 'mass_B', 'radius_A',
+               'radius_B', 'logg_A', 'logg_B', 'sma_rsun']
+
+path = 'vals.gaulme.TESS.1'
 vals = np.loadtxt(path)
-vals = np.append(vals, np.loadtxt('vals.gaulme.KEPLER.2'), axis=0)
-vals = np.append(vals, np.loadtxt('vals.gaulme.KEPLER.3'), axis=0)
-# vals = np.append(vals, np.loadtxt('vals.NOT.KEPLER.4'), axis=0)
+vals = np.append(vals, np.loadtxt('vals.gaulme.TESS.2'), axis=0)
+vals = np.append(vals, np.loadtxt('vals.gaulme.TESS.3'), axis=0)
+# vals = np.append(vals, np.loadtxt('vals.NOT.TESS.4'), axis=0)
 
 vals = vals[~np.isnan(vals[:, -2]), :]      # since they seem to be wack
 clip_mask = np.zeros((vals[:, 0].size, ), dtype=bool)
@@ -30,10 +34,13 @@ means = np.asarray(means)
 
 np.set_printoptions(precision=10, suppress=True)
 
-print('STDS')
-print(np.std(vals, axis=0))
-print('\nMeans')
-print(np.mean(vals, axis=0))
+mean = np.mean(vals, axis=0)
+std = np.std(vals, axis=0)
+print('{:>14}'.format('Mean Value'), '\t', '{:>14}'.format('STD'), '\t', '{:<20}'.format('Parameter'))
+for i in range(0, len(param_names)):
+    print(f'{param_names[i]: <20}', '\t', f'{mean[i]:14.5f}', '\t', f'{std[i]:14.7f}')
+
+
 plt.plot(stds)
 
 for i in range(0, vals[0, :].size):

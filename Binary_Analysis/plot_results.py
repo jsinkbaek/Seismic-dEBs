@@ -10,9 +10,12 @@ gs = fig.add_gridspec(1, 2)
 ax1 = fig.add_subplot(gs[0, 0])
 ax2 = fig.add_subplot(gs[0, 1])
 
-not_kepler = np.array([1.2544743268, 0.8137981554, 0.0160041189, 0.0057547704])  # val A, val B, err A, err B
-not_tess = np.array([1.254074808, 0.8131272818, 0.0171759106, 0.0061770481])
-gau_kepler = np.array([1.3235316213, 0.8310058351, 0.0299085038, 0.0177780483])
+# not_kepler = np.array([1.2544743268, 0.8137981554, 0.0160041189, 0.0057547704])  # val A, val B, err A, err B
+not_kepler = np.array([1.2544743268, 0.8137981554, 0.0157749, 0.0056894])  # val A, val B, err A, err B
+not_tess = np.array([1.254074808, 0.8131272818, 0.0160455, 0.0057615])
+# not_tess = np.array([1.254074808, 0.8131272818, 0.0113562015, 0.1715172969])
+# gau_kepler = np.array([1.3235316213, 0.8310058351, 0.0299085038, 0.0177780483])
+gau_kepler = np.array([1.3235316213, 0.8310058351, 0.0300639, 0.0178391])
 gau_tess = np.array([1.323290508, 0.8309951783, 0.0176648076, 0.0119215196])
 
 ax1.errorbar(1, not_kepler[0], yerr=not_kepler[2], fmt='rp', markersize=10)
@@ -43,7 +46,7 @@ ax2.yaxis.set_label_coords(1.125, 0.5)
 plt.tight_layout()
 plt.subplots_adjust(wspace=0.05, hspace=0)
 
-plt.savefig(fname='../figures/report/mass_radius/mass.png', dpi=400)
+plt.savefig(fname='../figures/report/mass_radius/mass_2.png', dpi=400)
 
 
 # Radius
@@ -52,9 +55,13 @@ gs = fig.add_gridspec(1, 2)
 ax1 = fig.add_subplot(gs[0, 0])
 ax2 = fig.add_subplot(gs[0, 1])
 
-not_kepler = np.array([7.532253316, 0.7539093043, 0.0421480452, 0.0054743409])
-not_tess = np.array([7.429325172, 0.7482196361, 0.0556111202, 0.0089069996])
-gau_kepler = np.array([7.687932365, 0.7708429083, 0.0652840906, 0.0074355405])
+# not_kepler = np.array([7.532253316, 0.7539093043, 0.0421480452, 0.0054743409])
+# not_tess = np.array([7.429325172, 0.7482196361, 0.0556111202, 0.0089069996])
+# gau_kepler = np.array([7.687932365, 0.7708429083, 0.0652840906, 0.0074355405])
+# gau_tess = np.array([7.546159157, 0.7603711045, 0.0528769941, 0.0081582503])
+not_kepler = np.array([7.532253316, 0.7539093043, 0.0412123, 0.0053196])
+not_tess = np.array([7.429325172, 0.7482196361, 0.0843203, 0.0113407])
+gau_kepler = np.array([7.687932365, 0.7708429083, 0.0648540, 0.0074469])
 gau_tess = np.array([7.546159157, 0.7603711045, 0.0528769941, 0.0081582503])
 
 ax1.errorbar(1, not_kepler[0], yerr=not_kepler[2], fmt='rp', markersize=10)
@@ -83,6 +90,6 @@ ax2.yaxis.set_label_coords(1.125, 0.5)
 
 plt.tight_layout()
 plt.subplots_adjust(wspace=0.05, hspace=0)
-plt.savefig(fname='../figures/report/mass_radius/radius.png', dpi=400)
+plt.savefig(fname='../figures/report/mass_radius/radius_2.png', dpi=400)
 
 plt.show()

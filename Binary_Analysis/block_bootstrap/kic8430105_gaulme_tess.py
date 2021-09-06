@@ -20,11 +20,11 @@ lc_blocks[0:lc_block_primary[:, 0].size, :, 1] = lc_block_primary
 # lc_blocks = lc.reshape((lc.shape[0], lc.shape[1], 1))
 
 
-rvA = np.loadtxt('work/rvA.NOT.dat')
-rvB = np.loadtxt('work/rvB.NOT.dat')
+rvA = np.loadtxt('work/rvA.gaulme.dat')
+rvB = np.loadtxt('work/rvB.gaulme.dat')
 
-rvA_model = np.loadtxt('work/rvA.NOT.model', unpack=True, usecols=4)
-rvB_model = np.loadtxt('work/rvB.NOT.model', unpack=True, usecols=4)
+rvA_model = np.loadtxt('work/rvA.gaulme.model', unpack=True, usecols=4)
+rvB_model = np.loadtxt('work/rvB.gaulme.model', unpack=True, usecols=4)
 
 
 param_names = ['sb_ratio', 'sum_radii', 'ratio_radii', 'incl', 'ecc', 'perilong', 'light_scale_factor',
