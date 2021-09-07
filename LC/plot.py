@@ -345,7 +345,6 @@ def obs_v_cal(loc_lc1, loc_model1, loc_lc2=None, loc_model2=None, t0=54976.635, 
     plt.show(block=True)
 
 
-# noinspection PyUnboundLocalVariable
 def obs_v_cal_folded(loc_lc1, loc_model1, loc_lc2=None, loc_model2=None, t0=54976.635, period=63.32713, legend=None,
                      phase_lim_primary=np.array([-0.0205, 0.01915]),
                      phase_lim_secondary=np.array([0.341355-0.0219, 0.341355+0.0218]), label1='Light Curve 1',
@@ -621,7 +620,7 @@ def plot_many_lc(loc, period, phaselim1, phaselim2, subplot_text, figname):
 
 # obs_v_cal('kepler_kasfit/lc.KEPLER', 'kepler_kasfit/model.out')
 if False:
-    obs_v_cal_folded('JKTEBOP/kepler_LTF/lc.KEPLER', 'JKTEBOP/kepler_LTF/model.out', 'JKTEBOP/kepler_kasfit/lc.KEPLER',
+    obs_v_cal_folded('Binary_Analysis/JKTEBOP/kepler_LTF/lc.KEPLER', 'JKTEBOP/kepler_LTF/model.out', 'JKTEBOP/kepler_kasfit/lc.KEPLER',
                      'JKTEBOP/kepler_kasfit/model.out', legend=['JKTEBOP model LTF','JKTEBOP model KASOC',
                                                                 'Kepler LTF LC', 'Kepler KASOC LC'],
                      o_c_ylim=[0.003, -0.003], marker1='y.', marker2='c.', line1='k--', line2='m-.', errorbar=True,
@@ -631,6 +630,6 @@ if False:
                      legend=['Kepler LTF LC', 'JKTEBOP model LTF'],
                      o_c_ylim=[0.003, -0.003], marker1='r.', marker2='c.', line1='k--', line2='m-.', errorbar=True)
 
-if True:
+if False:
     plot_many_lc('Data/unprocessed/kic8430105_kepler_unfiltered.txt', 63.32713, [0.1, 0.17], [0.445, 0.51], ' + 2400000',
                  '../figures/report/kepler/unfiltered_lc')
