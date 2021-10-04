@@ -1,5 +1,9 @@
 import numpy as np
 from astropy.io import fits
+import matplotlib.pyplot as plt
+import matplotlib
+
+matplotlib.rcParams.update({'font.size': 17})
 
 # Load and save uncorrected light curve # #
 with fits.open("../Data/unprocessed/kasoc/kplr008430105_kasoc-ts_llc_v1.fits") as hdul:
@@ -28,7 +32,15 @@ corr_full = corr_full[~nan_mask]
 corr_pos = corr_pos[~nan_mask]
 
 # Make uncorrected relative flux
+plt.figure(figsize=(16, 9))
 flux = (flux_seism * 1E-6 + 1) * corr_full
+tphase = np.mod(time, 120.5)
+plt.plot(tphase, flux, 'r.', markersize=0.5)
+plt.xlabel('BJD - 2400000', fontsize=22)
+plt.ylabel('Flux [e/s]', fontsize=22)
+plt.tight_layout()
+plt.savefig('/home/sinkbaek/PycharmProjects/Seismic-dEBs/figures/report/kepler/raw.png', dpi=400)
+plt.show()
 
 save_data = np.empty((flux.size, 2))
 save_data[:, 0] = time

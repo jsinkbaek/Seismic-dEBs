@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 from copy import deepcopy
 import RV.library.calculate_radial_velocities as cRV
+import sys
 
 matplotlib.rcParams.update({'font.size': 25})
 
@@ -66,7 +67,7 @@ estimate_RVb_from_RVa = True        # defines if a guess on RVb should be made i
 mass_A_estimate = 1.31
 mass_B_estimate = 0.83
 system_RV_estimate = 12.61  # 11.7  # 12.61  # 16.053 19.44
-orbital_period_estimate = 63.33  # only for plotting
+orbital_period_estimate = 63.33
 
 # # Stellar parameter estimates (relevant for limb darkening calculation) # #
 Teff_A, Teff_B = 5042, 5621
@@ -76,8 +77,8 @@ mTur_A, mTur_B = 2.0, 2.0
 
 # # Initial fit parameters for rotational broadening function fit # #
 bf_velocity_span = 300        # broadening function span in velocity space, should be the same for both components
-limbd_A = estimate_linear_limbd(wavelength_RV_limit, logg_A, Teff_A, MH_A, mTur_A, loc='Data/tables/atlasco.dat')
-limbd_B = estimate_linear_limbd(wavelength_RV_limit, logg_B, Teff_B, MH_B, mTur_B, loc='Data/tables/atlasco.dat')
+limbd_A = estimate_linear_limbd(wavelength_RV_limit, logg_A, Teff_A, MH_A, mTur_A, loc='../Data/tables/atlasco.dat')
+limbd_B = estimate_linear_limbd(wavelength_RV_limit, logg_B, Teff_B, MH_B, mTur_B, loc='../Data/tables/atlasco.dat')
 ifitpar_A = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=100, limbd_coef=limbd_A,
                                  smooth_sigma=2.0, bf_velocity_span=bf_velocity_span)
 ifitpar_B = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=20, limbd_coef=limbd_B,
@@ -138,6 +139,8 @@ for filename in os.listdir(data_path):
         wavelength_collection_list.append(wavelength)
         flux_collection_list.append(flux)
         i += 1
+print(spectral_separation_array_A)
+print(spectral_separation_array_B)
 
 # Override:
 # spectral_separation_array_B = np.array([2, 3, 4, 6, 8, 10, 13, 14, 18, 20])
@@ -153,28 +156,23 @@ for i in range(0, len(RA_array)):
     if RA_array[i] == RA and DEC_array[i] == DEC:
         pass
     else:
-        warnings.warn("Warning: Either not all RA values equal, or not all DEC values equal")
+        print("Warning: Either not all RA values equal, or not all DEC values equal")
         print('RA_array:  ', RA_array)
         print('DEC_array: ', DEC_array)
-
 # # # Calculate Barycentric RV Corrections # # #
 times = Time(date_array, scale='utc', location=observatory_location)
 times.format = 'jd'
 times.out_subfmt = 'long'
-print()
-print("RV correction")
 bc_rv_cor, warning, _ = get_BC_vel(times, ra=RA, dec=DEC, starname=stellar_target, ephemeris='de432s',
                                    obsname=observatory_name)
+bc_rv_cor_2, _, _ = get_BC_vel(times, ra=RA, dec=DEC, starname=stellar_target, ephemeris='de432s',
+                               obsname=observatory_name, predictive=True)
+# print('Comparison')
 bc_rv_cor = bc_rv_cor/1000      # from m/s to km/s
-print(bc_rv_cor)
-print(warning)
 
 # # # Calculate JDUTC to BJDTDB correction # # #
-print()
-print("Time conversion to BJDTDB")
 bjdtdb, warning, _ = utc_tdb.JDUTC_to_BJDTDB(times, ra=RA, dec=DEC, starname=stellar_target, obsname=observatory_name)
-print(bjdtdb)
-print(warning)
+# print(warning)
 
 # # Plot # #
 if plot:
@@ -278,8 +276,9 @@ if plot:
 # # Calculate broadening function RVs to use as initial guesses # #
 RV_guesses_A, _ = cRV.radial_velocities_of_multiple_spectra(
     flux_collection_inverted, flux_template_A_inverted, delta_v, ifitpar_A, number_of_parallel_jobs=4,
-    plot=False
+    plot=True
 )
+sys.exit()
 RV_guess_collection = np.empty((RV_guesses_A.size, 2))
 RV_guess_collection[:, 0] = RV_guesses_A
 RV_guesses_B = -RV_guesses_A * (mass_A_estimate / mass_B_estimate)

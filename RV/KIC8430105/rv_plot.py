@@ -33,33 +33,35 @@ rvb = np.loadtxt(rvb)
 
 fig = plt.figure(figsize=(16, 9))
 gs = fig.add_gridspec(5, 1)
-ax23 = fig.add_subplot(gs[3:5, 0])
-ax1 = fig.add_subplot(gs[0:3, 0])
-ax2 = fig.add_subplot(gs[3, 0])
-ax3 = fig.add_subplot(gs[4, 0])
-ax3.set_xlabel('Orbital Phase')
+# ax23 = fig.add_subplot(gs[3:5, 0])
+ax1 = fig.add_subplot(gs[0:5, 0])
+# ax2 = fig.add_subplot(gs[3, 0])
+# ax3 = fig.add_subplot(gs[4, 0])
+ax1.set_xlabel('Orbital Phase')
+# ax3.set_xlabel('Orbital Phase')
 ax1.set_ylabel('Radial Velocity (km/s)')
-ax23.set_ylabel('O-C')
+# ax23.set_ylabel('O-C')
 # ax2.set_ylabel('O - C')
 # ax3.set_ylabel('O - C')
 ax1.set_xlim([0, 1.0])
-ax2.set_xlim([0, 1.0])
-ax3.set_xlim([0, 1.0])
+# ax2.set_xlim([0, 1.0])
+# ax3.set_xlim([0, 1.0])
 
 a_mask = rva[:, 0] > 59000
 b_mask = rvb[:, 0] > 59000
 
-ax1.errorbar(rva[:, 3], rva[:, 1], yerr=rva[:, 2], fmt='*', color='blue', markersize=6)
-ax1.errorbar(rvb[:, 3], rvb[:, 1], yerr=rvb[:, 2], fmt='*', color='red', markersize=6)
+ax1.errorbar(rva[:, 3], rva[:, 1], yerr=rva[:, 2], fmt='v', color='indianred', markersize=7)
+ax1.errorbar(rvb[:, 3], rvb[:, 1], yerr=rvb[:, 2], fmt='v', color='royalblue', markersize=7)
 ax1.plot(phase_model, rv_Am, '--', alpha=0.8, color='grey')
 ax1.plot(phase_model, rv_Bm, '--', alpha=0.8, color='grey')
-ax1.tick_params(
-    axis='x',
-    which='both',
-    bottom=False,
-    top=False,
-    labelbottom=False
-)
+ax1.plot([0.0, 1.0], [11.627, 11.627], linestyle='dotted', alpha=0.8, color='grey')
+# ax1.tick_params(
+#     axis='x',
+#     which='both',
+#    bottom=False,
+#     top=False,
+#     labelbottom=False
+# )
 ax1.tick_params(
     axis='y',
     which='major',
@@ -67,6 +69,7 @@ ax1.tick_params(
     labelleft=True,
     labelsize=22,
 )
+"""
 ax2.tick_params(
     axis='x',
     which='both',
@@ -122,7 +125,9 @@ ax2.fill_between([0.0, 1.0], [wstd_a, wstd_a], [-wstd_a, -wstd_a],
                  color='grey', alpha=0.4)
 ax3.fill_between([0.0, 1.0], [wstd_b, wstd_b], [-wstd_b, -wstd_b],
                  color='grey', alpha=0.4)
+"""
 plt.tight_layout()
 plt.subplots_adjust(wspace=0, hspace=0)
+plt.savefig('/home/sinkbaek/PycharmProjects/Seismic-dEBs/figures/report/RV/basicRV.png', dpi=400)
 plt.show()
 

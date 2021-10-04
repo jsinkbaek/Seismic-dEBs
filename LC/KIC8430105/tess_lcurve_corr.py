@@ -13,9 +13,12 @@ import astropy.units as u, astropy.constants as c
 import astropy as ap
 from numpy.polynomial import Polynomial
 from copy import copy
+import matplotlib
 
 
 target = 'KIC8430105'
+matplotlib.rcParams.update({'font.size': 22})
+
 
 """
 # # # TESSCut FFI Cutout work # # # FFI (Full Frame Images) is the long cadence unprocessed data
@@ -61,9 +64,13 @@ plt.show()
 
 # # # RegressionCorrector on TESS 2-min cadence Target Pixel Files # # #
 # Here regressioncorrector is done to remove trends due to e.g. spacecraft motion
-tpf_2min = lk.search_targetpixelfile('KIC8430105', mission='TESS').download(quality_bitmask='hard')
-tpf_2min.plot(frame=300,  aperture_mask=tpf_2min.pipeline_mask, mask_color='red')
-plt.show(block=False)
+fig = plt.figure(figsize=(11, 18))
+gs = fig.add_gridspec(2, 1)
+ax1 = fig.add_subplot(gs[0, 0])
+ax2 = fig.add_subplot(gs[1, 0])
+print(lk.search_targetpixelfile('KIC8430105', mission='TESS'))
+tpf_2min = lk.search_targetpixelfile('KIC8430105', mission='TESS', sector=15).download(quality_bitmask='hard')
+tpf_2min.plot(frame=300,  aperture_mask=tpf_2min.pipeline_mask, mask_color='red', ax=ax1)
 
 # Using pipeline aperture or extended background mask
 aper = tpf_2min.pipeline_mask
@@ -74,14 +81,35 @@ aper2[-2:, -2:] = True
 aper2[-3:, -1] = True
 aper2[0:3, -2:] = True
 aper2[1:4, 2:5] = True
-tpf_2min.plot(frame=300,  aperture_mask=aper2, mask_color='red')
+tpf_2min.plot(frame=300,  aperture_mask=~aper2, mask_color='red', ax=ax2)
+ax1.set_xticks([])
+ax2.set_xticks([])
+ax1.set_yticks([])
+ax2.set_yticks([])
+ax1.set_xticklabels([])
+ax1.set_yticklabels([])
+ax2.set_yticklabels([])
+ax1.set_xlabel(None)
+ax2.set_xlabel(None)
+ax1.set_ylabel(None)
+ax2.set_ylabel(None)
+ax1.set_title(None)
+ax2.set_title(None)
+plt.tight_layout()
+# plt.savefig('/home/sinkbaek/PycharmProjects/Seismic-dEBs/figures/report/tess/apertures.png', dpi=400)
 plt.show()
 raw_lc_2min = tpf_2min.to_lightcurve()
 
 # Make design matrix
 dm = DesignMatrix(tpf_2min.flux[:, ~aper2], name='pixels').pca(2)
-plt.plot(tpf_2min.time.value, dm.values + np.arange(2)*0.2, '.')
-plt.show(block=False)
+fig = plt.figure(figsize=(16, 9))
+ax = fig.add_subplot()
+ax.plot(tpf_2min.time.value, dm.values + np.arange(2)*0.2, '.')
+ax.set_yticks([])
+ax.set_xlabel('Time - 2457000 [BTJD days]')
+plt.tight_layout()
+# plt.savefig('/home/sinkbaek/PycharmProjects/Seismic-dEBs/figures/report/tess/dm.png', dpi=400)
+plt.show(block=True)
 dm.validate()
 dm = dm.append_constant()
 
@@ -90,10 +118,25 @@ reg = RegressionCorrector(raw_lc_2min)
 corrected_lc_2min = reg.correct(dm)
 
 # Plot result
-ax = raw_lc_2min.errorbar(label='Raw light curve')
-corrected_lc_2min.errorbar(ax=ax, label='Corrected light curve')
-plt.show(block=False)
+fig = plt.figure(figsize=(16, 9))
+ax = fig.add_subplot()
+raw_lc_2min.errorbar(ax=ax, color='black')
+# corrected_lc_2min.errorbar(ax=ax, label='Corrected light curve')
+plt.tight_layout()
+# plt.savefig('/home/sinkbaek/PycharmProjects/Seismic-dEBs/figures/report/tess/lc_raw.png', dpi=400)
+plt.show(block=True)
 reg.diagnose()
+fig = plt.gcf()
+axs = fig.axes
+fig.set_size_inches(16, 9)
+axs[0].xaxis.label.set_size(22)
+axs[0].yaxis.label.set_size(22)
+axs[1].xaxis.label.set_size(22)
+axs[1].yaxis.label.set_size(22)
+axs[0].tick_params(axis='both', labelsize=18)
+axs[1].tick_params(axis='both', labelsize=18)
+plt.tight_layout()
+# plt.savefig('/home/sinkbaek/PycharmProjects/Seismic-dEBs/figures/report/tess/lc_corr.png', dpi=400)
 print(raw_lc_2min.estimate_cdpp())
 print(corrected_lc_2min.estimate_cdpp())
 plt.show(block=True)
@@ -115,7 +158,7 @@ save_data = np.zeros((m_tot.size, 3))
 save_data[:, 0] = lc.time.value + time_correct
 save_data[:, 1] = m_tot
 save_data[:, 2] = m_err_tot
-np.savetxt('Data/processed/lcmag_tess_tot.txt', save_data, delimiter='\t')
+# np.savetxt('Data/processed/lcmag_tess_tot.txt', save_data, delimiter='\t')
 
 plt.figure()
 plt.plot(lc.time.value, m_tot, 'r.')
@@ -155,12 +198,25 @@ lc_fit1, lc_fit2 = lc[mask][idx_fit1]/lc_median, lc[mask][idx_fit2]/lc_median
 p1 = Polynomial.fit(lc_fit1.time.value, lc_fit1.flux, deg=2)
 p2 = Polynomial.fit(lc_fit2.time.value, lc_fit2.flux, deg=2)
 
-ax = (lc/lc_median).plot(label='Full lc', color='g')
-(lc[mask]/lc_median).plot(ax=ax, label='lc excluding transits')
-lc_fit1.plot(ax=ax, label='lc for polynomial trend fit 1')
-lc_fit2.plot(ax=ax, label='lc for polynomial trend fit 2')
+fig = plt.figure(figsize=(16, 9))
+ax = fig.add_subplot()
+msize = matplotlib.rcParams['lines.markersize']
+(lc/lc_median).scatter(ax=ax, label='Excluded from fits', color='gray', alpha=0.6, s=msize*1.5, marker='o')
+(lc[mask]/lc_median).scatter(ax=ax, label='_no_legend_', color='gray', s=msize*1.5, marker='o', alpha=0.6)
+lc_fit1.scatter(ax=ax, label='LC for polynomial trend fit 1', s=msize*1.5, marker='o')
+lc_fit2.scatter(ax=ax, label='LC for polynomial trend fit 2', s=msize*1.5, marker='o')
 plt.plot(lc_fit1.time.value, p1(lc_fit1.time.value), 'k--')
 plt.plot(lc_fit2.time.value, p2(lc_fit2.time.value), 'k--')
+ax.set_ylabel('Median Normalized Flux')
+lgnd = ax.get_legend()
+for handle in lgnd.legendHandles:
+    handle.set_sizes([45])
+ax.xaxis.label.set_size(22)
+ax.yaxis.label.set_size(22)
+ax.tick_params(axis='both', labelsize=18)
+matplotlib.rcParams['legend.fontsize'] = 22
+plt.tight_layout()
+# plt.savefig('/home/sinkbaek/PycharmProjects/Seismic-dEBs/figures/report/tess/fit.png', dpi=400)
 plt.show()
 
 idx_norm1 = np.array(range(idx_fit1[0], idx_fit1[-1]+(exclude1[-1]-exclude1[0])))
@@ -192,9 +248,31 @@ m_err = np.abs(-2.5/np.log(10) * lc_norm.flux_err/lc_norm.flux)
 lc_mag = copy(lc_norm)
 lc_mag.flux = m
 lc_mag.flux_err = m_err
-lc_mag.errorbar(ylabel='Relative magnitude', fmt='k.', markersize=0.5, elinewidth=0.25)
-plt.ylim([0.022, -0.006])
-plt.show(block=False)
+fig = plt.figure(figsize=(16, 9))
+gs = fig.add_gridspec(1, 2)
+ax3 = fig.add_subplot(gs[0, :])
+ax1 = fig.add_subplot(gs[0, 0])
+ax2 = fig.add_subplot(gs[0, 1])
+
+lc_mag.errorbar(ax=ax1, ylabel='Relative magnitude', xlabel='', label='_nolegend_', fmt='k.', ecolor='gray', errorevery=5, markersize=2, elinewidth=0.5)
+lc_mag.errorbar(ax=ax2, ylabel='', xlabel='', fmt='k.', label='_nolegend_', ecolor='gray', errorevery=5, markersize=2, elinewidth=0.5)
+ax1.set_ylim([0.022, -0.006])
+ax2.set_xlim([1711.9, 1714])
+ax2.set_ylim([0.022, -0.006])
+ax1.set_xlim([1733.3, 1735.715])
+ax2.set_yticklabels([])
+ax3.set_xlabel('Time - 2457000 [BTJD days]')
+ax3.xaxis.set_label_coords(0.5, -0.10)
+plt.setp(ax3.spines.values(), visible=False)
+# ax1.xaxis.set_major_locator(plt.MaxNLocator(4, min_n_ticks=4))
+# ax2.xaxis.set_major_locator(plt.MaxNLocator(4, min_n_ticks=4))
+ax2.set_xticks([1712.2, 1712.7, 1713.2, 1713.7])
+ax3.set_xticks([])
+ax3.set_yticks([])
+plt.tight_layout()
+plt.subplots_adjust(wspace=0.05, hspace=0)
+plt.savefig('/home/sinkbaek/PycharmProjects/Seismic-dEBs/figures/report/tess/truncated.png', dpi=400)
+plt.show(block=True)
 
 # # # Save lightcurve to file # # #
 time_correct = 57000

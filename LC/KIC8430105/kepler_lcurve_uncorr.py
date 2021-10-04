@@ -5,7 +5,7 @@ from astropy.io import fits
 from numpy.polynomial import Polynomial
 from scipy.signal import medfilt
 
-matplotlib.use('Qt5Agg')
+# matplotlib.use('Qt5Agg')
 print(matplotlib.get_backend())
 
 

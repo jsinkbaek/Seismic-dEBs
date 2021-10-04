@@ -6,7 +6,7 @@ from numpy.polynomial import Polynomial
 
 
 # # # Start of Script # # #
-matplotlib.use('Qt5Agg')
+# matplotlib.use('Qt5Agg')
 matplotlib.rcParams.update({'font.size': 25})
 # Load data
 with fits.open("../Data/unprocessed/kasoc/kplr008430105_kasoc-ts_llc_v1.fits") as hdul:
@@ -59,7 +59,7 @@ if False:
     plt.legend(['F_phase', 'F_short'])
     plt.xlabel('BJD - 2400000')
     plt.ylabel('e-/s')
-    plt.show(block=False)
+    plt.show(block=True)
 
 
 if False:

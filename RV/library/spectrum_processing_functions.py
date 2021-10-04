@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 import scipy.constants as scc
 from scipy.interpolate import interp1d
 from numpy.polynomial import Polynomial
+from matplotlib.collections import PathCollection
+from matplotlib.legend_handler import HandlerPathCollection, HandlerLine2D
+import matplotlib
 
 
 def load_template_spectrum(template_spectrum_path: str):
@@ -318,7 +321,20 @@ def reduce_emission_lines(wavelength: np.ndarray, flux: np.ndarray, mf_window=40
     return wavelength_reduced, flux_emission_reduced
 
 
+def updatescatter(handle, orig):
+    """https://stackoverflow.com/questions/24706125/setting-a-fixed-size-for-points-in-legend"""
+    handle.update_from(orig)
+    handle.set_sizes([64])
+
+
+def updateline(handle, orig):
+    """https://stackoverflow.com/questions/24706125/setting-a-fixed-size-for-points-in-legend"""
+    handle.update_from(orig)
+    handle.set_markersize(12)
+
+
 def simple_normalizer(wavelength, flux, reduce_em_lines=True, plot=False):
+    matplotlib.rcParams.update({'font.size': 20})
     filtered_flux = moving_median_filter(flux, flux.size//25)
 
     selection_mask_1 = flux/filtered_flux > 0.85
@@ -335,20 +351,33 @@ def simple_normalizer(wavelength, flux, reduce_em_lines=True, plot=False):
         selection_mask_3 = normalized_flux < mean + 2.5*std
 
     if plot:
-        plt.figure()
-        plt.plot(wavelength, flux, 'b')
-        plt.plot(wavelength, filtered_flux, 'r')
-        plt.plot(wavelength, polynomial_1(wavelength), 'g')
+        plt.figure(figsize=(16, 9))
+        plt.plot(wavelength, flux, '.', markersize=1)
+        plt.plot(wavelength, filtered_flux)
+        plt.plot(wavelength, polynomial_1(wavelength))
+        plt.plot(wavelength, polynomial_2(wavelength))
 
-        plt.figure()
-        plt.plot(wavelength, flux / filtered_flux, 'b')
-        plt.plot(wavelength, flux / polynomial_1(wavelength), 'r')
-        plt.plot(wavelength, flux / polynomial_2(wavelength), 'g')
-
+        plt.xlabel('Wavelength [Å]', fontsize=22)
+        plt.ylabel('Spectral Flux [e/s]', fontsize=22)
         if reduce_em_lines:
-            plt.figure()
-            plt.plot(wavelength, normalized_flux, 'r')
-            plt.plot(wavelength[selection_mask_3], normalized_flux[selection_mask_3], 'b')
+            plt.plot(wavelength[~selection_mask_3], flux[~selection_mask_3], '.', color='red', markersize=4)
+            plt.legend(
+                ['Flux', 'Median filtered flux', '3rd degree Polynomial', '4th degree polynomial', 'Removed data'],
+                fontsize=20,
+                handler_map={PathCollection: HandlerPathCollection(update_func=updatescatter),
+                             plt.Line2D: HandlerLine2D(update_func=updateline)}
+            )
+        else:
+            plt.legend(
+                ['Flux', 'Median filtered flux', '3rd degree Polynomial', '4th degree polynomial'],
+                fontsize=20,
+                handler_map={PathCollection: HandlerPathCollection(update_func=updatescatter),
+                             plt.Line2D: HandlerLine2D(update_func=updateline)}
+            )
+        plt.tight_layout()
+        # plt.savefig('/home/sinkbaek/PycharmProjects/Seismic-dEBs/figures/report/RV/simple_normalizer/continuum_fit.png',
+        #            dpi=400)
+
         plt.show(block=True)
 
     if reduce_em_lines:
