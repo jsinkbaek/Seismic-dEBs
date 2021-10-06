@@ -228,10 +228,12 @@ def recalculate_RVs(
     RV_collection_B = deepcopy(RV_collection_B)
     n_spectra = inv_flux_collection[0, :].size
     v_span = ifitparamsA.bf_velocity_span
-    BRsvd_template_A = BroadeningFunction(inv_flux_collection[~buffer_mask, 0],
-                                          inv_flux_templateA[~buffer_mask], v_span, delta_v)
-    BRsvd_template_B = BroadeningFunction(inv_flux_collection[~buffer_mask, 0],
-                                          inv_flux_templateB[~buffer_mask], v_span, delta_v)
+    BRsvd_template_A = BroadeningFunction(
+        inv_flux_collection[~buffer_mask, 0], inv_flux_templateA[~buffer_mask], v_span, delta_v
+    )
+    BRsvd_template_B = BroadeningFunction(
+        inv_flux_collection[~buffer_mask, 0], inv_flux_templateB[~buffer_mask], v_span, delta_v
+    )
     BRsvd_template_A.smooth_sigma = ifitparamsA.bf_smooth_sigma
     BRsvd_template_B.smooth_sigma = ifitparamsB.bf_smooth_sigma
 
@@ -267,10 +269,11 @@ def recalculate_RVs(
             iterations = 0
             while True:
                 iterations += 1
-                RMS_RV_A = -RV_collection_A[i]
 
-                corrected_flux_A = inv_flux_collection[:, i] - shift_spectrum(separated_flux_B, RV_collection_B[i],
-                                                                              delta_v)
+                # # Calculate RV_A # #
+                RMS_RV_A = -RV_collection_A[i]
+                corrected_flux_A = inv_flux_collection[:, i] - \
+                                   shift_spectrum(separated_flux_B, RV_collection_B[i], delta_v)
 
                 if period is not None and ifitparamsB.ignore_at_phase is not None and time_values is not None:
                     if _check_for_total_eclipse(time_values[i], period, ifitparamsB.ignore_at_phase) is True:
@@ -279,25 +282,15 @@ def recalculate_RVs(
                 corrected_flux_A = corrected_flux_A[~buffer_mask]
                 ifitparamsA.RV = RV_collection_A[i]
 
-                RV_collection_A[i], model_A = radial_velocity_single_component(corrected_flux_A, BRsvd_template_A,
-                                                                               ifitparamsA)
+                RV_collection_A[i], model_A = radial_velocity_single_component(
+                    corrected_flux_A, BRsvd_template_A, ifitparamsA
+                )
                 RMS_RV_A = np.abs(RMS_RV_A + RV_collection_A[i])
-                if RMS_RV_A < convergence_limit:
-                    break
-                elif iterations > iteration_limit:
-                    if k == 1:
-                        warnings.warn(
-                            f'RV: spectrum {i} did not reach convergence limit {convergence_limit} for component A.'
-                        )
-                    break
 
-            iterations = 0
-            while True:
-                iterations += 1
+                # # Calculate RV_B # #
                 RMS_RV_B = -RV_collection_B[i]
-
-                corrected_flux_B = inv_flux_collection[:, i] - shift_spectrum(separated_flux_A, RV_collection_A[i],
-                                                                              delta_v)
+                corrected_flux_B = inv_flux_collection[:, i] - \
+                                   shift_spectrum(separated_flux_A, RV_collection_A[i], delta_v)
 
                 if period is not None and ifitparamsA.ignore_at_phase is not None and time_values is not None:
                     if _check_for_total_eclipse(time_values[i], period, ifitparamsA.ignore_at_phase) is True:
@@ -306,16 +299,18 @@ def recalculate_RVs(
                 corrected_flux_B = corrected_flux_B[~buffer_mask]
                 ifitparamsB.RV = RV_collection_B[i]
 
-                RV_collection_B[i], model_B = radial_velocity_single_component(corrected_flux_B, BRsvd_template_B,
-                                                                               ifitparamsB)
+                RV_collection_B[i], model_B = radial_velocity_single_component(
+                    corrected_flux_B, BRsvd_template_B, ifitparamsB
+                )
 
                 RMS_RV_B = np.abs(RMS_RV_B + RV_collection_B[i])
-                if RMS_RV_B < convergence_limit:
+
+                if RMS_RV_B < convergence_limit and RMS_RV_A < convergence_limit:
                     break
                 elif iterations > iteration_limit:
                     if k == 1:
                         warnings.warn(
-                            f'RV: spectrum {i} did not reach convergence limit {convergence_limit} for component B.'
+                            f'RV: spectrum {i} did not reach convergence limit {convergence_limit}.'
                         )
                     break
 

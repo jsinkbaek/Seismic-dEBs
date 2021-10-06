@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 
+
 """
 This file is meant to be used with the additional data results provided by the spectral separation routine
 (can be turned on by using the save_additional_results switch in spectral_separation_routine()). Default location for
@@ -169,14 +170,26 @@ def load_routine_results(folder_path: str, filename_bulk_list: list):
     return routine_results
 
 
-def plot_rv_and_separated_spectra(evaluation_data: RoutineResults, period: float, block=False):
+def plot_rv_and_separated_spectra(
+        evaluation_data: RoutineResults,
+        period: float,
+        block=False,
+        color_A='b',
+        color_B='r',
+        fig=None,
+        axs: list = None
+):
     matplotlib.rcParams.update({'font.size': 20})
     for i in range(0, len(evaluation_data.interval_results)):
-        fig = plt.figure(figsize=(16, 9))
-        gspec = fig.add_gridspec(2, 2)
-        ax1 = fig.add_subplot(gspec[0, :])
-        ax2 = fig.add_subplot(gspec[1, 0])
-        ax3 = fig.add_subplot(gspec[1, 1])
+        if fig is None:
+            fig = plt.figure(figsize=(16, 9))
+        if axs is None:
+            gspec = fig.add_gridspec(2, 2)
+            ax1 = fig.add_subplot(gspec[0, :])
+            ax2 = fig.add_subplot(gspec[1, 0])
+            ax3 = fig.add_subplot(gspec[1, 1])
+        else:
+            ax1, ax2, ax3 = axs
 
         phase_A = np.mod(evaluation_data.time_values_A[i], period) / period
         phase_B = np.mod(evaluation_data.time_values_B[i], period) / period
@@ -184,18 +197,18 @@ def plot_rv_and_separated_spectra(evaluation_data: RoutineResults, period: float
 
         flag_mask = evaluation_data.RV_B_flags[i].astype(bool)
 
-        ax1.plot(phase_A, evaluation_data.RV_A[i], 'b*')
-        ax1.plot(phase_B[flag_mask], evaluation_data.RV_B[i][flag_mask], 'r*')
-        ax1.plot(phase_B[~flag_mask], evaluation_data.RV_B[i][~flag_mask], 'rx')
+        ax1.plot(phase_A, evaluation_data.RV_A[i], color_A+'*')
+        ax1.plot(phase_B[flag_mask], evaluation_data.RV_B[i][flag_mask], color_B+'*')
+        ax1.plot(phase_B[~flag_mask], evaluation_data.RV_B[i][~flag_mask], color_B+'x')
         ax1.set_xlabel('Orbital Phase')
         ax1.set_ylabel('Radial Velocity - system velocity (km/s)', fontsize=15)
 
-        ax2.plot(evaluation_data.wavelengths[i], 1-evaluation_data.separated_spectra_A[i], 'b', linewidth=2)
+        ax2.plot(evaluation_data.wavelengths[i], 1-evaluation_data.separated_spectra_A[i], color_A, linewidth=2)
         ax2.plot(evaluation_data.wavelengths[i], 1-evaluation_data.template_flux_A[i], '--', color='grey', linewidth=0.5)
         ax2.set_xlabel('Wavelength (Å)')
         ax2.set_ylabel('Normalized Separated Flux', fontsize=15)
 
-        ax3.plot(evaluation_data.wavelengths[i], 1-evaluation_data.separated_spectra_B[i], 'r', linewidth=2)
+        ax3.plot(evaluation_data.wavelengths[i], 1-evaluation_data.separated_spectra_B[i], color_B, linewidth=2)
         ax3.plot(evaluation_data.wavelengths[i], 1-evaluation_data.template_flux_B[i], '--', color='grey', linewidth=0.5)
         ax2.set_xlabel('Wavelength (Å)')
         ax3.set_xlabel('Wavelength (Å)')
@@ -203,40 +216,48 @@ def plot_rv_and_separated_spectra(evaluation_data: RoutineResults, period: float
         plt.tight_layout()
 
     plt.show(block=block)
-    return ax1, ax2, ax3
+    return fig, ax1, ax2, ax3
 
 
-def plot_smoothed_broadening_functions(evaluation_data: RoutineResults, block=False):
+def plot_broadening_functions(evaluation_data: RoutineResults, block=False, xlim=None, smoothed=True):
     matplotlib.rcParams.update({'font.size': 25})
     for i in range(0, len(evaluation_data.interval_results)):
-        fig = plt.figure(figsize=(16, 9))
+        fig = plt.figure(figsize=(16, 15))
         gspec = fig.add_gridspec(1, 2)
         ax1 = fig.add_subplot(gspec[0, 0])
         ax2 = fig.add_subplot(gspec[0, 1])
 
         bf_results = evaluation_data.bf_results[i]
-        vel_A, bf_smooth_A, models_A = bf_results[0], bf_results[2], bf_results[3]
-        vel_B, bf_smooth_B, models_B = bf_results[4], bf_results[6], bf_results[7]
+        if smoothed is True:
+            vel_A, bf_A, models_A = bf_results[0], bf_results[2], bf_results[3]
+            vel_B, bf_B, models_B = bf_results[4], bf_results[6], bf_results[7]
+        else:
+            vel_A, bf_A, models_A = bf_results[0], bf_results[1], bf_results[3]
+            vel_B, bf_B, models_B = bf_results[4], bf_results[5], bf_results[7]
         RV_A = evaluation_data.RV_A[i]
         RV_B = evaluation_data.RV_B[i]
         flag_mask = evaluation_data.RV_B_flags[i].astype(bool)
         RV_B_initial = evaluation_data.RV_B_initial[i]
 
-        ax1.set_xlim([np.min(vel_A), np.max(vel_A)])
-        ax2.set_xlim([np.min(vel_A), np.max(vel_A)])
+        if xlim is None:
+            ax1.set_xlim([np.min(vel_A), np.max(vel_A)])
+            ax2.set_xlim([np.min(vel_A), np.max(vel_A)])
+        else:
+            ax1.set_xlim(xlim)
+            ax2.set_xlim(xlim)
 
         ax1.plot(np.zeros(shape=(2,)), [0.0, 1.05], '--', color='grey')
         ax2.plot(np.zeros(shape=(2,)), [0.0, 1.05], '--', color='grey')
         for k in range(0, vel_A[:, 0].size):
             offset = k/vel_A[:, 0].size
-            scale = (0.5/vel_A[:, 0].size)/np.max(bf_smooth_A[k, :])
-            ax1.plot(vel_A[k, :], 1 + scale*bf_smooth_A[k, :] - offset)
+            scale = (0.5/vel_A[:, 0].size)/np.max(bf_A[k, :])
+            ax1.plot(vel_A[k, :], 1 + scale*bf_A[k, :] - offset)
             ax1.plot(vel_A[k, :], 1 + scale*models_A[k, :] - offset, 'k--')
             ax1.plot(np.ones(shape=(2,))*RV_A[k], [1-offset*1.01, 1+5/4 * scale*np.max(models_A[k, :])-offset],
                      color='blue')
 
-            scale = (0.5/vel_B[:, 0].size)/np.max(bf_smooth_B[k, :])
-            ax2.plot(vel_B[k, :], 1 + scale*bf_smooth_B[k, :] - offset)
+            scale = (0.5/vel_B[:, 0].size)/np.max(bf_B[k, :])
+            ax2.plot(vel_B[k, :], 1 + scale*bf_B[k, :] - offset)
             ax2.plot(vel_B[k, :], 1 + scale*models_B[k, :] - offset, 'k--')
             if ~flag_mask[k]:
                 ax2.plot(np.ones(shape=(2,))*RV_B[k], [1-offset*1.01, 1+5/4 * scale*np.max(models_B[k, :])-offset],
@@ -246,9 +267,12 @@ def plot_smoothed_broadening_functions(evaluation_data: RoutineResults, block=Fa
                          color='blue')
             ax2.plot(np.ones(shape=(2,)) * RV_B_initial[k], [1-offset*1.01, 1+5/4*scale*np.max(models_B[k, :])-offset],
                      color='grey')
-            ax1.set_ylabel('Normalized, smoothed Broadening Function')
-            ax1.set_xlabel('Velocity Shift (km/s)')
-            ax2.set_xlabel('Velocity Shift (km/s)')
+            if smoothed is True:
+                ax1.set_ylabel('Normalized, smoothed Broadening Function')
+            else:
+                ax1.set_ylabel('Normalized Broadening Function')
+            ax1.set_xlabel('Velocity Shift [km/s]')
+            ax2.set_xlabel('Velocity Shift [km/s]')
             fig.suptitle(f'Interval results {evaluation_data.wavelength_a[i]}-{evaluation_data.wavelength_b[i]} Å ')
             ax1.tick_params(
                 axis='y',  # changes apply to the x-axis
