@@ -6,7 +6,8 @@ from typing import List, Tuple
 
 
 def draw_sample(
-        lc_blocks: np.ndarray, rvA, rvB, block_midtime: List[np.ndarray] or np.ndarray, rvA_model, rvB_model
+        lc_blocks: np.ndarray, rvA, rvB, block_midtime: List[np.ndarray] or np.ndarray, rvA_model, rvB_model,
+        draw_random_rv_obs=True
 ):
     """
 
@@ -20,7 +21,7 @@ def draw_sample(
     :return:
     """
     lc_sample = draw_lc_sample(lc_blocks, block_midtime)
-    rvA_sample, rvB_sample = draw_rv_sample(rvA, rvB, rvA_model, rvB_model)
+    rvA_sample, rvB_sample = draw_rv_sample(rvA, rvB, rvA_model, rvB_model, draw_random_timestamps=draw_random_rv_obs)
     return lc_sample, rvA_sample, rvB_sample
 
 
@@ -65,30 +66,76 @@ def draw_lc_sample(lc_blocks: np.ndarray, block_midtime: List[np.ndarray] or np.
     return lc_sample
 
 
-def draw_rv_sample(rvA, rvB, rvA_model, rvB_model):
+def draw_rv_sample(rvA, rvB, rvA_model, rvB_model, draw_random_timestamps=True):
     rng = default_rng()
 
     # Draw random rvs for sample
-    rvA_draw_indices = rng.integers(low=0, high=rvA.shape[0], size=rvA.shape[0])
-    rvA_sample = rvA[rvA_draw_indices, :]
+    if draw_random_timestamps is True:
+        rvA_draw_indices = rng.integers(low=0, high=rvA.shape[0], size=rvA.shape[0])
+        rvA_sample = rvA[rvA_draw_indices, :]
 
-    rvB_draw_indices = rng.integers(low=0, high=rvB.shape[0], size=rvB.shape[0])
-    rvB_sample = rvB[rvB_draw_indices, :]
+        rvB_draw_indices = rng.integers(low=0, high=rvB.shape[0], size=rvB.shape[0])
+        rvB_sample = rvB[rvB_draw_indices, :]
+    else:
+        rvA_sample = rvA
+        rvB_sample = rvB
+        rvA_draw_indices = np.indices((rvA[:, 0].size, ))
+        rvB_draw_indices = np.indices((rvB[:, 0].size, ))
 
     # Generate synthetic rv data from model + random residual
     if rvA_model is not None:
         residual_A = rvA[:, 1] - rvA_model
         residual_B = rvB[:, 1] - rvB_model
-
+        # Draw
         residual_indices_A = rng.integers(low=0, high=rvA.shape[0], size=rvA.shape[0])
         residual_indices_B = rng.integers(low=0, high=rvB.shape[0], size=rvB.shape[0])
-
+        # Value
         rvA_sample[:, 1] = rvA_model[rvA_draw_indices] + residual_A[residual_indices_A]
         rvB_sample[:, 1] = rvB_model[rvB_draw_indices] + residual_B[residual_indices_B]
-
+        # Error
         rvA_sample[:, 2] = rvA[residual_indices_A, 2]
         rvB_sample[:, 2] = rvB[residual_indices_B, 2]
     return rvA_sample, rvB_sample
+
+
+def draw_residual_sample(
+        model_blocks, residuals, error_residuals, rvA, rvB, rvA_model, rvB_model, draw_random_rv_obs=False
+):
+    lc_sample = draw_residual_lc_sample(model_blocks, residuals, error_residuals)
+    rvA_sample, rvB_sample = draw_rv_sample(rvA, rvB, rvA_model, rvB_model, draw_random_timestamps=draw_random_rv_obs)
+    return lc_sample, rvA_sample, rvB_sample
+
+
+def draw_residual_lc_sample(model_blocks, residuals, error_residuals):
+    """
+
+    :param model_blocks: np.ndarray shape (:, 2, nblocks) (time, model) in second axis
+    :param residuals:       np.ndarray shape (ndatapoints)
+    :param error_residuals: np.ndarray shape (ndatapoints)
+    :return:
+    """
+    model_blocks = np.copy(model_blocks)
+    # Make room for errors
+    model_blocks = np.append(
+        model_blocks, np.zeros((model_blocks[:, 0, 0].size, 1, model_blocks[0, 0, :].size)), axis=1
+    )
+
+    rng = default_rng()
+    lc_sample_list = []
+    for i in range(0, model_blocks[0, 0, :].size):
+        current_block = model_blocks[:, :, i]
+        nan_mask = np.isnan(current_block[:, 0])
+        current_block = current_block[~nan_mask, :]
+
+        index_0 = rng.integers(low=0, high=residuals.size-1, size=1)[0]
+        indices = range(index_0, index_0+current_block[:, 0].size)
+        current_block[:, 1] = current_block[:, 1] + np.take(residuals, indices, mode='wrap')
+        current_block[:, 2] = np.take(error_residuals, indices, mode='wrap')
+
+        lc_sample_list.append(current_block)
+
+    lc_sample = np.concatenate(lc_sample_list, axis=0)
+    return lc_sample
 
 
 def _divide_into_subgroups(lc_blocks: np.ndarray, subgroup_divisions: Tuple[int]):
@@ -157,7 +204,7 @@ def draw_lc_sample_variable_moving_blocks(
 def block_bootstrap(
         lc_blocks, rvA, rvB, repetitions, parameter_names, n_jobs=4,
         block_midtime: List[np.ndarray] or np.ndarray = None, rvA_model=None, rvB_model=None,
-        infile_name='infile.default'
+        infile_name='infile.default', draw_random_rv_obs=True
 ):
     """
     :param lc_blocks:       required shape (:, 3, nblocks). 1st column must be time values, 2nd lc flux magnitude,
@@ -192,7 +239,28 @@ def block_bootstrap(
     """
     clean_work_folder()
     job_results = Parallel(n_jobs=n_jobs)(
-        delayed(_loop_function)(lc_blocks, rvA, rvB, parameter_names, block_midtime, rvA_model, rvB_model, infile_name, i)
+        delayed(_loop_function)(
+            lc_blocks, rvA, rvB, parameter_names, block_midtime, rvA_model, rvB_model, infile_name, draw_random_rv_obs,
+            i
+        )
+        for i in range(0, repetitions)
+    )
+    return evaluate_runs(job_results)
+
+
+def residual_block_bootstrap(
+        model_blocks, residuals, error_residuals, rvA, rvB,
+        repetitions, parameter_names, n_jobs=4,
+        rvA_model=None, rvB_model=None, draw_random_rv_obs=False,
+        infile_name='infile.default'
+):
+    clean_work_folder()
+    job_results = Parallel(n_jobs=n_jobs)(
+        delayed(_loop_function_residual)(
+            model_blocks, residuals, error_residuals, rvA, rvB, parameter_names, rvA_model, rvB_model,
+            infile_name, draw_random_rv_obs,
+            i
+        )
         for i in range(0, repetitions)
     )
     return evaluate_runs(job_results)
@@ -215,10 +283,29 @@ def block_bootstrap_variable_moving_blocks(
     return evaluate_runs(job_results)
 
 
-def _loop_function(lc_blocks, rvA, rvB, parameter_names, block_midtime, rvA_model, rvB_model, infile_name, index):
-    lc_sample, rvA_sample, rvB_sample = draw_sample(lc_blocks, rvA, rvB, block_midtime, rvA_model, rvB_model)
-    parameter_values = run_jktebop_on_sample(lc_sample, rvA_sample, rvB_sample, index, parameter_names,
-                                             infile_name=infile_name)
+def _loop_function(
+        lc_blocks, rvA, rvB, parameter_names, block_midtime, rvA_model, rvB_model, infile_name, draw_random_rv_obs,
+        index
+):
+    lc_sample, rvA_sample, rvB_sample = draw_sample(
+        lc_blocks, rvA, rvB, block_midtime, rvA_model, rvB_model, draw_random_rv_obs
+    )
+    parameter_values = run_jktebop_on_sample(
+        lc_sample, rvA_sample, rvB_sample, index, parameter_names, infile_name=infile_name
+    )
+    return parameter_values
+
+
+def _loop_function_residual(
+        model_blocks, residuals, error_residuals, rvA, rvB, parameter_names, rvA_model, rvB_model, infile_name,
+        draw_random_rv_obs, index
+):
+    lc_sample, rvA_sample, rvB_sample = draw_residual_sample(
+        model_blocks, residuals, error_residuals, rvA, rvB, rvA_model, rvB_model, draw_random_rv_obs
+    )
+    parameter_values = run_jktebop_on_sample(
+        lc_sample, rvA_sample, rvB_sample, index, parameter_names, infile_name=infile_name
+    )
     return parameter_values
 
 

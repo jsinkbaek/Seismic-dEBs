@@ -6,18 +6,18 @@ from Binary_Analysis.block_bootstrap import block_bootstrap as boot
 os.chdir('/home/sinkbaek/PycharmProjects/Seismic-dEBs/Binary_Analysis/block_bootstrap/')
 
 period = 63.3270949830
+block_length = 0.3
 
-lc = np.loadtxt('work/lc.TESS')
+# lc = np.loadtxt('work/lc.TESS')
+lc_model = np.loadtxt('work/model.TESS.NOT')
+lc_err = lc_model[:, 2]
+time = lc_model[:, 0]
+model = lc_model[:, 4]
+residual = lc_model[:, 5]
+phase = np.mod(time, period)/period
 
-mask_secondary = lc[:, 0] < np.mean(lc[:, 0])
-lc_block_secondary = lc[mask_secondary, :]
-lc_block_primary = lc[~mask_secondary, :]
-
-lc_blocks = np.empty((np.max([lc_block_secondary[:, 0].size, lc_block_primary[:, 0].size]), 3, 2), dtype=lc.dtype)
-lc_blocks[:, :, :] = np.nan
-lc_blocks[0:lc_block_secondary[:, 0].size, :, 0] = lc_block_secondary
-lc_blocks[0:lc_block_primary[:, 0].size, :, 1] = lc_block_primary
-# lc_blocks = lc.reshape((lc.shape[0], lc.shape[1], 1))
+time_diff = np.median(np.diff(time))
+nblocks = int(np.rint(time_diff/block_length))
 
 rvA = np.loadtxt('work/rvA.NOT.dat')
 rvB = np.loadtxt('work/rvB.NOT.dat')

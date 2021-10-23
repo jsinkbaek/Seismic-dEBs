@@ -36,14 +36,16 @@ outfile_row = {'sb_ratio': '1  Surf. bright. ratio',
                'radius_A': 'Radius of star A (Rsun)',
                'radius_B': 'Radius of star B (Rsun)',
                'logg_A': 'Log surface gravity of star A (cgs):',
-               'logg_B': 'Log surface gravity of star B (cgs):'}
+               'logg_B': 'Log surface gravity of star B (cgs):',
+               'lum_ratio': 'Stellar light ratio'
+               }
 
 outfile_col = {'sb_ratio': 4, 'sum_radii': 5, 'ratio_radii': 5, 'limbd_A1': 4, 'limbd_B1': 4, 'incl': 3,
                'ecc': 2, 'perilong': 2, 'grav_dark_A': 3, 'grav_dark_B': 3, 'refl_light_A': 4, 'refl_light_B': 4,
                'phot_mass_ratio': 4, '3_light': 4, 'phase_corr': 3, 'light_scale_factor': 4, 'integration_ring': 3,
                'period': 4, 'ephemeris_tbase': 3, 'limbd_A2': 4, 'limbd_B2': 4, 'rv_amp_A': 5, 'rv_amp_B': 5,
                'system_rv_A': 5, 'system_rv_B': 5, 'sma_rsun': 4, 'mass_A': 5, 'mass_B': 5, 'radius_A': 5,
-               'radius_B': 5, 'logg_A': 7, 'logg_B': 7}
+               'radius_B': 5, 'logg_A': 7, 'logg_B': 7, 'lum_ratio': 5}
 
 
 def pull_parameters_from_outfile(folder: str, parameter_names: List[str]):

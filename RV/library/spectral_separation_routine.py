@@ -190,7 +190,7 @@ def recalculate_RVs(
         inv_flux_collection: np.ndarray, separated_flux_A: np.ndarray, separated_flux_B: np.ndarray,
         RV_collection_A: np.ndarray, RV_collection_B: np.ndarray, inv_flux_templateA: np.ndarray,
         inv_flux_templateB: np.ndarray, delta_v: float, ifitparamsA: InitialFitParameters,
-        ifitparamsB: InitialFitParameters, buffer_mask: np.ndarray, iteration_limit=6, convergence_limit=1e-5,
+        ifitparamsB: InitialFitParameters, buffer_mask: np.ndarray, iteration_limit=6, convergence_limit=5e-3,
         plot_ax_A=None, plot_ax_B=None, plot_ax_d1=None, plot_ax_d2=None, rv_lower_limit=0.0, period=None,
         time_values=None
 ):
@@ -263,8 +263,8 @@ def recalculate_RVs(
                 fit_width_A = copy(ifitparamsA.velocity_fit_width)
                 fit_width_B = copy(ifitparamsB.velocity_fit_width)
             if k == 1:
-                ifitparamsA.velocity_fit_width = 5.0
-                ifitparamsB.velocity_fit_width = 5.0
+                ifitparamsA.velocity_fit_width = 7.5
+                ifitparamsB.velocity_fit_width = 7.5
 
             iterations = 0
             while True:
@@ -305,7 +305,7 @@ def recalculate_RVs(
 
                 RMS_RV_B = np.abs(RMS_RV_B + RV_collection_B[i])
 
-                if RMS_RV_B < convergence_limit and RMS_RV_A < convergence_limit:
+                if RMS_RV_B < convergence_limit and RMS_RV_A < convergence_limit/10:
                     break
                 elif iterations > iteration_limit:
                     if k == 1:
@@ -573,8 +573,10 @@ def spectral_separation_routine(
             _, _, vsini_B[i], _, _, _ = get_fit_parameter_values(bf_fitres_B[i][0].params)
         ifitparamsA.vsini = np.mean(vsini_A)
         ifitparamsB.vsini = np.mean(vsini_B)
-        ifitparamsA.vsini_vary_limit = 0.5
-        ifitparamsB.vsini_vary_limit = 0.5
+        ifitparamsA.vsini_vary_limit = 0.7
+        ifitparamsB.vsini_vary_limit = 0.7
+        print('vsini A: ', ifitparamsA.vsini)
+        print('vsini B: ', ifitparamsB.vsini)
 
         iterations += 1
         RMS_A += RV_collection_A
@@ -663,101 +665,6 @@ def save_separation_data(
     np.savetxt(location + filename_bulk + 'models_B.txt', model_array)
 
 
-def estimate_errors_rv_only(
-        wavelength_intervals: list, inv_flux_collection: np.ndarray, inv_flux_templateA: np.ndarray,
-        inv_flux_templateB: np.ndarray, separated_flux_A: np.ndarray, separated_flux_B: np.ndarray, delta_v: float,
-        ifitparamsA: InitialFitParameters, ifitparamsB: InitialFitParameters, wavelength: np.ndarray,
-        RV_collection_A: np.ndarray, RV_collection_B: np.ndarray, times: np.ndarray, wavelength_buffer_size=100.0,
-        plot=False, period=1.0, combine_intervals=None, save_additional_results=True,
-        rv_lower_limit=0.0
-):
-    interval_results = _create_wavelength_intervals(
-        wavelength, wavelength_intervals, inv_flux_collection, inv_flux_templateA, inv_flux_templateB,
-        wavelength_buffer_size, separated_flux_A=separated_flux_A, separated_flux_B=separated_flux_B
-    )
-    (wavelength_interval_collection, flux_interval_collection, templateA_interval_collection,
-     templateB_interval_collection, sep_flux_A_interval_collection, sep_flux_B_interval_collection, interval_buffer_mask
-     ) = interval_results
-
-    if combine_intervals is not None:
-        combine_res =_combine_intervals(
-            combine_intervals, wavelength_interval_collection, flux_interval_collection,
-            templateA_interval_collection, templateB_interval_collection, interval_buffer_mask
-        )
-        (wavelength_interval_collection, flux_interval_collection, templateA_interval_collection,
-         templateB_interval_collection, interval_buffer_mask) = combine_res
-
-    RV_estimates_A = np.empty((RV_collection_A.size, len(wavelength_interval_collection)))
-    RV_estimates_B = np.empty((RV_collection_B.size, len(wavelength_interval_collection)))
-
-    RV_collection = np.empty((RV_collection_A.size, 2))
-    RV_collection[:, 0] = RV_collection_A
-    RV_collection[:, 1] = RV_collection_B
-
-    # # Calculate RVs using limited part of spectra # #
-    for i in range(0, len(wavelength_interval_collection)):
-        if plot:
-            # RVs and separated spectra
-            fig_1 = plt.figure(figsize=(16, 9))
-            gs_1 = fig_1.add_gridspec(2, 2)
-            f1_ax1 = fig_1.add_subplot(gs_1[0, :])
-            f1_ax2 = fig_1.add_subplot(gs_1[1, 0])
-            f1_ax3 = fig_1.add_subplot(gs_1[1, 1])
-
-            # Broadening function fits A
-            fig_2 = plt.figure(figsize=(8, 9))
-            gs_2 = fig_2.add_gridspec(1, 1)
-            f2_ax1 = fig_2.add_subplot(gs_2[:, :])
-
-            # Broadening function fits B
-            fig_3 = plt.figure(figsize=(8, 9))
-            gs_3 = fig_3.add_gridspec(1, 1)
-            f3_ax1 = fig_3.add_subplot(gs_3[:, :])
-        else:
-            f2_ax1 = None; f3_ax1 = None
-
-        RV_estimates_A[:, i], RV_estimates_B[:, i], fitres = recalculate_RVs(
-            flux_interval_collection[i], sep_flux_A_interval_collection[i], sep_flux_B_interval_collection[i],
-            RV_collection_A, RV_collection_B, templateA_interval_collection[i], templateB_interval_collection[i],
-            delta_v, ifitparamsA, ifitparamsB, interval_buffer_mask[i], plot_ax_A=f2_ax1, plot_ax_B=f3_ax1
-        )
-
-        if plot:
-            phase = np.mod(times, period) / period
-            f1_ax1.plot(phase, RV_estimates_A[:, i], 'b*')
-            f1_ax1.plot(phase, RV_estimates_B[:, i], 'r*')
-            f1_ax2.plot(wavelength_interval_collection[i], 1-sep_flux_A_interval_collection[i], 'b', linewidth=2)
-            f1_ax2.plot(wavelength_interval_collection[i], 1-templateA_interval_collection[i], '--', color='grey',
-                        linewidth=0.5)
-            f1_ax3.plot(wavelength_interval_collection[i], 1 - sep_flux_B_interval_collection[i], 'r', linewidth=2)
-            f1_ax3.plot(wavelength_interval_collection[i], 1 - templateB_interval_collection[i], '--', color='grey',
-                        linewidth=0.5)
-            f1_ax1.set_ylabel('Radial Velocity [km/s]')
-            f1_ax2.set_ylabel('Normalized Flux')
-            f1_ax2.set_xlabel('Wavelength [Å]')
-            f1_ax3.set_xlabel('Wavelength [Å]')
-            plt.show(block=True)
-
-        if save_additional_results is True:
-            bf_fitres_A, bf_fitres_B = fitres
-            buffer = interval_buffer_mask[i]
-            wl = wavelength_interval_collection[i][~buffer]
-            sepA = sep_flux_A_interval_collection[i][~buffer]
-            sepB = sep_flux_B_interval_collection[i][~buffer]
-            temA = templateA_interval_collection[i][~buffer]
-            temB = templateB_interval_collection[i][~buffer]
-            RVb_flags = np.zeros(RV_collection_B.shape)
-            RVb_flags[np.abs(RV_collection_A) > rv_lower_limit] = 1.0
-            save_separation_data(
-                'Data/additionals/error_rv_only/', wl, times, RV_estimates_A[:, i], RV_estimates_B[:, i],
-                RV_collection, sepA, sepB, bf_fitres_A, bf_fitres_B, RVb_flags, temA, temB
-            )
-
-    errors_RV_A = np.std(RV_estimates_A, axis=1) / np.sqrt(RV_estimates_A[0, :].size)
-    errors_RV_B = np.std(RV_estimates_B, axis=1) / np.sqrt(RV_estimates_B[0, :].size)
-    return (errors_RV_A, errors_RV_B), (RV_estimates_A, RV_estimates_B)
-
-
 def _create_wavelength_intervals(
         wavelength, wavelength_intervals: float or list, inv_flux_collection, inv_flux_templateA, inv_flux_templateB,
         wavelength_buffer_size, separated_flux_A: np.ndarray = None, separated_flux_B: np.ndarray = None
@@ -819,70 +726,6 @@ def _create_wavelength_intervals(
     else:
         return (wavelength_interval_collection, flux_interval_collection, templateA_interval_collection,
                 templateB_interval_collection, interval_buffer_mask)
-
-
-def estimate_errors(
-        wavelength_interval_size: int, inv_flux_collection: np.ndarray,
-        inv_flux_templateA: np.ndarray, inv_flux_templateB: np.ndarray, delta_v: float,
-        ifitparamsA: InitialFitParameters, ifitparamsB: InitialFitParameters, wavelength: np.ndarray,
-        time_values: np.ndarray, RV_collection: np.ndarray, convergence_limit=1E-5,
-        iteration_limit=10, plot=True, period=None, wavelength_buffer_size=100, rv_lower_limit=0.0,
-        suppress_print=False, convergence_limit_scs=1E-7, save_bf_plots=False, ignore_component_B=False
-):
-    (wavelength_interval_collection, flux_interval_collection, templateA_interval_collection,
-     templateB_interval_collection, interval_buffer_mask) = _create_wavelength_intervals(
-        wavelength, wavelength_interval_size, inv_flux_collection, inv_flux_templateA, inv_flux_templateB,
-        wavelength_buffer_size
-    )
-
-    RV_A_interval_values = np.empty((RV_collection[:, 0].size, len(wavelength_interval_collection)))
-    RV_B_interval_values = np.empty((RV_collection[:, 0].size, len(wavelength_interval_collection)))
-    for i in range(0, len(wavelength_interval_collection)):
-        current_wl, current_fl = wavelength_interval_collection[i], flux_interval_collection[i]
-        current_fltA, current_fltB = templateA_interval_collection[i], templateB_interval_collection[i]
-        current_buffer = interval_buffer_mask[i]
-
-        if save_bf_plots:
-            matplotlib.rcParams.update({'font.size': 25})
-            for k in range(0, current_fl[0, :].size):
-                current_wl_unbuffered = current_wl[~current_buffer]
-                current_fl_unbuffered = current_fl[~current_buffer, :]
-                current_fltA_unbuffered = current_fltA[~current_buffer]
-
-                BF = bfsvd.BroadeningFunction(current_fl_unbuffered[:, k], current_fltA_unbuffered,
-                                              ifitparamsA.bf_velocity_span, delta_v)
-                BF.smooth_sigma = ifitparamsA.bf_smooth_sigma
-                BF.solve()
-                BF.smooth()
-                plt.figure(figsize=(16, 9))
-                plt.plot(BF.velocity, BF.bf_smooth / np.max(BF.bf_smooth), 'r', linewidth=3)
-                plt.xlabel('Velocity Shift [km/s]')
-                plt.ylabel('Normalized Smoothed Broadening Function')
-                plt.xlim([-100, 100])
-                plt.tight_layout()
-                plt.savefig(fname=f'../figures/BF_plots/{k}/{current_wl_unbuffered[0]}_{current_wl_unbuffered[-1]}.png', dpi=400)
-                plt.close()
-
-        if plot:
-            save_plot_path = f'../figures/spectrum_plots/group_plots/{current_wl[~current_buffer][0]}_{current_wl[~current_buffer][1]}_multi.pdf'
-        else:
-            save_plot_path = None
-
-        RV_A_temp, RV_B_temp, _, _, _, _, _ = spectral_separation_routine(
-            current_fl, current_fltA, current_fltB, delta_v, ifitparamsA, ifitparamsB, current_wl, time_values,
-            RV_collection, convergence_limit, iteration_limit, plot, period, buffer_mask=current_buffer,
-            rv_lower_limit=rv_lower_limit, suppress_print=suppress_print, convergence_limit_scs=convergence_limit_scs,
-            save_plot_path=save_plot_path, ignore_component_B=ignore_component_B
-        )
-        if plot:
-            plt.close('all')
-        RV_A_interval_values[:, i] = RV_A_temp
-        RV_B_interval_values[:, i] = RV_B_temp
-
-    # bad_RVB_value_mask = np.abs(RV_A_interval_values) < rv_lower_limit
-    RV_errors_A = np.std(RV_A_interval_values, axis=1) / np.sqrt(RV_A_interval_values[0, :].size)
-    RV_errors_B = np.std(RV_B_interval_values, axis=1) / np.sqrt(RV_B_interval_values[0, :].size)
-    return RV_errors_A, RV_errors_B, (RV_A_interval_values, RV_B_interval_values)
 
 
 def _combine_intervals(combine_intervals, wl_intervals, fl_intervals, templA_intervals, templB_intervals,
