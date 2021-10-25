@@ -34,14 +34,14 @@ def tess_spectral_response(wl):
     :return: interpolated spectral response values for the TESS bandpass
     """
     data = np.loadtxt("Data/tables/TESS_TESS.Red.dat")
-    intp = interp1d(data[:, 0], data[:, 1], kind='cubic')
+    intp = interp1d(data[:, 0], data[:, 1], kind='linear')
     spectral_response = intp(wl)
     return spectral_response
 
 
 def kepler_spectral_response(wl):
     data = np.loadtxt("Data/tables/Kepler_Kepler.K.dat")
-    intp = interp1d(data[:, 0], data[:, 1], kind='cubic')
+    intp = interp1d(data[:, 0], data[:, 1], kind='linear')
     spectral_response = intp(wl)
     return spectral_response
 
@@ -330,9 +330,9 @@ def jktebop_iterator(T_RG, MH, mTurb, n_iter=4,  loc_infile='JKTEBOP/tess/infile
 
 
 def main():
-    # T2 = find_T2(7.513, 0.727, 5042, 61.16, kepler_spectral_response)
-    T_MS = find_T2(12.78589, 0.97445, 4700, 0.01892, kepler_spectral_response)
-    print(T_MS)
+    # T_MS = find_T2(7.5322533155, 0.7539093043, 5042, 0.0170083351, kepler_spectral_response)
+    # T_MS = find_T2(12.78589, 0.97445, 4700, 0.01892, kepler_spectral_response)
+    # print(T_MS)
     # print(interpolated_LD_param(4.62640, T2, -0.5, 2.0, loc='Data/tables/kepler_sing_table.dat'))
     # print(interpolated_LD_param(2.80835, 5042, -0.5, 2.0, loc='Data/tables/kepler_sing_table.dat'))
     # jktebop_iterator(n_iter=1, loc_infile='../Binary_Analysis/JKTEBOP/tess/infile.TESS',
@@ -343,8 +343,12 @@ def main():
     #     loc_infile='../Binary_Analysis/JKTEBOP/gaulme2016/KIC10001167/kepler_kasoc/infile.KEPLER',
     #     loc_jktebop='../Binary_Analysis/JKTEBOP/gaulme2016/KIC10001167/kepler_kasoc/',
     #     loc_ld_table='Data/tables/kepler_sing_table.dat')
-    # jktebop_iterator(n_iter=1, loc_infile='JKTEBOP/kepler_LTF/infile.KEPLER', loc_jktebop='JKTEBOP/kepler_LTF/',
-    #                  loc_ld_table='Data/tables/kepler_sing_table.dat')
+    jktebop_iterator(
+        5042, -0.49, 2.0,
+        n_iter=1, loc_infile='../Binary_Analysis/JKTEBOP/gaulme2016/KIC8430105/kepler_LTF_test/infile.KEPLER',
+        loc_jktebop='../Binary_Analysis/JKTEBOP/gaulme2016/KIC8430105/kepler_LTF_test/',
+        loc_ld_table='Data/tables/kepler_sing_table.dat'
+    )
 
 
 if __name__ == "__main__":

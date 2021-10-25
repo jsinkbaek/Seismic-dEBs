@@ -19,7 +19,7 @@ import sys
 matplotlib.rcParams.update({'font.size': 25})
 
 # # # # Set variables for script # # # #
-warnings.filterwarnings("ignore", category=UserWarning)
+# warnings.filterwarnings("ignore", category=UserWarning)
 plt.ion()
 data_path = '../Data/unprocessed/NOT/KIC8430105/'
 
@@ -31,8 +31,8 @@ wavelength_RV_limit = (4450, 7000)              # Ångström, the actual spectru
 wavelength_buffer_size = 25                     # Ångström, padding included at ends of spectra. Useful when doing
                                                 # wavelength shifts with np.roll()
 wavelength_intervals_full = [(4500, 5825)]
-# wavelength_intervals = [(4500, 4765), (4765, 5030), (5030, 5295), (5295, 5560), (5560, 5825)]
-wavelength_intervals = [(5985, 6250), (6575, 6840)]
+wavelength_intervals = [(4500, 4765), (4765, 5030), (5030, 5295), (5295, 5560), (5560, 5825), (5985, 6250), (6575, 6840)]
+# wavelength_intervals = [(5985, 6250), (6575, 6840)]
 combine_intervals = None
 # telluric lines: 5885-5970, 6266-6330, 6465-6525, 6850-7050
 # relevant balmer lines: 6563 (H alpha), 4861 (H beta)
@@ -79,13 +79,13 @@ mTur_A, mTur_B = 2.0, 2.0
 bf_velocity_span = 300        # broadening function span in velocity space, should be the same for both components
 limbd_A = estimate_linear_limbd(wavelength_RV_limit, logg_A, Teff_A, MH_A, mTur_A, loc='../Data/tables/atlasco.dat')
 limbd_B = estimate_linear_limbd(wavelength_RV_limit, logg_B, Teff_B, MH_B, mTur_B, loc='../Data/tables/atlasco.dat')
-ifitpar_A = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=100, limbd_coef=limbd_A,
+ifitpar_A = InitialFitParameters(vsini_guess=2.0, spectral_resolution=67000, velocity_fit_width=60, limbd_coef=limbd_A,
                                  smooth_sigma=2.0, bf_velocity_span=bf_velocity_span)
-ifitpar_B = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=20, limbd_coef=limbd_B,
+ifitpar_B = InitialFitParameters(vsini_guess=4.0, spectral_resolution=67000, velocity_fit_width=20, limbd_coef=limbd_B,
                                  smooth_sigma=4.0, bf_velocity_span=bf_velocity_span, ignore_at_phase=(0.98, 0.02))
 
 # # Template Spectra # #
-template_spectrum_path_A = '../Data/template_spectra/5000_20_m05p00.ms.fits'
+template_spectrum_path_A = '../Data/template_spectra/5000_30_m05p00.ms.fits'
 template_spectrum_path_B = '../Data/template_spectra/5500_45_m05p00.ms.fits'
 
 # # Computation parameters # #
@@ -276,9 +276,8 @@ if plot:
 # # Calculate broadening function RVs to use as initial guesses # #
 RV_guesses_A, _ = cRV.radial_velocities_of_multiple_spectra(
     flux_collection_inverted, flux_template_A_inverted, delta_v, ifitpar_A, number_of_parallel_jobs=4,
-    plot=True
+    plot=False
 )
-sys.exit()
 RV_guess_collection = np.empty((RV_guesses_A.size, 2))
 RV_guess_collection[:, 0] = RV_guesses_A
 RV_guesses_B = -RV_guesses_A * (mass_A_estimate / mass_B_estimate)
@@ -286,7 +285,7 @@ RV_guesses_B = -RV_guesses_A * (mass_A_estimate / mass_B_estimate)
 RV_guess_collection[:, 1] = RV_guesses_B
 
 # # #  Separate component spectra and calculate RVs iteratively # # #
-if False:
+if True:
     interval_results = ssr.spectral_separation_routine_multiple_intervals(
         wavelength_buffered, wavelength_intervals_full, flux_collection_inverted_buffered,
         flux_template_A_inverted_buffered,
@@ -299,8 +298,8 @@ if False:
 
 # # # Calculate error # # #
 # RV_A, RV_B, separated_flux_A_buffered, separated_flux_B_buffered, _, _, _ = interval_results[0]
-_, RV_A = np.loadtxt('Data/additionals/separation_routine/4500_5825_rvA.txt', unpack=True)
-_, RV_B, _ = np.loadtxt('Data/additionals/separation_routine/4500_5825_rvB.txt', unpack=True)
+_, RV_A = np.loadtxt('../Data/additionals/separation_routine/4500_5825_rvA.txt', unpack=True)
+_, RV_B, _ = np.loadtxt('../Data/additionals/separation_routine/4500_5825_rvB.txt', unpack=True)
 
 # # Separate component spectra and calculate RVs for each interval # #
 RV_guess_collection[:, 0] = RV_A

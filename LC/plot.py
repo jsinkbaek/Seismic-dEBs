@@ -151,9 +151,7 @@ def jktebop_model(loc_model, loc_lc, loc_lc_fit, loc_rvA, loc_rvB, period, initi
 
 
 def temperature_profile(T_MS, T_RG, R_MS, R_RG):
-    plt.rcParams.update({
-        "font.family": "sans-serif",
-        "font.sans-serif": ["Helvetica"]})
+    matplotlib.rcParams.update({'font.size': 20})
     lim_tess = Tlib.spectral_response_limits(Tlib.tess_spectral_response)
     wl_tess = np.linspace(lim_tess[0], lim_tess[1], 1000)
     srt = Tlib.tess_spectral_response(wl_tess)
@@ -165,7 +163,7 @@ def temperature_profile(T_MS, T_RG, R_MS, R_RG):
     planck_rg = Tlib.planck_func(wl_planck, T_RG)
     planck_ms = Tlib.planck_func(wl_planck, T_MS)
 
-    plt.figure()
+    plt.figure(figsize=(16, 9))
     plt.plot(wl_planck, planck_rg/np.max(planck_rg))
     plt.xlabel('Wavelength [Å]')
     plt.ylabel('Normalized units')
@@ -174,7 +172,7 @@ def temperature_profile(T_MS, T_RG, R_MS, R_RG):
     plt.legend(['Radiance of Planck Curve (T=5042K)', 'Spectral Response Function of Kepler CCD'])
     plt.show()
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(16, 9))
     ax1.plot(wl_planck, planck_rg, 'r')
     ax1.plot(wl_planck, planck_ms, 'y')
     ax1.set_ylabel('Radiance')
@@ -188,14 +186,15 @@ def temperature_profile(T_MS, T_RG, R_MS, R_RG):
     plt.xlim([3000, 12000])
     plt.show(block=False)
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
-    ax1.plot(wl_planck, planck_rg/np.max(planck_ms), 'r')
-    ax1.plot(wl_planck, planck_ms/np.max(planck_ms), 'y')
-    ax1.plot(wl_tess, srt, 'b')
-    ax1.plot(wl_kepler, srk, color='darkorange')
+    fig, ax1 = plt.subplots(1, 1, figsize=(16, 9))
+    ax1.plot(wl_planck, planck_rg/np.max(planck_ms), '--', color='indianred', linewidth=3)
+    ax1.plot(wl_planck, planck_ms/np.max(planck_ms), 'y--', linewidth=3)
+    ax1.plot(wl_tess, srt, color='royalblue', linewidth=5)
+    ax1.plot(wl_kepler, srk, color='darkorange', linewidth=5)
     ax1.legend(['Scaled planck curve T='+str(T_RG), 'Scaled planck curve T='+str(T_MS),
-                'TESS Spectral Response', 'Kepler Spectral Response'])
-    ax1.set_ylabel('Normalized units')
+                'TESS Spectral Response', 'Kepler Spectral Response'], fontsize=18)
+    ax1.set_ylabel('Normalized units', fontsize=22)
+    ax1.set_xlabel('Wavelength [Å]', fontsize=22)
     planck_tess_MS = Tlib.planck_func(wl_tess, T_MS)
     planck_tess_RG = Tlib.planck_func(wl_tess, T_RG)
     planck_kepler_MS = Tlib.planck_func(wl_kepler, T_MS)
@@ -210,10 +209,12 @@ def temperature_profile(T_MS, T_RG, R_MS, R_RG):
     ax2.set_title(r'Planck curve $\cdot$ Spectral response function')
     ax2.set_xlabel('Wavelength [Å]')
     ax2.set_ylabel('Normalized units')
-    plt.xlim([3000, 12000])
-    plt.show(block=False)
+    plt.xlim([3500, 11280])
+    plt.tight_layout()
+    plt.savefig('../figures/report/bandpass.png', dpi=400)
+    plt.show(block=True)
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, )
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(16, 9))
     ax1.plot(wl_tess, planck_tess_MS*srt*(R_MS**2), 'b')
     ax2.plot(wl_tess, planck_tess_RG*srt*(R_RG**2), 'b')
     ax1.plot(wl_kepler, planck_kepler_MS*srk*(R_MS**2), 'r')
@@ -221,7 +222,7 @@ def temperature_profile(T_MS, T_RG, R_MS, R_RG):
     ax2.set_xlabel('Wavelength [Å]')
     plt.show(block=False)
 
-    plt.figure()
+    plt.figure(figsize=(16, 9))
     plt.plot(wl_tess, planck_tess_RG*srt*(R_RG**2)/(planck_tess_MS*srt*(R_MS**2)), 'b')
     plt.plot(wl_kepler, planck_kepler_RG*srk*(R_RG**2)/(planck_kepler_MS*srk*(R_MS**2)), 'r')
     plt.xlabel('Wavelength [Å]')
@@ -607,7 +608,7 @@ def plot_many_lc(loc, period, phaselim1, phaselim2, subplot_text, figname):
     plt.show()
 
 
-# temperature_profile(5616, 5042, 0.727, 7.513)
+temperature_profile(5673, 5042, 0.7539093043, 7.5322533155)
 # jktebop_model('jktebop_kepler/model.out', 'lcmag_kepler_full.txt', 'lcmag_kepler.txt', 'jktebop_kepler/rvA.dat',
 #              'jktebop_kepler/rvB.dat', 63.32713, 54976.6351499878)
 # jktebop_model(loc_model='tess/model.out', loc_lc='lcmag_tess.txt', loc_rvA='tess/rvA.dat',

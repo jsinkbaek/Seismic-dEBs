@@ -4,7 +4,7 @@ import os
 import matplotlib
 
 matplotlib.rcParams.update({'font.size': 25})
-model_dir = '/Binary_Analysis/JKTEBOP/NOT/kepler_LTF/'
+model_dir = '/home/sinkbaek/PycharmProjects/Seismic-dEBs/Binary_Analysis/JKTEBOP/NOT/kepler_LTF/'
 
 model_filename = 'model.out'
 # rva = 'rvA.out'
@@ -13,15 +13,16 @@ phase_model, rv_Am, rv_Bm = np.loadtxt(model_dir+model_filename, usecols=(0, 6, 
 # rva = np.loadtxt(rva)
 # rvb = np.loadtxt(rvb)
 
-data_dir = '/RV/Data/additionals/separation_routine/'
+data_dir = '/home/sinkbaek/PycharmProjects/Seismic-dEBs/RV/Data/finalized_used/8430105/additionals/'
 time_A, rv_A = np.loadtxt(data_dir+'4500_5825_rvA.txt', unpack=True)
 time_B, rv_B, _ = np.loadtxt(data_dir+'4500_5825_rvB.txt', unpack=True)
 index_B, _, mean_rv_B, error_B = np.loadtxt(data_dir+'refitted/mean_std_B.txt', unpack=True)
 _, mean_rv_A, error_A = np.loadtxt(data_dir+'refitted/mean_std_A.txt', unpack=True)
 
+print(time_B[index_B.astype(int)] + 54976.6348 - 50000)
 time_A = time_A - (54998.2347431865 - 54976.6348)
 time_B = time_B - (54998.2347431865 - 54976.6348)
-print(time_B)
+
 
 index_B = index_B.astype(int)
 # print(index_B)
