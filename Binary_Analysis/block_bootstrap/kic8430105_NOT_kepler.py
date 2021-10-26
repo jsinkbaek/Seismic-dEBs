@@ -70,16 +70,16 @@ param_names = ['sb_ratio', 'sum_radii', 'ratio_radii', 'incl', 'ecc', 'perilong'
                'ephemeris_tbase', 'rv_amp_A', 'rv_amp_B', 'system_rv_A', 'system_rv_B', 'mass_A', 'mass_B', 'radius_A',
                'radius_B', 'logg_A', 'logg_B', 'sma_rsun']
 
-# mean_vals, std_vals, vals = boot.block_bootstrap(
-#     lc_blocks, rvA, rvB, 1000, param_names, n_jobs=10, block_midtime=midtimes, rvA_model=rvA_model, rvB_model=rvB_model
-# )
-mean_vals, std_vals, vals = boot.block_bootstrap_variable_moving_blocks(
-    lc_blocks, rvA, rvB, 3000, param_names,
-    subgroup_divisions=(1, 2, 3, 4, 5, 6), period=period,
-    n_jobs=10,
-    rvA_model=rvA_model, rvB_model=rvB_model,
-    infile_name='infile.default.NOT.KEPLER'
+mean_vals, std_vals, vals = boot.block_bootstrap(
+    lc_blocks, rvA, rvB, 10000, param_names, n_jobs=11, block_midtime=None, rvA_model=rvA_model, rvB_model=rvB_model
 )
+# mean_vals, std_vals, vals = boot.block_bootstrap_variable_moving_blocks(
+#     lc_blocks, rvA, rvB, 3000, param_names,
+#     subgroup_divisions=(1, 2, 3, 4, 5, 6), period=period,
+#     n_jobs=10,
+#     rvA_model=rvA_model, rvB_model=rvB_model,
+#     infile_name='infile.default.NOT.KEPLER'
+# )
 
 
 print('{:>14}'.format('Mean Value'), '\t', '{:>14}'.format('STD'), '\t', '{:<20}'.format('Parameter'))
