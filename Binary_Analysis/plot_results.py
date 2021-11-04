@@ -229,10 +229,10 @@ ax1.plot(
     [rho_gaulme[0], rho_gaulme[0]],
     '.-', color='black', linewidth=1.0
 )
-ax1.plot(
-    [0.80, 5.20],
-    [rho_kjeldsen[0], rho_kjeldsen[0]],
-    '.-', color='darkgreen', linewidth=1.0)
+#ax1.plot(
+#    [0.80, 5.20],
+#    [rho_kjeldsen[0], rho_kjeldsen[0]],
+#    '.-', color='darkgreen', linewidth=1.0)
 ax1.fill_between(
     [0.80, 5.20],
     [rho_gaulme[0]-rho_gaulme[1], rho_gaulme[0]-rho_gaulme[1]],
@@ -245,12 +245,12 @@ ax1.fill_between(
     [rho_rodrigues[0]+rho_rodrigues[1], rho_rodrigues[0]+rho_rodrigues[1]],
     alpha=0.4, color='indianred'
 )
-ax1.fill_between(
-    [0.80, 5.20],
-    [rho_kjeldsen[0]-rho_kjeldsen[1], rho_kjeldsen[0]-rho_kjeldsen[1]],
-    [rho_kjeldsen[0]+rho_kjeldsen[1], rho_kjeldsen[0]+rho_kjeldsen[1]],
-    alpha=0.4, color='limegreen'
-)
+#ax1.fill_between(
+#    [0.80, 5.20],
+#    [rho_kjeldsen[0]-rho_kjeldsen[1], rho_kjeldsen[0]-rho_kjeldsen[1]],
+#    [rho_kjeldsen[0]+rho_kjeldsen[1], rho_kjeldsen[0]+rho_kjeldsen[1]],
+#    alpha=0.4, color='limegreen'
+#)
 
 ax1.set_xticks([1, 2, 3, 4, 5])
 ax1.set_xticklabels(['NOT Kepler', 'Gaulme Kepler', 'NOT TESS', 'Gaulme TESS', 'Gaulme et al. 2016'], rotation=20)
