@@ -46,16 +46,16 @@ markersize = 12
 ax1.errorbar(1, not_kepler[0], yerr=not_kepler[2], fmt='rp', markersize=markersize)
 ax1.errorbar(2, gau_kepler[0], yerr=gau_kepler[2], fmt='p', color='orange', markersize=markersize)
 ax1.errorbar(3, not_tess[0], yerr=not_tess[2], fmt='bp', markersize=markersize)
-ax1.errorbar(4, gau_tess[0], yerr=gau_tess[2], fmt='gp', markersize=markersize)
+ax1.errorbar(4, gau_tess[0], yerr=gau_tess[2], fmt='p', color='deeppink', markersize=markersize)
 ax1.errorbar(5, gau_16_m[0], yerr=gau_16_m[2], fmt='p', color='indigo', markersize=markersize)
-ax1.plot([0.70, 5.2], [m_gaulm[0], m_gaulm[0]], '--', color='black', linewidth=1.0)
+ax1.plot([0.70, 5.2], [m_gaulm[0], m_gaulm[0]], '--', color='darkgreen', linewidth=1.0)
 ax1.plot([0.70, 5.2], [m_rodrigues[0], m_rodrigues[0]], '.-', color='red', linewidth=1.0)
 ax1.plot([0.70, 5.2], [m_buldgen[0], m_buldgen[0]], '.-', color='indigo', linewidth=1.0)
 ax1.fill_between(
     [0.7, 5.20],
     [m_gaulm[0]-m_gaulm[1], m_gaulm[0]-m_gaulm[1]],
     [m_gaulm[0]+m_gaulm[1], m_gaulm[0]+m_gaulm[1]],
-    alpha=0.4, color='grey'
+    alpha=0.4, color='darkseagreen'
 )
 ax1.fill_between(
     [0.7, 5.20],
@@ -78,7 +78,7 @@ ax1.set_xlim([0.7, 5.2])
 ax2.errorbar(1, not_kepler[1], yerr=not_kepler[3], fmt='rv', markersize=markersize)
 ax2.errorbar(2, gau_kepler[1], yerr=gau_kepler[3], fmt='v', color='orange', markersize=markersize)
 ax2.errorbar(3, not_tess[1], yerr=not_tess[3], fmt='bv', markersize=markersize)
-ax2.errorbar(4, gau_tess[1], yerr=gau_tess[3], fmt='gv', markersize=markersize)
+ax2.errorbar(4, gau_tess[1], yerr=gau_tess[3], fmt='v', color='deeppink', markersize=markersize)
 ax2.errorbar(5, gau_16_m[1], yerr=gau_16_m[3], fmt='v', color='indigo', markersize=markersize)
 
 ax2.set_xticks([1, 2, 3, 4, 5])
@@ -112,16 +112,16 @@ gau_16_r = np.array([7.65, 0.770, 0.05, 0.005])
 ax1.errorbar(1, not_kepler[0], yerr=not_kepler[2], fmt='rp', markersize=markersize)
 ax1.errorbar(2, gau_kepler[0], yerr=gau_kepler[2], fmt='p', color='orange', markersize=markersize)
 ax1.errorbar(3, not_tess[0], yerr=not_tess[2], fmt='bp', markersize=markersize)
-ax1.errorbar(4, gau_tess[0], yerr=gau_tess[2], fmt='gp', markersize=markersize)
+ax1.errorbar(4, gau_tess[0], yerr=gau_tess[2], fmt='p', color='deeppink', markersize=markersize)
 ax1.errorbar(5, gau_16_r[0], yerr=gau_16_r[2], fmt='p', color='indigo', markersize=markersize)
-ax1.plot([0.80, 5.2], [r_gaulm[0], r_gaulm[0]], '--', color='black', linewidth=1.0)
+ax1.plot([0.80, 5.2], [r_gaulm[0], r_gaulm[0]], '--', color='darkgreen', linewidth=1.0)
 ax1.plot([0.80, 5.2], [r_rodrigues[0], r_rodrigues[0]], '.-', color='red', linewidth=1.0)
 ax1.plot([0.80, 5.2], [r_buldgen[0], r_buldgen[0]], '.-', color='indigo', linewidth=1.0)
 ax1.fill_between(
     [0.7, 5.20],
     [r_gaulm[0]-r_gaulm[1], r_gaulm[0]-r_gaulm[1]],
     [r_gaulm[0]+r_gaulm[1], r_gaulm[0]+r_gaulm[1]],
-    alpha=0.4, color='grey'
+    alpha=0.4, color='darkseagreen'
 )
 ax1.fill_between(
     [0.7, 5.20],
@@ -143,7 +143,7 @@ ax1.set_xlim([0.8, 5.2])
 ax2.errorbar(1, not_kepler[1], yerr=not_kepler[3], fmt='rv', markersize=markersize)
 ax2.errorbar(2, gau_kepler[1], yerr=gau_kepler[3], fmt='v', color='orange', markersize=markersize)
 ax2.errorbar(3, not_tess[1], yerr=not_tess[3], fmt='bv', markersize=markersize)
-ax2.errorbar(4, gau_tess[1], yerr=gau_tess[3], fmt='gv', markersize=markersize)
+ax2.errorbar(4, gau_tess[1], yerr=gau_tess[3], fmt='v', color='deeppink', markersize=markersize)
 ax2.errorbar(5, gau_16_r[1], yerr=gau_16_r[3], fmt='v', color='indigo', markersize=markersize)
 
 ax2.set_xticks([1, 2, 3, 4, 5])
@@ -174,15 +174,15 @@ logg_gau_16 = np.array([2.788, 4.5, 0.004, 4.5])
 ax1.errorbar(1, logg_not_kepler[0], yerr=logg_not_kepler[2], fmt='rp', markersize=markersize)
 ax1.errorbar(2, logg_gau_kepler[0], yerr=logg_gau_kepler[2], fmt='p', color='orange', markersize=markersize)
 ax1.errorbar(3, logg_not_tess[0], yerr=logg_not_tess[2], fmt='bp', markersize=markersize)
-ax1.errorbar(4, logg_gau_tess[0], yerr=logg_gau_tess[2], fmt='gp', markersize=markersize)
+ax1.errorbar(4, logg_gau_tess[0], yerr=logg_gau_tess[2], fmt='p', color='deeppink', markersize=markersize)
 ax1.errorbar(5, logg_gau_16[0], yerr=logg_gau_16[2], fmt='p', color='indigo', markersize=markersize)
-ax1.plot([0.80, 5.2], [logg_gau_ast[0], logg_gau_ast[0]], '--', color='black', linewidth=1.0)
+ax1.plot([0.80, 5.2], [logg_gau_ast[0], logg_gau_ast[0]], '--', color='darkgreen', linewidth=1.0)
 ax1.plot([0.80, 5.2], [logg_rodrigues[0], logg_rodrigues[0]], '.-', color='red', linewidth=1.0)
 ax1.fill_between(
     [0.7, 5.20],
     [logg_gau_ast[0]-logg_gau_ast[1], logg_gau_ast[0]-logg_gau_ast[1]],
     [logg_gau_ast[0]+logg_gau_ast[1], logg_gau_ast[0]+logg_gau_ast[1]],
-    alpha=0.4, color='grey'
+    alpha=0.4, color='darkseagreen'
 )
 ax1.fill_between(
     [0.7, 5.20],
@@ -216,7 +216,7 @@ rho_gau_16     = np.array([0.00293, 0.0, 0.00003, 0.0])
 ax1.errorbar(1, rho_not_kepler[0], yerr=rho_not_kepler[2], fmt='rp', markersize=markersize)
 ax1.errorbar(2, rho_gau_kepler[0], yerr=rho_gau_kepler[2], fmt='p', color='orange', markersize=markersize)
 ax1.errorbar(3, rho_not_tess[0], yerr=rho_not_tess[2], fmt='bp', markersize=markersize)
-ax1.errorbar(4, rho_gau_tess[0], yerr=rho_gau_tess[2], fmt='gp', markersize=markersize)
+ax1.errorbar(4, rho_gau_tess[0], yerr=rho_gau_tess[2], fmt='p', color='deeppink', markersize=markersize)
 ax1.errorbar(5, rho_gau_16[0], yerr=rho_gau_16[2], fmt='p', color='indigo', markersize=markersize)
 
 ax1.plot(
@@ -227,7 +227,7 @@ ax1.plot(
 ax1.plot(
     [0.80, 5.20],
     [rho_gaulme[0], rho_gaulme[0]],
-    '.-', color='black', linewidth=1.0
+    '.-', color='darkgreen', linewidth=1.0
 )
 #ax1.plot(
 #    [0.80, 5.20],
@@ -237,7 +237,7 @@ ax1.fill_between(
     [0.80, 5.20],
     [rho_gaulme[0]-rho_gaulme[1], rho_gaulme[0]-rho_gaulme[1]],
     [rho_gaulme[0]+rho_gaulme[1], rho_gaulme[0]+rho_gaulme[1]],
-    alpha=0.4, color='grey'
+    alpha=0.4, color='darkseagreen'
 )
 ax1.fill_between(
     [0.80, 5.20],

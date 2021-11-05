@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import scipy.constants as c
 from scipy.interpolate import interp1d
@@ -330,9 +332,9 @@ def jktebop_iterator(T_RG, MH, mTurb, n_iter=4,  loc_infile='JKTEBOP/tess/infile
 
 
 def main():
-    # T_MS = find_T2(7.5322533155, 0.7539093043, 5042, 0.0170083351, kepler_spectral_response)
+    T_MS = find_T2(7.5322533155, 0.7539093043, 5042, 0.0170083351, kepler_spectral_response)
     # T_MS = find_T2(12.78589, 0.97445, 4700, 0.01892, kepler_spectral_response)
-    # print(T_MS)
+    print(T_MS)
     # print(interpolated_LD_param(4.62640, T2, -0.5, 2.0, loc='Data/tables/kepler_sing_table.dat'))
     # print(interpolated_LD_param(2.80835, 5042, -0.5, 2.0, loc='Data/tables/kepler_sing_table.dat'))
     # jktebop_iterator(n_iter=1, loc_infile='../Binary_Analysis/JKTEBOP/tess/infile.TESS',
@@ -343,12 +345,12 @@ def main():
     #     loc_infile='../Binary_Analysis/JKTEBOP/gaulme2016/KIC10001167/kepler_kasoc/infile.KEPLER',
     #     loc_jktebop='../Binary_Analysis/JKTEBOP/gaulme2016/KIC10001167/kepler_kasoc/',
     #     loc_ld_table='Data/tables/kepler_sing_table.dat')
-    jktebop_iterator(
-        5042, -0.49, 2.0,
-        n_iter=1, loc_infile='../Binary_Analysis/JKTEBOP/gaulme2016/KIC8430105/kepler_LTF_test/infile.KEPLER',
-        loc_jktebop='../Binary_Analysis/JKTEBOP/gaulme2016/KIC8430105/kepler_LTF_test/',
-        loc_ld_table='Data/tables/kepler_sing_table.dat'
-    )
+    # jktebop_iterator(
+    #     5042, -0.49, 2.0,
+    #     n_iter=1, loc_infile='../Binary_Analysis/JKTEBOP/gaulme2016/KIC8430105/kepler_LTF/infile.KEPLER',
+    #     loc_jktebop='../Binary_Analysis/JKTEBOP/gaulme2016/KIC8430105/kepler_LTF/',
+    #     loc_ld_table='Data/tables/kepler_sing_table.dat'
+    #)
 
 
 if __name__ == "__main__":
