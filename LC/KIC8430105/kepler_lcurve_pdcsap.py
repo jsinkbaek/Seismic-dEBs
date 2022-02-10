@@ -4,6 +4,7 @@ import matplotlib
 from astropy.io import fits
 from numpy.polynomial import Polynomial
 from scipy.signal import medfilt
+import os
 
 # matplotlib.use('Qt5Agg')
 print(matplotlib.get_backend())
@@ -54,7 +55,7 @@ def poly_plt(fl, tm, fln, tmn, pfit, tm0, tm1, fignr, component, res_mask, fit_m
     plt.xticks(fontsize=13)
     plt.legend(['Uncorrected light curve', 'Data used for fit', 'Data for corrected LC', 'Chosen LTF polynomial'],
                 markerscale=8)
-    plt.savefig(fname='../../figures/LTF/8430105/fig_'+str(fignr)+component+'1', orientation='landscape', dpi=150)
+    plt.savefig(fname='../../figures/LTF_pdcsap/8430105/fig_'+str(fignr)+component+'1', orientation='landscape', dpi=150)
     plt.close(fig)
 
     fig = plt.figure(figsize=[6.4*1.5, 4.8*1.5])
@@ -70,13 +71,14 @@ def poly_plt(fl, tm, fln, tmn, pfit, tm0, tm1, fignr, component, res_mask, fit_m
     else:
         plt.legend(['LTF corrected light curve'], markerscale=8)
     plt.ticklabel_format(axis='x', style='plain', useOffset=False)
-    plt.savefig(fname='../../figures/LTF/8430105/fig_'+str(fignr)+component+'2', orientation='landscape', dpi=150)
+    plt.savefig(fname='../../figures/LTF_pdcsap/8430105/fig_'+str(fignr)+component+'2', orientation='landscape', dpi=150)
     plt.close(fig)
 
 
 def plt_inspect(ph, fl, tm, phn, fln, fit_mask, res_mask, pfit, tm0, tm1):
     plt.figure()
     plt.plot(phn, fln, 'r.', markersize=1.0)
+    plt.plot(phn, np.ones(shape=phn.shape), 'k--')
     plt.show(block=False)
 
     matplotlib.rcParams.update({'font.size': 17})
@@ -136,7 +138,7 @@ def inspection_loop(ph, fl, tm, fit_mask, res_mask, deg, tm0, tm1):
     return (phn, fln, tmn), pfit, fit_mask_, res_mask_
 
 
-def save_phase(ph, fl, tm, i_, pfit, component, loc='../Data/processed/KIC8430105/kepler_local_trendfitting_results/'):
+def save_phase(ph, fl, tm, i_, pfit, component, loc='../Data/processed/KIC8430105/pdcsap_trendfit_results/'):
     """
 
     :param ph: phase
@@ -153,7 +155,7 @@ def save_phase(ph, fl, tm, i_, pfit, component, loc='../Data/processed/KIC843010
     np.savetxt(loc+str(i_)+component+'.pfit', pfit.coef)
 
 
-def load_phase(i_, component, loc='../Data/processed/KIC8430105/kepler_local_trendfitting_results/'):
+def load_phase(i_, component, loc='../Data/processed/KIC8430105/pdcsap_trendfit_results/'):
     """
     :param i_: integer designating phase to load
     :param component: string 'A' or 'B' designating first (full) or second eclipse
@@ -210,35 +212,28 @@ if load_previous:
             phase_p12 = np.append(phase_p12, phase2)
             time_p12 = np.append(time_p12, time2)
 else:
-    with fits.open("../Data/unprocessed/kasoc/kplr008430105_kasoc-ts_llc_v1.fits") as hdul:
-        print(hdul.info())
-        hdu = hdul[1]
-        print(hdu.columns)
-        time = hdu.data['TIME']
-        flux_seism = hdu.data['FLUX']
-        err_seism = hdu.data['FLUX_ERR']
-        corr_long = hdu.data['XLONG']
-        corr_transit = hdu.data['XPHASE']
-        corr_short = hdu.data['XSHORT']
-        corr_pos = hdu.data['XPOS']
-        corr_full = hdu.data['FILTER']
-        kasoc_qflag = hdu.data['KASOC_FLAG']
+    pdcsap = np.array([])
+    time = np.array([])
+    pdcsap_err = np.array([])
+    for fname in os.listdir('../Data/unprocessed/mast/kepler-kic8430105/'):
+        with fits.open('../Data/unprocessed/mast/kepler-kic8430105/'+fname) as hdul:
+            hdu = hdul[1]
+            time_temp = hdu.data['TIME']
+            pdcsap_temp = hdu.data['PDCSAP_FLUX']
+            pdcsap_err_temp = hdu.data['PDCSAP_FLUX_ERR']
+            nan_mask = np.isnan(time_temp) | np.isnan(pdcsap_temp) | np.isnan(pdcsap_err_temp)
+            time_temp = time_temp[~nan_mask]
+            pdcsap_temp = pdcsap_temp[~nan_mask]
+            pdcsap_err_temp = pdcsap_err_temp[~nan_mask]
+            pdcsap = np.append(pdcsap, pdcsap_temp)
+            time = np.append(time, time_temp)
+            pdcsap_err = np.append(pdcsap_err, pdcsap_err_temp)
 
-    # Remove nan's
-    nan_mask = np.isnan(time) | np.isnan(flux_seism) | np.isnan(corr_full)
-    time = time[~nan_mask]
-    flux_seism = flux_seism[~nan_mask]
-    err_seism = err_seism[~nan_mask]
-    corr_long = corr_long[~nan_mask]
-    corr_transit = corr_transit[~nan_mask]
-    corr_short = corr_short[~nan_mask]
-    corr_full = corr_full[~nan_mask]
-    corr_pos = corr_pos[~nan_mask]
+    sort_idx = np.argsort(time)
+    time = time[sort_idx]
+    pdcsap = pdcsap[sort_idx]
+    pdcsap_err = pdcsap_err[sort_idx]
 
-    # Make uncorrected relative flux
-    flux = (flux_seism * 1E-6 + 1) * corr_full
-    # Correct flux for transit
-    flux_transit = flux / (corr_long + corr_short)
     # Do phase fold
     period = 63.32713
     phase = np.mod(time, period) / period
@@ -247,9 +242,12 @@ else:
     # Split dataset into separate orbits
     phasecut_mask = np.diff(phase) < -0.8
     phasecut_idxs = np.where(phasecut_mask)[0]
-    flux_split = np.split(flux, phasecut_idxs)
+    flux_split = np.split(pdcsap, phasecut_idxs)
     phase_split = np.split(phase, phasecut_idxs)
     time_split = np.split(time, phasecut_idxs)
+    for i in range(0, len(phase_split)):
+        plt.plot(phase_split[i], flux_split[i], '.')
+    plt.show()
 
     # Correct and normalize flux (either with eclipse normalization for quick plot, or polynomial local trend fitting)
     norm_flux1 = np.array([])
@@ -272,12 +270,16 @@ else:
         current_flux = flux_split[i]
         current_time = time_split[i]
 
-        fit_mask1 = ((current_phases > 0.02) & (current_phases < 0.12292)) \
-                    | ((current_phases > 0.15164) & (current_phases < 0.3))
-        fit_mask2 = ((current_phases > 0.34) & (current_phases < 0.46269)) \
-                    | ((current_phases > 0.49391) & (current_phases < 0.65))
-        res_mask1 = (current_phases > 0.04) & (current_phases < 0.24)
-        res_mask2 = (current_phases > 0.38) & (current_phases < 0.58)
+        diff1 = 0.12292-0.02
+        diff2 = 0.3-0.15164
+        diff3 = 0.46269-0.34
+        diff4 = 0.65-0.49391
+        fit_mask1 = ((current_phases > 0.253-diff1) & (current_phases < 0.253)) \
+                    | ((current_phases > 0.285) & (current_phases < 0.285+diff2))
+        fit_mask2 = ((current_phases > 0.592-diff3) & (current_phases < 0.592)) \
+                    | ((current_phases > 0.629) & (current_phases < 0.629+diff4))
+        res_mask1 = (current_phases > 0.2) & (current_phases < 0.35)
+        res_mask2 = (current_phases > 0.53) & (current_phases < 0.7)
 
         # # Polynomial local trend fitting normalization # #
         if current_phases[fit_mask1].size > 10:
@@ -348,7 +350,7 @@ if False:
     plt.show()
 
 # Measure spread within full eclipse as estimator of flux error
-rmse_measure_mask = (phase_p1 > 0.126) & (phase_p1 < 0.149)
+rmse_measure_mask = (phase_p1 > 0.2569) & (phase_p1 < 0.2798)
 rmse_used_vals = flux_p1[rmse_measure_mask]
 mean_val = np.mean(rmse_used_vals)
 error = np.sqrt(np.sum((mean_val - rmse_used_vals)**2) / rmse_used_vals.size)
@@ -402,9 +404,12 @@ m_err = m_err[mask]
 print(m.shape)
 
 # Cut fit data down to bone
-# mask = ((phase_p12 > 0.117) & (phase_p12 < 0.156)) | ((phase_p12 > 0.457) & (phase_p12 < 0.500))
-diff = 0.025
-mask = ((phase_p12 > 0.1373-diff) & (phase_p12 < 0.1373+diff)) | ((phase_p12 > 0.478-diff) & (phase_p12 < 0.478+diff))
+# diff_x1 = 0.156 - 0.117
+# diff_x2 = 0.500 - 0.457
+diff_x1 = 0.025
+diff_x2 = 0.025
+mask = ((phase_p12 > 0.268-diff_x1) & (phase_p12 < 0.268+diff_x1)) | \
+       ((phase_p12 > 0.6087-diff_x2) & (phase_p12 < 0.6087+diff_x2))
 m = m[mask]
 flux_p12 = flux_p12[mask]
 time_p12 = time_p12[mask]
@@ -422,20 +427,20 @@ if True:
     ax1.errorbar(phase_p12, m, m_err, fmt='k.', ecolor='gray', markersize=0.5, elinewidth=0.1, errorevery=10)
     ax1.set_xlabel('Phase')
     ax1.set_ylabel('Relative Magnitude')
-    ax1.set_xlim([0.115, 0.158])
+    ax1.set_xlim([0.268-diff_x1-0.0002, 0.268+diff_x1+0.0002])
     ax1.set_ylim([0.020, -0.003])
     ax2.errorbar(phase_p12, m, m_err, fmt='k.', ecolor='gray', markersize=0.5, elinewidth=0.1, errorevery=10)
     ax2.set_xlabel('Phase')
-    ax2.set_xlim([0.455, 0.502])
+    ax2.set_xlim([0.6087-diff_x2-0.0002, 0.6087+diff_x2+0.0002])
     plt.show()
 
 save_data = np.zeros((m.size, 3))
 print(save_data.shape)
-save_data[:, 0] = time_p12
+save_data[:, 0] = time_p12 + 54833.0
 save_data[:, 1] = m
 save_data[:, 2] = m_err
-np.savetxt('../Data/processed/KIC8430105/lcmag_kepler_ltf_wide.txt', save_data)
+np.savetxt('../Data/processed/KIC8430105/lcmag_kepler_pdcsap.txt', save_data)
 save_data[:, 1] = flux_p12
 save_data[:, 2] = np.ones(flux_p12.shape) * error
-np.savetxt('../Data/processed/KIC8430105/lcflux_kepler_ltf_wide.txt', save_data)
+np.savetxt('../Data/processed/KIC8430105/lcflux_kepler_pdcsap.txt', save_data)
 

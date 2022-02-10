@@ -7,20 +7,25 @@ matplotlib.rcParams.update({'font.size': 17})
 
 os.chdir('/home/sinkbaek/PycharmProjects/Seismic-dEBs/Binary_Analysis/JKTEBOP/')
 
-lc_NOT_kepler = np.loadtxt('NOT/kepler_LTF/lc.out')
-lc_NOT_kepler_2 = np.loadtxt('NOT/kepler_LTF (copy)/lc.out')
+lc_NOT_kepler = np.loadtxt('NOT/kepler_pdcsap_newbarycorr/lc.out')
+# lc_NOT_kepler_2 = np.loadtxt('NOT/kepler_LTF (copy)/lc.out')
 lc_gaulme_kepler = np.loadtxt('gaulme2016/KIC8430105/kepler_LTF/lc.out')
 lc_NOT_tess = np.loadtxt('NOT/tess_LTF/lc.out')
 lc_gaulme_tess = np.loadtxt('gaulme2016/KIC8430105/tess_ltf/lc.out')
 
-rva_not = np.loadtxt('NOT/kepler_LTF/rvA.out')
-rvb_not = np.loadtxt('NOT/kepler_LTF/rvB.out')
-not_model = np.loadtxt('NOT/kepler_LTF/model.out')
-gau_model = np.loadtxt('gaulme2016/KIC8430105/kepler_LTF/model.out')
-rva_gau = np.loadtxt('gaulme2016/KIC8430105/kepler_LTF/rvA.out')
-rvb_gau = np.loadtxt('gaulme2016/KIC8430105/kepler_LTF/rvB.out')
-sys_gau_A = 16.1460728236
-sys_gau_B = 16.6779564382
+rva_not = np.loadtxt('NOT/kepler_pdcsap_newbarycorr/rvA.out')
+rvb_not = np.loadtxt('NOT/kepler_pdcsap_newbarycorr/rvB.out')
+not_model = np.loadtxt('NOT/kepler_pdcsap_newbarycorr/model.out')
+# gau_model = np.loadtxt('gaulme2016/KIC8430105/kepler_LTF/model.out')
+gau_model = np.loadtxt('NOT/kepler_pdcsap/model.out')
+# rva_gau = np.loadtxt('gaulme2016/KIC8430105/kepler_LTF/rvA.out')
+# rvb_gau = np.loadtxt('gaulme2016/KIC8430105/kepler_LTF/rvB.out')
+rva_gau = np.loadtxt('NOT/kepler_pdcsap/rvA.out')
+rvb_gau = np.loadtxt('NOT/kepler_pdcsap/rvB.out')
+# sys_gau_A = 16.1460728236
+# sys_gau_B = 16.6779564382
+sys_gau_A = 11.6126002555
+sys_gau_B = 12.0261221106
 sys_not_A = 11.6126002555
 sys_not_B = 12.0261221106
 
@@ -148,9 +153,16 @@ def rv_plot(rv1_a, rv1_b, rv2_a, rv2_b, sys1_a, sys1_b, sys2_a, sys2_b, rv1_mode
     ax22.plot([-0.05, 1], [0, 0], '--', color='black', alpha=0.7)
 
     std1_a = np.std(rv1_a[:, 5])
+    # std1_a = np.sqrt(np.sum(rv1_a[:, 5]**2)/len(rv1_a[:, 5]))
     std1_b = np.std(rv1_b[:, 5])
+    # std1_b = np.sqrt(np.sum(rv1_b[:, 5] ** 2) / len(rv1_b[:, 5]))
     std2_a = np.std(rv2_a[:, 5])
     std2_b = np.std(rv2_b[:, 5])
+
+    print('std1_a', std1_a, 'std1_b', std1_b)
+    print('std2_a', std2_a, 'std2_b', std2_b)
+    print('rv_mean_err_1a', np.mean(rv1_a[:, 2]))
+    print('rv_mean_err_1b', np.mean(rv1_b[:, 2]))
 
     ax21.fill_between([-0.05, 1], [std1_a, std1_a], [-std1_a, -std1_a], color='indianred', alpha=0.25)
     ax21.fill_between([-0.05, 1], [std2_a, std2_a], [-std2_a, -std2_a], color='darkorange', alpha=0.25)
@@ -170,13 +182,13 @@ def rv_plot(rv1_a, rv1_b, rv2_a, rv2_b, sys1_a, sys1_b, sys2_a, sys2_b, rv1_mode
     ax22.plot([0.65892, 0.65892], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.5)
     ax22.plot([0., 0.], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.5)
 
-    ax21.set_yticks([-2.5, 0.0, 2.5])
+    # ax21.set_yticks([-2.5, 0.0, 2.5])
     ax22.set_yticks([-2.5, 0.0, 2.5])
 
 
-lc_plot(lc_NOT_tess, [-0.01756, 0.01859], [0.64334, 0.67481])
-plt.savefig('../../figures/report/tess/lc_not.png', dpi=400)
-# lc_plot(lc_NOT_kepler_2, [-0.02110, 0.02181], [0.63887, 0.67778])
+# lc_plot(lc_NOT_tess, [-0.01756, 0.01859], [0.64334, 0.67481])
+# plt.savefig('../../figures/report/tess/lc_not.png', dpi=400)
+lc_plot(lc_NOT_kepler, [-0.02110, 0.02181], [0.63887, 0.67778])
 # plt.savefig('../../figures/report/kepler/lc_sigmaclip.png', dpi=400)
 # rv_plot(rva_not, rvb_not, rva_gau, rvb_gau, sys_not_A, sys_not_B, sys_gau_A, sys_gau_B, not_model, gau_model)
 # plt.savefig('../../figures/report/kepler/rv.png', dpi=400)

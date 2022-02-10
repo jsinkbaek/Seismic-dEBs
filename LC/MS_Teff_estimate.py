@@ -332,8 +332,10 @@ def jktebop_iterator(T_RG, MH, mTurb, n_iter=4,  loc_infile='JKTEBOP/tess/infile
 
 
 def main():
-    T_MS = find_T2(7.5322533155, 0.7539093043, 5042, 0.0170083351, kepler_spectral_response)
-    # T_MS = find_T2(12.78589, 0.97445, 4700, 0.01892, kepler_spectral_response)
+    # T_MS = find_T2(7.5322533155, 0.7539093043, 5042, 0.0170083351, kepler_spectral_response)
+    # T_MS = find_T2(7.6879323646, 0.7708429083, 5042, 0.0170194096, kepler_spectral_response)
+    # T_MS = find_T2(7.5461591574, 0.7603711045, 5042, 0.0156490920, tess_spectral_response)
+    T_MS = find_T2(7.4293251720, 0.7482196361, 5042, 0.0156412964, tess_spectral_response)
     print(T_MS)
     # print(interpolated_LD_param(4.62640, T2, -0.5, 2.0, loc='Data/tables/kepler_sing_table.dat'))
     # print(interpolated_LD_param(2.80835, 5042, -0.5, 2.0, loc='Data/tables/kepler_sing_table.dat'))

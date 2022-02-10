@@ -2,7 +2,7 @@ import numpy as np
 from astropy.io import fits
 import os
 
-loc_datafiles = 'Data/unprocessed/mast/tess-kic8430105/'
+loc_datafiles = '../Data/unprocessed/mast/tess-kic8430105/'
 crowding = np.array([])
 for filename in os.listdir(loc_datafiles):
     with fits.open(loc_datafiles+filename) as hdul:

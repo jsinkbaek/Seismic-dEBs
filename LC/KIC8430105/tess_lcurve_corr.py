@@ -14,6 +14,7 @@ import astropy as ap
 from numpy.polynomial import Polynomial
 from copy import copy
 import matplotlib
+import sys
 
 
 target = 'KIC8430105'
@@ -71,6 +72,7 @@ ax2 = fig.add_subplot(gs[1, 0])
 print(lk.search_targetpixelfile('KIC8430105', mission='TESS'))
 tpf_2min = lk.search_targetpixelfile('KIC8430105', mission='TESS', sector=15).download(quality_bitmask='hard')
 tpf_2min.plot(frame=300,  aperture_mask=tpf_2min.pipeline_mask, mask_color='red', ax=ax1)
+sys.exit()
 
 # Using pipeline aperture or extended background mask
 aper = tpf_2min.pipeline_mask

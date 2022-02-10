@@ -21,7 +21,7 @@ def weighted_avg_and_std(values, weights):
     return average, math.sqrt(variance)
 
 
-matplotlib.rcParams.update({'font.size': 25})
+matplotlib.rcParams.update({'font.size': 30})
 os.chdir('Binary_Analysis/JKTEBOP/NOT/kepler_LTF/')
 
 model_filename = 'model.out'
@@ -39,7 +39,7 @@ ax1 = fig.add_subplot(gs[0:5, 0])
 # ax3 = fig.add_subplot(gs[4, 0])
 ax1.set_xlabel('Orbital Phase')
 # ax3.set_xlabel('Orbital Phase')
-ax1.set_ylabel('Radial Velocity (km/s)')
+ax1.set_ylabel('Radial Velocity [km/s]')
 # ax23.set_ylabel('O-C')
 # ax2.set_ylabel('O - C')
 # ax3.set_ylabel('O - C')
@@ -50,10 +50,10 @@ ax1.set_xlim([0, 1.0])
 a_mask = rva[:, 0] > 59000
 b_mask = rvb[:, 0] > 59000
 
-ax1.errorbar(rva[:, 3], rva[:, 1], yerr=rva[:, 2], fmt='v', color='indianred', markersize=7)
-ax1.errorbar(rvb[:, 3], rvb[:, 1], yerr=rvb[:, 2], fmt='v', color='royalblue', markersize=7)
-ax1.plot(phase_model, rv_Am, '--', alpha=0.8, color='grey')
-ax1.plot(phase_model, rv_Bm, '--', alpha=0.8, color='grey')
+ax1.errorbar(rva[:, 3], rva[:, 1], yerr=rva[:, 2], fmt='v', color='indianred', markersize=18)
+ax1.errorbar(rvb[:, 3], rvb[:, 1], yerr=rvb[:, 2], fmt='v', color='royalblue', markersize=18)
+ax1.plot(phase_model, rv_Am, '--', alpha=0.8, color='indianred', linewidth=4)
+ax1.plot(phase_model, rv_Bm, '--', alpha=0.8, color='royalblue', linewidth=4)
 ax1.plot([0.0, 1.0], [11.627, 11.627], linestyle='dotted', alpha=0.8, color='grey')
 # ax1.tick_params(
 #     axis='x',
@@ -67,7 +67,7 @@ ax1.tick_params(
     which='major',
     left=True,
     labelleft=True,
-    labelsize=22,
+    labelsize=30,
 )
 """
 ax2.tick_params(
