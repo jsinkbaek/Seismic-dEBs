@@ -14,6 +14,7 @@ import scipy.linalg as lg
 import warnings
 from RV.library.rotational_broadening_function_fitting import *
 import matplotlib.pyplot as plt
+from copy import copy
 
 
 class DesignMatrix:
@@ -158,7 +159,7 @@ class BroadeningFunction:
 
     def __copy__(self):
         new_copy = type(self)(self.spectrum, self.template_spectrum, self.velocity_span, self.dv, self.span, copy=True)
-        new_copy.svd = self.svd
+        new_copy.svd = copy(self.svd)
         new_copy.bf = self.bf
         new_copy.bf_smooth = self.bf_smooth
         new_copy.smooth_sigma = self.smooth_sigma

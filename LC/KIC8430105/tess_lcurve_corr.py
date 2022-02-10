@@ -15,7 +15,7 @@ from numpy.polynomial import Polynomial
 from copy import copy
 import matplotlib
 import sys
-
+matplotlib.rcParams['legend.fontsize'] = 22
 
 target = 'KIC8430105'
 matplotlib.rcParams.update({'font.size': 22})
@@ -132,16 +132,30 @@ fig = plt.gcf()
 axs = fig.axes
 fig.set_size_inches(16, 9)
 axs[0].xaxis.label.set_size(22)
+axs[0].legend(prop=dict(size=18))
 axs[0].yaxis.label.set_size(22)
 axs[1].xaxis.label.set_size(22)
+axs[1].legend(prop=dict(size=18))
 axs[1].yaxis.label.set_size(22)
 axs[0].tick_params(axis='both', labelsize=18)
 axs[1].tick_params(axis='both', labelsize=18)
+lgnd = axs[0].get_legend()
+for handle in lgnd.legendHandles:
+    if isinstance(handle, matplotlib.pyplot.Line2D):
+        pass
+    else:
+        handle.set_sizes([45])
+lgnd = axs[1].get_legend()
+for handle in lgnd.legendHandles:
+    if isinstance(handle, matplotlib.pyplot.Line2D):
+        pass
+    else:
+        handle.set_sizes([45])
 plt.tight_layout()
-# plt.savefig('/home/sinkbaek/PycharmProjects/Seismic-dEBs/figures/report/tess/lc_corr.png', dpi=400)
+plt.savefig('/home/sinkbaek/PycharmProjects/Seismic-dEBs/figures/report/tess/lc_corr.png', dpi=400)
 print(raw_lc_2min.estimate_cdpp())
 print(corrected_lc_2min.estimate_cdpp())
-plt.show(block=True)
+plt.show(block=False)
 
 
 # # # Save unfitted light curve # # #
@@ -154,12 +168,17 @@ m_tot = -2.5*np.log10(lc_norm_tot)
 # https://en.wikipedia.org/wiki/Propagation_of_uncertainty
 m_err_tot = np.abs(-2.5/np.log(10) * lc_norm_err/lc_norm_tot)
 
+plt.figure()
 
 time_correct = 57000
 save_data = np.zeros((m_tot.size, 3))
 save_data[:, 0] = lc.time.value + time_correct
 save_data[:, 1] = m_tot
 save_data[:, 2] = m_err_tot
+
+plt.plot(lc.time.value + time_correct, -m_tot)
+plt.show()
+
 # np.savetxt('Data/processed/lcmag_tess_tot.txt', save_data, delimiter='\t')
 
 plt.figure()
@@ -210,15 +229,15 @@ lc_fit2.scatter(ax=ax, label='LC for polynomial trend fit 2', s=msize*1.5, marke
 plt.plot(lc_fit1.time.value, p1(lc_fit1.time.value), 'k--')
 plt.plot(lc_fit2.time.value, p2(lc_fit2.time.value), 'k--')
 ax.set_ylabel('Median Normalized Flux')
+
 lgnd = ax.get_legend()
 for handle in lgnd.legendHandles:
     handle.set_sizes([45])
 ax.xaxis.label.set_size(22)
 ax.yaxis.label.set_size(22)
 ax.tick_params(axis='both', labelsize=18)
-matplotlib.rcParams['legend.fontsize'] = 22
 plt.tight_layout()
-# plt.savefig('/home/sinkbaek/PycharmProjects/Seismic-dEBs/figures/report/tess/fit.png', dpi=400)
+plt.savefig('/home/sinkbaek/PycharmProjects/Seismic-dEBs/figures/report/tess/fit.png', dpi=400)
 plt.show()
 
 idx_norm1 = np.array(range(idx_fit1[0], idx_fit1[-1]+(exclude1[-1]-exclude1[0])))

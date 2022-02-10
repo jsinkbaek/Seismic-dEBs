@@ -15,8 +15,6 @@ filename_identifier = 'merge.fits'
 reduced_filename_identifier = '_reduced_set.dat'
 
 filename_list = []
-flux_collection_list = []
-wavelength_collection_list = []
 date_array = []
 RA_array = np.array([])
 DEC_array = np.array([])
@@ -33,16 +31,7 @@ for filename in os.listdir(spectra_folder_path):
         _, _, date, ra, dec = spf.load_program_spectrum(spectra_folder_path + filename)
 
         filename_bulk = filename[:filename.rfind(".fits")]
-        wavelength, flux = np.loadtxt(reduced_spectra_folder_path+filename_bulk+reduced_filename_identifier,
-                                      unpack=True)
 
-        # Remove values over 1.05 and under 0
-        selection_mask = (flux > 1.1) | (flux < 0.0)
-        flux = flux[~selection_mask]
-        wavelength = wavelength[~selection_mask]
-
-        wavelength_collection_list.append(wavelength)
-        flux_collection_list.append(flux)
         date_array = np.append(date_array, date)
         RA_array = np.append(RA_array, ra * 15.0)  # converts unit
         DEC_array = np.append(DEC_array, dec)
@@ -101,26 +90,5 @@ ax_rv.plot([eclipse_secondary-approximate_eclipse_hwidth, eclipse_secondary-appr
 ax_rv.plot([eclipse_secondary+approximate_eclipse_hwidth, eclipse_secondary+approximate_eclipse_hwidth], [-40, 50],
            '--', color='gray')
 ax_rv.plot(np.mod(bjd_extra - 2454976.6348, period)/period, 0, 'g*')
-
-plt.show(block=True)
-
-# Spectrum plots
-for i in range(0, filenames_sorted.size, 2):
-    fig_spectra = plt.figure(figsize=(16, 9))
-    gs_spectra = fig_spectra.add_gridspec(1, 2)
-    ax1 = fig_spectra.add_subplot(gs_spectra[:, 0])
-    ax2 = fig_spectra.add_subplot(gs_spectra[:, 1])
-
-    ax1.plot(wavelength_collection_list[sort_idx[i]], flux_collection_list[sort_idx[i]])
-    ax2.plot(wavelength_collection_list[sort_idx[i+1]], flux_collection_list[sort_idx[i+1]])
-
-    ax1.set_title(filenames_sorted[i])
-    ax2.set_title(filenames_sorted[i+1])
-    ax1.set_xlabel('Wavelength [Å]')
-    ax2.set_xlabel('Wavelength [Å]')
-
-    ax1.set_xlim([4700, 5400])
-    ax2.set_xlim([4700, 5400])
-    plt.show(block=False)
 
 plt.show(block=True)

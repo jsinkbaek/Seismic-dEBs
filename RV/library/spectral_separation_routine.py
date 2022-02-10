@@ -757,7 +757,6 @@ def spectral_separation_routine_multiple_intervals(
         ifitparamsA: InitialFitParameters, ifitparamsB: InitialFitParameters,
         RV_guess_collection: np.ndarray,
         time_values: np.ndarray,
-        combine_intervals: list = None,
         buffer_size: float = None,
         rv_lower_limit: float = 0.0, rv_proximity_limit: float = 0.0,
         convergence_limit: float = 1E-5, iteration_limit: int = 10, convergence_limit_scs: float = 1E-7,
@@ -774,10 +773,6 @@ def spectral_separation_routine_multiple_intervals(
      interval_buffer_mask) = _create_wavelength_intervals(
         wavelength, wavelength_intervals, inv_flux_collection, inv_flux_templateA, inv_flux_templateB, buffer_size
     )
-    if combine_intervals is not None:
-        wl_interval_coll, flux_interval_coll, templA_interval_coll, templB_interval_coll, interval_buffer_mask = \
-            _combine_intervals(combine_intervals, wl_interval_coll, flux_interval_coll, templA_interval_coll,
-                               templB_interval_coll, interval_buffer_mask)
 
     results = []
     for i in range(0, len(wl_interval_coll)):

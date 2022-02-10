@@ -27,24 +27,19 @@ observatory_location = EarthLocation.of_site("lapalma")
 observatory_name = "lapalma"
 stellar_target = "kic8430105"
 wavelength_normalization_limit = (4450, 7000)   # Ångström, limit to data before performing continuum normalization
-wavelength_RV_limit = (4450, 7000)              # Ångström, the actual spectrum area used for analysis
+wavelength_RV_limit = (4450, 7000)              # Ångström, limit after normalization
 wavelength_buffer_size = 25                     # Ångström, padding included at ends of spectra. Useful when doing
-                                                # wavelength shifts with np.roll()
-wavelength_intervals_full = [(4500, 5825)]
+                                                # wavelength shifts
+wavelength_intervals_full = [(4500, 5825)]      # used when running on the whole interval (see the two separate function
+                                                # calls at the end of the script
 wavelength_intervals = [(4500, 4765), (4765, 5030), (5030, 5295), (5295, 5560), (5560, 5825), (5985, 6250), (6575, 6840)]
-# wavelength_intervals = [(5985, 6250), (6575, 6840)]
-combine_intervals = None
-# telluric lines: 5885-5970, 6266-6330, 6465-6525, 6850-7050
-# relevant balmer lines: 6563 (H alpha), 4861 (H beta)
+# wavelength_intervals = [(5985, 6250), (6575, 6840)]   # similarly, but for individual small intervals (uncertainty)
+# telluric lines: 5885-5970, 6266-6330, 6465-6525, 6850-7050        (reminder)
+# relevant balmer lines: 6563 (H alpha), 4861 (H beta)              (reminder)
 
-# wavelength_intervals_error_estimate = 150       # Ångström, size of the intervals used for error estimation on RVs
-load_data = True      # Defines if normalized spectrum should be loaded from earlier, or done with AFS_algorithm
+
 plot = False
-file_exclude_list = []  # ['FIBl060068_step011_merge.fits']
-# use_for_spectral_separation_A = [
-#    'FIBj030100_step011_merge.fits', 'FIBj030108_step011_merge.fits',
-#    'FIBj040099_step011_merge.fits'
-# ]
+file_exclude_list = []
 use_for_spectral_separation_A = [
     'FIDi080098_step011_merge.fits', 'FIDi090065_step011_merge.fits',
     'FIBj150080_step011_merge.fits', 'FIDi130112_step011_merge.fits', 'FIBk030043_step011_merge.fits',
@@ -62,14 +57,14 @@ use_for_spectral_separation_B = [
     ]
 delta_v = 1.0          # interpolation resolution for spectrum in km/s
 speed_of_light = scc.c / 1000       # in km/s
-estimate_RVb_from_RVa = True        # defines if a guess on RVb should be made in case it cannot be picked up during
-                                    # initial fitting
-mass_A_estimate = 1.31
-mass_B_estimate = 0.83
-system_RV_estimate = 12.61  # 11.7  # 12.61  # 16.053 19.44
-orbital_period_estimate = 63.33
 
-# # Stellar parameter estimates (relevant for limb darkening calculation) # #
+mass_A_estimate = 1.31              # solar masses, used to calculate guess for RV_B
+mass_B_estimate = 0.83
+
+system_RV_estimate = 12.61          # subtracted before RV calculation
+orbital_period_estimate = 63.33     # especially important for eclipse exclusion
+
+# # Stellar parameter estimates (mildly relevant for limb darkening calculation) # #
 Teff_A, Teff_B = 5042, 5621
 logg_A, logg_B = 2.78, 4.58
 MH_A  , MH_B   = -0.49, -0.49
@@ -165,9 +160,6 @@ times.format = 'jd'
 times.out_subfmt = 'long'
 bc_rv_cor, warning, _ = get_BC_vel(times, ra=RA, dec=DEC, starname=stellar_target, ephemeris='de432s',
                                    obsname=observatory_name)
-bc_rv_cor_2, _, _ = get_BC_vel(times, ra=RA, dec=DEC, starname=stellar_target, ephemeris='de432s',
-                               obsname=observatory_name, predictive=True)
-# print('Comparison')
 bc_rv_cor = bc_rv_cor/1000      # from m/s to km/s
 
 # # # Calculate JDUTC to BJDTDB correction # # #
@@ -193,7 +185,7 @@ flux_template_A = flux_template_A[0, :]     # continuum normalized spectrum only
 wavelength_template_B, flux_template_B = spf.load_template_spectrum(template_spectrum_path_B)
 flux_template_B = flux_template_B[0, :]
 
-# # Resample to same wavelength grid, equi-spaced in velocity space # #
+# # Resample all spectra to same wavelength grid, equi-spaced in velocity space # #
 wavelength, (flux_collection_array, flux_template_A, flux_template_B) = spf.resample_multiple_spectra(
     delta_v, (wavelength_collection_list, flux_collection_list), (wavelength_template_A, flux_template_A),
     (wavelength_template_B, flux_template_B)
@@ -204,7 +196,7 @@ flux_collection_inverted = 1 - flux_collection_array
 flux_template_A_inverted = 1 - flux_template_A
 flux_template_B_inverted = 1 - flux_template_B
 
-# # Perform barycentric corrections # #
+# # Perform barycentric corrections and remove system RV estimate # #
 for i in range(0, flux_collection_inverted[0, :].size):
     flux_collection_inverted[:, i] = ssr.shift_spectrum(
         flux_collection_inverted[:, i], bc_rv_cor[i]-system_RV_estimate, delta_v
@@ -287,14 +279,25 @@ RV_guess_collection[:, 1] = RV_guesses_B
 # # #  Separate component spectra and calculate RVs iteratively # # #
 if True:
     interval_results = ssr.spectral_separation_routine_multiple_intervals(
-        wavelength_buffered, wavelength_intervals_full, flux_collection_inverted_buffered,
-        flux_template_A_inverted_buffered,
-        flux_template_B_inverted_buffered, delta_v, ifitpar_A, ifitpar_B, RV_guess_collection,
+        wavelength_buffered, wavelength_intervals_full,
+        flux_collection_inverted_buffered,
+        flux_template_A_inverted_buffered, flux_template_B_inverted_buffered,
+        delta_v,
+        ifitpar_A, ifitpar_B,
+        RV_guess_collection,
         bjdtdb - (2400000 + 54976.6348),
-        combine_intervals, wavelength_buffer_size, rv_lower_limit, convergence_limit=1E-2, iteration_limit=8,
-        period=orbital_period_estimate, plot=False, return_unbuffered=False, save_additional_results=True,
+        wavelength_buffer_size,
+        rv_lower_limit,
+        convergence_limit=1E-2, iteration_limit=8,
+        period=orbital_period_estimate,
+        plot=False,
+        return_unbuffered=False,
+        save_additional_results=True,
         suppress_print='scs'
     )
+# Currently, the useful results are saved in the folder ../Data/additionals/separation_routine/. This is hardcoded,
+# and each result will be labeled by the respective interval (e.g. 4500_5825_*) and separated into multiple files with
+# data. If save_additional_results is set to False, any data not returned directly by the function will be lost.
 
 # # # Calculate error # # #
 # RV_A, RV_B, separated_flux_A_buffered, separated_flux_B_buffered, _, _, _ = interval_results[0]
@@ -305,10 +308,19 @@ _, RV_B, _ = np.loadtxt('../Data/additionals/separation_routine/4500_5825_rvB.tx
 RV_guess_collection[:, 0] = RV_A
 RV_guess_collection[:, 1] = RV_B
 interval_results = ssr.spectral_separation_routine_multiple_intervals(
-     wavelength_buffered, wavelength_intervals, flux_collection_inverted_buffered,
-     flux_template_A_inverted_buffered,
-     flux_template_B_inverted_buffered, delta_v, ifitpar_A, ifitpar_B, RV_guess_collection, bjdtdb-(2400000+54976.6348),
-     combine_intervals, wavelength_buffer_size, rv_lower_limit, convergence_limit=2E-2, iteration_limit=8,
-     period=orbital_period_estimate, plot=False, return_unbuffered=False, save_additional_results=True,
+     wavelength_buffered, wavelength_intervals,
+     flux_collection_inverted_buffered,
+     flux_template_A_inverted_buffered, flux_template_B_inverted_buffered,
+     delta_v,
+     ifitpar_A, ifitpar_B,
+     RV_guess_collection,
+     bjdtdb-(2400000+54976.6348),
+     wavelength_buffer_size,
+     rv_lower_limit,
+     convergence_limit=2E-2, iteration_limit=8,
+     period=orbital_period_estimate,
+     plot=False,
+     return_unbuffered=False,
+     save_additional_results=True,
      suppress_print='scs'
 )
