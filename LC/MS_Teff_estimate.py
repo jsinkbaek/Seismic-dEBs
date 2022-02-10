@@ -5,6 +5,8 @@ import scipy.constants as c
 from scipy.interpolate import interp1d
 import scipy.interpolate as interp
 from scipy.optimize import minimize_scalar
+from astropy.modeling import models
+from astropy import units as u
 import matplotlib.pyplot as plt
 import subprocess
 
@@ -17,8 +19,9 @@ def planck_func(wl, T):
     :return: spectral radiance [W/(sr m^2)]
     """
     wl = np.array(wl) * 1E-10       # Convert to array (if not) and from Ångström to metres
-    spectral_radiance = (2*c.h*c.c**2 / wl**5) * 1/(np.exp(c.h*c.c / (wl*c.k*T)) - 1)
-    return spectral_radiance
+    # spectral_radiance = (2*c.h*c.c**2 / wl**5) * 1/(np.exp(c.h*c.c / (wl*c.k*T)) - 1)
+    bb = models.BlackBody(temperature=T*u.K)
+    return bb(wl*u.AA).value
 
 
 def tess_spectral_response(wl):
