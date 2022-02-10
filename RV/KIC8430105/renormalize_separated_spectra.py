@@ -10,15 +10,16 @@ flux_G = spectra[:, 1]      # giant
 flux_M = spectra[:, 2]      # main sequence
 
 T_estimate_G = 5042
-T_estimate_M = 5672
-R_G = 7.531
-R_M = 0.7534
+T_estimate_M = 5708.73
+R_G = 7.4791
+R_M = 0.7502
 
 flux_G = 1-flux_G
 flux_M = 1-flux_M
 
 bb_G = models.BlackBody(temperature=T_estimate_G*u.K)
 bb_M = models.BlackBody(temperature=T_estimate_M*u.K)
+
 
 def lum_ratio(wl, bb1, bb2, R1, R2):
     """
@@ -54,8 +55,8 @@ save_array = np.empty(shape=spectra.shape)
 save_array[:, 0] = wavelength
 save_array[:, 1] = flux_G_norm
 save_array[:, 2] = flux_M_norm
-save_array[:, 3] = spectra[:, 3]
-save_array[:, 4] = spectra[:, 4]
+save_array[:, 3] = 1-spectra[:, 3]
+save_array[:, 4] = 1-spectra[:, 4]
 np.savetxt(
     'sep_flux_renormalized.txt', save_array, delimiter='\t',
     header='wavelength [Å]\t' + 'Separated flux Giant\t' + 'Separated flux MS\t' + 'Template Giant\t' + 'Template MS'

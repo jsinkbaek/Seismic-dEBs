@@ -18,7 +18,7 @@ def planck_func(wl, T):
     :param T: temperature [K]
     :return: spectral radiance [W/(sr m^2)]
     """
-    wl = np.array(wl) * 1E-10       # Convert to array (if not) and from Ångström to metres
+    # wl = np.array(wl) * 1E-10       # Convert to array (if not) and from Ångström to metres
     # spectral_radiance = (2*c.h*c.c**2 / wl**5) * 1/(np.exp(c.h*c.c / (wl*c.k*T)) - 1)
     bb = models.BlackBody(temperature=T*u.K)
     return bb(wl*u.AA).value
@@ -352,7 +352,7 @@ def main():
     #     loc_ld_table='Data/tables/kepler_sing_table.dat')
     jktebop_iterator(
          5042, -0.49, 2.0,
-         n_iter=4, loc_infile='../Binary_Analysis/JKTEBOP/NOT/kepler_pdcsap/infile.KEPLER',
+         n_iter=2, loc_infile='../Binary_Analysis/JKTEBOP/NOT/kepler_pdcsap/infile.KEPLER',
          loc_jktebop='../Binary_Analysis/JKTEBOP/NOT/kepler_pdcsap/',
          loc_ld_table='Data/tables/kepler_sing_table.dat'
     )

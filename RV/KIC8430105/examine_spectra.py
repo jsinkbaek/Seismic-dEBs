@@ -4,13 +4,13 @@ from astropy.time import Time
 from astropy.coordinates import EarthLocation
 from barycorrpy import utc_tdb
 
-observatory_location = EarthLocation.of_site("lapalma")
-observatory_name = "lapalma"
+target = "kic8430105"
+observatory_name = 'Roque de los Muchachos'
+observatory_location = EarthLocation.of_site(observatory_name)
 stellar_target = "kic8430105"
 
 
 spectra_folder_path = '../Data/unprocessed/NOT/KIC8430105/'
-reduced_spectra_folder_path = '../Data/processed/AFS_algorithm/Normalized_Spectrum/'
 filename_identifier = 'merge.fits'
 reduced_filename_identifier = '_reduced_set.dat'
 
@@ -19,10 +19,10 @@ date_array = []
 RA_array = np.array([])
 DEC_array = np.array([])
 
-period = 63.33
+period = 63.3271045716
 
 eclipse_primary = 0.0
-eclipse_secondary = 0.341
+eclipse_secondary = 0.6589
 approximate_eclipse_hwidth= 0.02
 
 
@@ -39,7 +39,7 @@ for filename in os.listdir(spectra_folder_path):
 
 
 # # Calculate bjdtdb
-RA, DEC = RA_array[0], DEC_array[0]
+RA, DEC = np.mean(RA_array), np.mean(DEC_array)
 times = Time(date_array, scale='utc', location=observatory_location)
 times.format = 'jd'
 times.out_subfmt = 'long'
@@ -53,24 +53,53 @@ bjd_extra, _, _ = utc_tdb.JDUTC_to_BJDTDB(time_extra, ra=RA, dec=DEC, starname=s
 
 
 # Phases
-model_filename = '../../Binary_Analysis/JKTEBOP/gaulme2016/KIC8430105/kepler_LTF/model.out'
-bjdtdb -= 2400000 + 54976.6348
-phase_model, rv_Bm, rv_Am = np.loadtxt(model_filename, usecols=(0, 6, 7), unpack=True)
+model_filename = '../../Binary_Analysis/JKTEBOP/NOT/kepler_pdcsap/model.out'
+rvA_filename = '../../Binary_Analysis/JKTEBOP/NOT/kepler_pdcsap/rvA.out'
+rvB_filename = '../../Binary_Analysis/JKTEBOP/NOT/kepler_pdcsap/rvB.out'
+bjdtdb -= 2400000 + 54998.2336737188  # 54976.6348
+phase_model, rv_Am, rv_Bm = np.loadtxt(model_filename, usecols=(0, 6, 7), unpack=True)
 phase_spectra = np.mod(bjdtdb, period) / period
+time_rvA, rvA, error_rvA, phase_rvA = np.loadtxt(rvA_filename, usecols=(0, 1, 2, 3), unpack=True)
+time_rvB, rvB, error_rvB, phase_rvB = np.loadtxt(rvB_filename, usecols=(0, 1, 2, 3), unpack=True)
+sort_idx = np.argsort(phase_rvA)
+time_rvA, rvA, error_rvA, phase_rvA = time_rvA[sort_idx], rvA[sort_idx], error_rvA[sort_idx], phase_rvA[sort_idx]
+sort_idx = np.argsort(phase_rvB)
+time_rvB, rvB, error_rvB, phase_rvB = time_rvB[sort_idx], rvB[sort_idx], error_rvB[sort_idx], phase_rvB[sort_idx]
 
 # Sort
 sort_idx = np.argsort(phase_spectra)
 filenames_sorted = np.array(filename_list)[sort_idx]
 phase_spectra_sorted = phase_spectra[sort_idx]
 
+print('Phase\tSpectra')
+for i in range(0, len(phase_spectra_sorted)):
+    print(phase_spectra_sorted[i], filenames_sorted[i])
+print('')
+print('Processed rv A:')
+print('Phase\tRV\tError\tTime')
+for i in range(0, len(rvA)):
+    print(phase_rvA[i], time_rvA[i]-50000, rvA[i], error_rvA[i])
+print('')
+print('Processed rv B:')
+print('Phase\tRV\tError\tTime')
+for i in range(0, len(rvB)):
+    print(phase_rvB[i], time_rvB[i]-50000, rvB[i], error_rvB[i])
+print('')
+print('Phase\tSpectra')
+for i in range(0, len(phase_spectra_sorted)):
+    print(phase_spectra_sorted[i], filenames_sorted[i])
 # RV plot
 fig_rv = plt.figure(figsize=(16, 9))
 gs_rv = fig_rv.add_gridspec(1, 1)
 ax_rv = fig_rv.add_subplot(gs_rv[:, :])
 
+system_rvA = 11.6144
+system_rvB = 12.0293
 
-ax_rv.plot(phase_model, rv_Am-16.053, 'b')
-ax_rv.plot(phase_model, rv_Bm-16.053, 'r')
+ax_rv.plot(phase_model, rv_Am-system_rvA, 'r')
+ax_rv.plot(phase_model, rv_Bm-system_rvB, 'b')
+ax_rv.plot(phase_rvA, rvA-system_rvA, 'r*')
+ax_rv.plot(phase_rvB, rvB-system_rvB, 'b*')
 ax_rv.plot(phase_spectra, np.zeros(phase_spectra.shape), 'k*', markersize=5)
 for i in range(0, filenames_sorted.size):
     ax_rv.annotate(filenames_sorted[i], (phase_spectra_sorted[i], 0),
@@ -89,6 +118,6 @@ ax_rv.plot([eclipse_secondary-approximate_eclipse_hwidth, eclipse_secondary-appr
            '--', color='gray')
 ax_rv.plot([eclipse_secondary+approximate_eclipse_hwidth, eclipse_secondary+approximate_eclipse_hwidth], [-40, 50],
            '--', color='gray')
-ax_rv.plot(np.mod(bjd_extra - 2454976.6348, period)/period, 0, 'g*')
+ax_rv.plot(np.mod(bjd_extra - 2454998.2336737188, period)/period, 0, 'g*')
 
 plt.show(block=True)
