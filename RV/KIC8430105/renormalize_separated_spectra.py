@@ -7,4 +7,6 @@ wavelength = spectra[:, 0]
 flux_G = spectra[:, 1]      # giant
 flux_M = spectra[:, 2]      # main sequence
 
+T_estimate_G = 5042
+T_estimate_M = 5672
 
