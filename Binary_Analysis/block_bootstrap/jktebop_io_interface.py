@@ -37,7 +37,10 @@ outfile_row = {'sb_ratio': '1  Surf. bright. ratio',
                'radius_B': 'Radius of star B (Rsun)',
                'logg_A': 'Log surface gravity of star A (cgs):',
                'logg_B': 'Log surface gravity of star B (cgs):',
-               'lum_ratio': 'Stellar light ratio'
+               'lum_ratio': 'Stellar light ratio',
+               'rho_A': 'Density of star A (solar units):',
+               'rho_B': 'Density of star B (solar units):',
+               'chisq': 'Total chisq of the fit:'
                }
 
 outfile_col = {'sb_ratio': 4, 'sum_radii': 5, 'ratio_radii': 5, 'limbd_A1': 4, 'limbd_B1': 4, 'incl': 3,
