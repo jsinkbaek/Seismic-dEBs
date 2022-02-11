@@ -89,6 +89,15 @@ plt.plot(wavelength, flux_mean)
 plt.show()
 
 # # Save co-added spectrum # #
+save_array = np.empty((wavelength.size, 2))
+save_array[:, 0] = wavelength
+save_array[:, 1] = flux_mean
+np.savetxt(
+    'coadded_eclipse_spectrum.txt', save_array, delimiter='\t',
+    header='wavelength [Å]\tcoadded spectrum'
+)
+
+# # Save co-added spectrum # #
 save_array = np.empty((wavelength.size, 5))
 save_array[:, 0] = wavelength
 save_array[:, 1] = flux_mean
@@ -96,6 +105,6 @@ save_array[:, 2] = flux_collection_array[:, 0]
 save_array[:, 3] = flux_collection_array[:, 1]
 save_array[:, 4] = flux_collection_array[:, 2]
 np.savetxt(
-    'coadded_eclipse_spectrum.txt', save_array, delimiter='\t',
+    'coadded_eclipse_spectrum_full.txt', save_array, delimiter='\t',
     header='wavelength [Å]\tcoadded spectrum\tspectrum 1\tspectrum 2\tspectrum 3'
 )
