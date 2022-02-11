@@ -7,13 +7,13 @@ from Binary_Analysis.block_bootstrap.kic8430105_convenience_functions import spl
 
 os.chdir('/home/sinkbaek/PycharmProjects/Seismic-dEBs/Binary_Analysis/block_bootstrap/')
 period = 63.3271348987
-lc_model = np.loadtxt('work/model.TESS.gaulme')
+lc_model = np.loadtxt('Data/model.TESS.gaulme')
 lc_err = lc_model[:, 2]
 residual = lc_model[:, 5]
-rvA = np.loadtxt('work/rvA.gaulme.dat')
-rvB = np.loadtxt('work/rvB.gaulme.dat')
-rvA_model = np.loadtxt('work/rvA.gaulme.TESS.model', unpack=True, usecols=4)
-rvB_model = np.loadtxt('work/rvB.gaulme.TESS.model', unpack=True, usecols=4)
+rvA = np.loadtxt('Data/rvA.gaulme.dat')
+rvB = np.loadtxt('Data/rvB.gaulme.dat')
+rvA_model = np.loadtxt('Data/rvA.gaulme.TESS.model', unpack=True, usecols=4)
+rvB_model = np.loadtxt('Data/rvB.gaulme.TESS.model', unpack=True, usecols=4)
 param_names = [
     'sb_ratio', 'sum_radii', 'ratio_radii', 'incl', 'ecc', 'perilong', 'light_scale_factor', 'ephemeris_tbase',
     'rv_amp_A', 'rv_amp_B', 'system_rv_A', 'system_rv_B', 'mass_A', 'mass_B', 'radius_A', 'radius_B', 'logg_A',
@@ -37,4 +37,4 @@ for n_blocks in n_blocks_list:
     print('{:>14}'.format('Mean Value'), '\t', '{:>14}'.format('STD'), '\t', '{:<20}'.format('Parameter'))
     for i in range(0, len(param_names)):
         print(f'{mean_vals[i]:14.5f}', '\t', f'{std_vals[i]:14.7f}', '\t', f'{param_names[i]: <20}')
-    np.savetxt(f'vals.gaulme.TESS.resi.{n_blocks}', vals)
+    np.savetxt(f'Results/vals.gaulme.TESS.resi.{n_blocks}', vals)

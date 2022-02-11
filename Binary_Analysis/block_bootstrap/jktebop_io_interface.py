@@ -40,7 +40,7 @@ outfile_row = {'sb_ratio': '1  Surf. bright. ratio',
                'lum_ratio': 'Stellar light ratio',
                'rho_A': 'Density of star A (solar units):',
                'rho_B': 'Density of star B (solar units):',
-               'chisq': 'Total chisq of the fit:'
+               'chisqr': 'Reduced chisq of the fit:'
                }
 
 outfile_col = {'sb_ratio': 4, 'sum_radii': 5, 'ratio_radii': 5, 'limbd_A1': 4, 'limbd_B1': 4, 'incl': 3,
@@ -48,7 +48,7 @@ outfile_col = {'sb_ratio': 4, 'sum_radii': 5, 'ratio_radii': 5, 'limbd_A1': 4, '
                'phot_mass_ratio': 4, '3_light': 4, 'phase_corr': 3, 'light_scale_factor': 4, 'integration_ring': 3,
                'period': 4, 'ephemeris_tbase': 3, 'limbd_A2': 4, 'limbd_B2': 4, 'rv_amp_A': 5, 'rv_amp_B': 5,
                'system_rv_A': 5, 'system_rv_B': 5, 'sma_rsun': 4, 'mass_A': 5, 'mass_B': 5, 'radius_A': 5,
-               'radius_B': 5, 'logg_A': 7, 'logg_B': 7, 'lum_ratio': 5}
+               'radius_B': 5, 'logg_A': 7, 'logg_B': 7, 'lum_ratio': 5, 'rho_A': 6, 'rho_B': 6, 'chisqr': 5}
 
 
 def pull_parameters_from_outfile(folder: str, parameter_names: List[str]):
