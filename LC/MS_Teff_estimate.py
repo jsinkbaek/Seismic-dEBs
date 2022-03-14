@@ -220,6 +220,38 @@ def read_limb_darkening_parameters(logg_range=np.array([1, 5]), Trange=np.array(
             T_mask = Teff == Trange
             data = np.delete(data, 0, 1)
         mask = lg_mask & T_mask & MH_mask
+
+    elif loc == 'Data/tables/claret2011_ld_ab.dat':
+        data = np.loadtxt(loc, usecols=(0, 1, 2, 3, 4, 5))
+        mask_data = np.loadtxt(loc, usecols=(6, 7, 8), dtype=str)
+        mask_table = (mask_data[:, 0] == 'Kp') & (mask_data[:, 1] == 'L') & (mask_data[:, 2] == 'ATLAS')
+        data = data[mask_table]
+        logg = data[:, 0]
+        Teff = data[:, 1]
+        MH = data[:, 2]
+        mTurb = data[:, 3]
+
+        if isinstance(mTurb_range, np.ndarray):
+            mT_mask = (mTurb >= mTurb_range[0]) & (mTurb <= mTurb_range[1])
+        else:
+            mT_mask = mTurb == mTurb_range
+            data = np.delete(data, 3, 1)
+        if isinstance(MH_range, np.ndarray):
+            MH_mask = (MH >= MH_range[0]) & (MH <= MH_range[1])
+        else:
+            MH_mask = MH == MH_range
+            data = np.delete(data, 2, 1)
+        if isinstance(Trange, np.ndarray):
+            T_mask = (Teff >= Trange[0]) & (Teff <= Trange[1])
+        else:
+            T_mask = Teff == Trange
+            data = np.delete(data, 1, 1)
+        if isinstance(logg_range, np.ndarray):
+            lg_mask = (logg >= logg_range[0]) & (logg <=logg_range[1])
+        else:
+            lg_mask = logg == logg_range
+            data = np.delete(data, 0, 1)
+        mask = lg_mask & T_mask & MH_mask & mT_mask
     else:
         raise IOError("Unknown datafile structure or wrongly defined location.")
 
@@ -263,6 +295,15 @@ def interpolated_LD_param(logg, Teff, MH, mTurb, logg_range=np.array([0, 7]), Tr
             eval_points = np.append(eval_points, logg)
         if isinstance(MH_range, np.ndarray):
             eval_points = np.append(eval_points, MH)
+    elif loc=='Data/tables/claret2011_ld_ab.dat':
+        if isinstance(logg_range, np.ndarray):
+            eval_points = np.append(eval_points, logg)
+        if isinstance(Trange, np.ndarray):
+            eval_points = np.append(eval_points, Teff)
+        if isinstance(MH_range, np.ndarray):
+            eval_points = np.append(eval_points, MH)
+        if isinstance(mTurb_range, np.ndarray):
+            eval_points = np.append(eval_points, mTurb)
     else:
         raise IOError("Unknown datafile structure or wrongly defined location.")
 
@@ -272,7 +313,8 @@ def interpolated_LD_param(logg, Teff, MH, mTurb, logg_range=np.array([0, 7]), Tr
     return res[0, :]
 
 
-def save_LD_to_infile(LD_param_MS=None, LD_param_RG=None, loc_infile='JKTEBOP/tess/infile.TESS'):
+def save_LD_to_infile(LD_param_MS=None, LD_param_RG=None, loc_infile='JKTEBOP/tess/infile.TESS', n_iter=0,
+                      fit_lda_G=False, fit_ldb_G=False):
     """
     Convenience function to use for updating limb-darkening parameters directly in the JKTEBOP input file.
     One or both components can be filled at a time.
@@ -286,6 +328,16 @@ def save_LD_to_infile(LD_param_MS=None, LD_param_RG=None, loc_infile='JKTEBOP/te
                                + "    LD star A (linear coeff)   LD star B (linear coeff)\n"
             list_of_lines[8] = " " + str(LD_b[0]) + " " + str(LD_b[1]) \
                                + "    LD star A (nonlin coeff)   LD star B (nonlin coeff)\n"
+            if fit_lda_G is True:
+                list_of_lines[19] = " " + str(1) + "  " + str(0) \
+                                    + "             Adjust LD-LIN starA or  LD-LIN starB   (0, 1, 2, 3)\n"
+            else:
+                pass
+            if fit_ldb_G is True:
+                list_of_lines[20] = " " + str(1) + "  " + str(0) \
+                                    + "             Adjust LD-NONLIN A  or  LD-NONLIN B    (0, 1, 2, 3)\n"
+            else:
+                pass
     else:
         raise ValueError("No LD parameters to update were given.")
 
@@ -294,7 +346,8 @@ def save_LD_to_infile(LD_param_MS=None, LD_param_RG=None, loc_infile='JKTEBOP/te
 
 
 def jktebop_iterator(T_RG, MH, mTurb, n_iter=4,  loc_infile='JKTEBOP/tess/infile.TESS', loc_jktebop='JKTEBOP/tess/',
-                     loc_ld_table='Data/tables/tess_ldquad_table25.dat'):
+                     loc_ld_table='Data/tables/tess_ldquad_table25.dat', mTurb_MS=None, mTurb_range_G=None,
+                     mTurb_range_MS=None, MH_range=None, fit_lda_G=False, fit_ldb_G=False):
     """
     Calls JKTEBOP to perform fit, extracts key parameters, calculates MS effective temperature,
     finds Limb-darkening parameters, and repeats iteratively.
@@ -304,14 +357,26 @@ def jktebop_iterator(T_RG, MH, mTurb, n_iter=4,  loc_infile='JKTEBOP/tess/infile
     :param loc_ld_table: location of Limb darkening table
     """
     print('JKTEBOP folder:      ', loc_jktebop)
+    if mTurb_range_G is None:
+        mTurb_range_G = mTurb
+    if MH_range is None:
+        MH_range = MH
+    if fit_lda_G is True:
+        print('LD coefficient A for giant set to fitting by JKTEBOP. Refer to param.out for the fitted parameter. '
+              'Make sure infile is initially set to not fit if a first guess is to be tabulated.')
+    if fit_ldb_G is True:
+        print('LD coefficient B for giant set to fitting by JKTEBOP. Refer to param.out for the fitted parameter. '
+              'Make sure infile is initially set to not fit if a first guess is to be tabulated.')
     for i in range(0, n_iter):
         print("")
         print("Iteration ", i)
         subprocess.run("cd " + loc_jktebop + " && make clean -s && make -s", shell=True)
-        _, jktebop_vals = read_jktebop_output(['Log surface gravity of star A (cgs):',
-                                               'Log surface gravity of star B (cgs):', 'Radius of star A (Rsun)',
-                                               'Radius of star B (Rsun)', 'Stellar light ratio'],
-                                               loc=loc_jktebop+'param.out')
+        _, jktebop_vals = read_jktebop_output(
+            ['Log surface gravity of star A (cgs):', 'Log surface gravity of star B (cgs):', 'Radius of star A (Rsun)',
+             'Radius of star B (Rsun)', 'Stellar light ratio'
+             ],
+            loc=loc_jktebop+'param.out'
+        )
         [L_ratio, R_RG, R_MS, loggRG, loggMS] = jktebop_vals
         print("Using T_RG=", T_RG, "  MH=", MH, "  mTurb=", mTurb)
         print("log g MS         ", loggMS)
@@ -327,11 +392,22 @@ def jktebop_iterator(T_RG, MH, mTurb, n_iter=4,  loc_infile='JKTEBOP/tess/infile
             raise AttributeError("Unknown spectral response")
         T_MS = find_T2(R_RG, R_MS, T_RG, L_ratio, spectral_response)
         print("Calculated T_MS  ", T_MS)
-        LD_param_MS = interpolated_LD_param(loggMS, T_MS, MH, mTurb, loc=loc_ld_table)
-        LD_param_RG = interpolated_LD_param(loggRG, T_RG, MH, mTurb, loc=loc_ld_table)
+        if mTurb_MS is None:
+            mTurb_MS = mTurb
+        if mTurb_range_MS is None:
+            mTurb_range_MS = mTurb_MS
+        LD_param_MS = interpolated_LD_param(
+            loggMS, T_MS, MH, mTurb_MS, loc=loc_ld_table, MH_range=MH_range, mTurb_range=mTurb_range_MS
+        )
+        LD_param_RG = interpolated_LD_param(
+            loggRG, T_RG, MH, mTurb, loc=loc_ld_table, MH_range=MH_range, mTurb_range=mTurb_range_G
+        )
         print("LD_param_MS      ", LD_param_MS)
         print("LD_param_RG      ", LD_param_RG)
-        save_LD_to_infile(LD_param_MS, LD_param_RG, loc_infile=loc_infile)
+
+        save_LD_to_infile(
+            LD_param_MS, LD_param_RG, loc_infile=loc_infile, n_iter=n_iter, fit_lda_G=fit_lda_G, fit_ldb_G=fit_ldb_G
+        )
 
 
 def main():
@@ -350,11 +426,17 @@ def main():
     #     loc_infile='../Binary_Analysis/JKTEBOP/gaulme2016/KIC10001167/kepler_kasoc/infile.KEPLER',
     #     loc_jktebop='../Binary_Analysis/JKTEBOP/gaulme2016/KIC10001167/kepler_kasoc/',
     #     loc_ld_table='Data/tables/kepler_sing_table.dat')
+    # jktebop_iterator(
+    #      5042, -0.49, 2.0,
+    #      n_iter=2, loc_infile='../Binary_Analysis/JKTEBOP/NOT/kepler_pdcsap/infile.KEPLER',
+    #      loc_jktebop='../Binary_Analysis/JKTEBOP/NOT/kepler_pdcsap/',
+    #      loc_ld_table='Data/tables/kepler_sing_table.dat'
+    # )
     jktebop_iterator(
-         5042, -0.49, 2.0,
-         n_iter=2, loc_infile='../Binary_Analysis/JKTEBOP/NOT/kepler_pdcsap/infile.KEPLER',
-         loc_jktebop='../Binary_Analysis/JKTEBOP/NOT/kepler_pdcsap/',
-         loc_ld_table='Data/tables/kepler_sing_table.dat'
+        4990, -0.46, 0.91, n_iter=3, loc_infile='../Binary_Analysis/JKTEBOP/NOT/kepler_pdcsap/infile.KEPLER',
+        loc_jktebop='../Binary_Analysis/JKTEBOP/NOT/kepler_pdcsap/', loc_ld_table='Data/tables/claret2011_ld_ab.dat',
+        mTurb_range_G=np.array([0.0, 2.0]), MH_range=np.array([-2.0, 1.0]), mTurb_MS=2.0, fit_ldb_G=False,
+        fit_lda_G=True
     )
 
 
