@@ -1,12 +1,10 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import os
-import sys
 from Binary_Analysis.block_bootstrap import block_bootstrap as boot
 from Binary_Analysis.block_bootstrap.kic8430105_convenience_functions import split_tess_residual_lightcurve
 
 os.chdir('/home/sinkbaek/PycharmProjects/Seismic-dEBs/Binary_Analysis/block_bootstrap/')
-period = 63.3270949830
+period = 63.3271055478
 lc_model = np.loadtxt('Data/model.TESS.NOT')
 lc_err = lc_model[:, 2]
 residual = lc_model[:, 5]

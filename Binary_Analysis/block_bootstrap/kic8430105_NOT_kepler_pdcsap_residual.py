@@ -1,21 +1,19 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import os
-import sys
 from Binary_Analysis.block_bootstrap import block_bootstrap as boot
 from Binary_Analysis.block_bootstrap.kic8430105_convenience_functions import split_kepler_residual_lightcurve
 
 os.chdir('/home/sinkbaek/PycharmProjects/Seismic-dEBs/Binary_Analysis/block_bootstrap/')
-period = 63.3270949830
+period = 63.3271055478
 lc_model = np.loadtxt('Data/model.PDCSAP.NOT')
 lc_err = lc_model[:, 2]
 residual = lc_model[:, 5]
 rvA = np.loadtxt('Data/rvA.NOT.dat')
 rvB = np.loadtxt('Data/rvB.NOT.dat')
-rvA_model = np.loadtxt('Data/rvA.NOT.pdcsap.model', unpack=True, usecols=4)
-rvB_model = np.loadtxt('Data/rvB.NOT.pdcsap.model', unpack=True, usecols=4)
+rvA_model = np.loadtxt('Data/rvA.pdcsap.NOT.model', unpack=True, usecols=4)
+rvB_model = np.loadtxt('Data/rvB.pdcsap.NOT.model', unpack=True, usecols=4)
 param_names = [
-    'sb_ratio', 'sum_radii', 'ratio_radii', 'incl', 'ecc', 'perilong', 'light_scale_factor', 'ephemeris_tbase',
+    'sb_ratio', 'sum_radii', 'ratio_radii', 'incl', 'ecc_2', 'perilong_2', 'light_scale_factor', 'ephemeris_tbase',
     'rv_amp_A', 'rv_amp_B', 'system_rv_A', 'system_rv_B', 'mass_A', 'mass_B', 'radius_A', 'radius_B', 'logg_A',
     'logg_B', 'sma_rsun', 'period', 'lum_ratio', 'rho_A', 'rho_B', 'chisqr'
 ]
