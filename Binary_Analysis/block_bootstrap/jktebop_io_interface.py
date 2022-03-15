@@ -1,3 +1,5 @@
+import shutil
+
 import numpy as np
 from typing import List
 import os
@@ -12,7 +14,9 @@ outfile_row = {'sb_ratio': '1  Surf. bright. ratio',
                'limbd_B1': '5  Limb darkening B1',
                'incl': '6  Orbit inclination',
                'ecc': '7  Eccentricity',
+               'ecc_2': 'Orbital eccentricity e:',
                'perilong': '8  Periastronlongitude',
+               'perilong_2': 'Periastron longitude omega (degree):',
                'grav_dark_A': '9  Grav darkening A',
                'grav_dark_B': '10  Grav darkening B',
                'refl_light_A': '10  Grav darkening B',
@@ -44,7 +48,7 @@ outfile_row = {'sb_ratio': '1  Surf. bright. ratio',
                }
 
 outfile_col = {'sb_ratio': 4, 'sum_radii': 5, 'ratio_radii': 5, 'limbd_A1': 4, 'limbd_B1': 4, 'incl': 3,
-               'ecc': 2, 'perilong': 2, 'grav_dark_A': 3, 'grav_dark_B': 3, 'refl_light_A': 4, 'refl_light_B': 4,
+               'ecc': 2, 'ecc_2': 3, 'perilong': 2, 'perilong_2': 4, 'grav_dark_A': 3, 'grav_dark_B': 3, 'refl_light_A': 4, 'refl_light_B': 4,
                'phot_mass_ratio': 4, '3_light': 4, 'phase_corr': 3, 'light_scale_factor': 4, 'integration_ring': 3,
                'period': 4, 'ephemeris_tbase': 3, 'limbd_A2': 4, 'limbd_B2': 4, 'rv_amp_A': 5, 'rv_amp_B': 5,
                'system_rv_A': 5, 'system_rv_B': 5, 'sma_rsun': 4, 'mass_A': 5, 'mass_B': 5, 'radius_A': 5,
@@ -90,11 +94,20 @@ def setup_sample_folder(
     np.savetxt(f'work/{index}/rvB.sample', rvB)
 
 
+def save_parameter_values(parameter_values, sample_index, save_vals_tag):
+    if save_vals_tag is None:
+        np.savetxt(f'work/param_vals/{sample_index}', parameter_values)
+    else:
+        np.savetxt(f'work/param_vals/{sample_index}.{save_vals_tag}', parameter_values)
+
+
 def run_jktebop_on_sample(
         light_curve, rvA, rvB,
         sample_index,
         parameter_names: List[str],
-        infile_name='infile.default', makefile_name='Makefile.default'
+        infile_name='infile.default', makefile_name='Makefile.default',
+        remove_sample_folders=True,
+        save_vals_tag=None
 ):
     """
 
@@ -112,6 +125,9 @@ def run_jktebop_on_sample(
     setup_sample_folder(light_curve, rvA, rvB, sample_index, infile_name, makefile_name)
     subprocess.run('make', cwd=f'work/{sample_index}/', stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     parameter_values = pull_parameters_from_outfile(f'work/{sample_index}/', parameter_names)
+    save_parameter_values(parameter_values, sample_index, save_vals_tag)
+    if remove_sample_folders is True:
+        shutil.rmtree(f'work/{sample_index}')
     return parameter_values
 
 

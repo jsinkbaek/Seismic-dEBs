@@ -152,7 +152,7 @@ def read_jktebop_output(identifiers, loc='JKTEBOP/tess/param.out'):
                             name = np.append(name, lsplit[0])
                             val = np.append(val, np.double(lsplit[-1]))
                         elif ident in lsplit[0] and ident in used_id:
-                            replace_idx = np.argwhere(name == ident)
+                            replace_idx = np.argwhere(used_id == ident)
                             val[replace_idx] = np.double(lsplit[-1])
                 except IndexError:
                     pass
@@ -313,7 +313,7 @@ def interpolated_LD_param(logg, Teff, MH, mTurb, logg_range=np.array([0, 7]), Tr
     return res[0, :]
 
 
-def save_LD_to_infile(LD_param_MS=None, LD_param_RG=None, loc_infile='JKTEBOP/tess/infile.TESS', n_iter=0,
+def save_LD_to_infile(LD_param_MS=None, LD_param_RG=None, loc_infile='JKTEBOP/tess/infile.TESS',
                       fit_lda_G=False, fit_ldb_G=False):
     """
     Convenience function to use for updating limb-darkening parameters directly in the JKTEBOP input file.
@@ -371,7 +371,7 @@ def jktebop_iterator(T_RG, MH, mTurb, n_iter=4,  loc_infile='JKTEBOP/tess/infile
         print("")
         print("Iteration ", i)
         subprocess.run("cd " + loc_jktebop + " && make clean -s && make -s", shell=True)
-        _, jktebop_vals = read_jktebop_output(
+        name, jktebop_vals = read_jktebop_output(
             ['Log surface gravity of star A (cgs):', 'Log surface gravity of star B (cgs):', 'Radius of star A (Rsun)',
              'Radius of star B (Rsun)', 'Stellar light ratio'
              ],
@@ -406,12 +406,12 @@ def jktebop_iterator(T_RG, MH, mTurb, n_iter=4,  loc_infile='JKTEBOP/tess/infile
         print("LD_param_RG      ", LD_param_RG)
 
         save_LD_to_infile(
-            LD_param_MS, LD_param_RG, loc_infile=loc_infile, n_iter=n_iter, fit_lda_G=fit_lda_G, fit_ldb_G=fit_ldb_G
+            LD_param_MS, LD_param_RG, loc_infile=loc_infile, fit_lda_G=fit_lda_G, fit_ldb_G=fit_ldb_G
         )
 
 
 def main():
-    # T_MS = find_T2(7.5322533155, 0.7539093043, 5042, 0.0170083351, kepler_spectral_response)
+    # T_MS = find_T2(7.4805646651, 0.7499888756, 4990, 0.0170878335, kepler_spectral_response)
     # T_MS = find_T2(7.6879323646, 0.7708429083, 5042, 0.0170194096, kepler_spectral_response)
     # T_MS = find_T2(7.5461591574, 0.7603711045, 5042, 0.0156490920, tess_spectral_response)
     # T_MS = find_T2(7.4293251720, 0.7482196361, 5042, 0.0156412964, tess_spectral_response)
@@ -433,11 +433,17 @@ def main():
     #      loc_ld_table='Data/tables/kepler_sing_table.dat'
     # )
     jktebop_iterator(
-        4990, -0.46, 0.91, n_iter=3, loc_infile='../Binary_Analysis/JKTEBOP/NOT/kepler_pdcsap/infile.KEPLER',
-        loc_jktebop='../Binary_Analysis/JKTEBOP/NOT/kepler_pdcsap/', loc_ld_table='Data/tables/claret2011_ld_ab.dat',
+        4990, -0.46, 0.91, n_iter=3, loc_infile='../Binary_Analysis/JKTEBOP/NOT/kepler_pdcsap_copy/infile.KEPLER',
+        loc_jktebop='../Binary_Analysis/JKTEBOP/NOT/kepler_pdcsap_copy/', loc_ld_table='Data/tables/claret2011_ld_ab.dat',
         mTurb_range_G=np.array([0.0, 2.0]), MH_range=np.array([-2.0, 1.0]), mTurb_MS=2.0, fit_ldb_G=False,
         fit_lda_G=True
     )
+    # jktebop_iterator(
+    #     4990, -0.46, 0.91, n_iter=3, loc_infile='../Binary_Analysis/JKTEBOP/NOT/tess_LTF/infile.TESS',
+    #     loc_jktebop='../Binary_Analysis/JKTEBOP/NOT/tess_LTF/', loc_ld_table='Data/tables/tess_ldquad_table25.dat',
+    #     mTurb_range_G=np.array([0.0, 2.0]), MH_range=np.array([-2.0, 1.0]), mTurb_MS=2.0, fit_ldb_G=False,
+    #     fit_lda_G=True
+    # )
 
 
 if __name__ == "__main__":

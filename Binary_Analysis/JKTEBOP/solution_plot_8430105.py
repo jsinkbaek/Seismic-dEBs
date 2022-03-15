@@ -186,9 +186,9 @@ def rv_plot(rv1_a, rv1_b, rv2_a, rv2_b, sys1_a, sys1_b, sys2_a, sys2_b, rv1_mode
     ax22.set_yticks([-2.5, 0.0, 2.5])
 
 
-# lc_plot(lc_NOT_tess, [-0.01756, 0.01859], [0.64334, 0.67481])
+lc_plot(lc_NOT_tess, [-0.01756, 0.01859], [0.64334, 0.67481])
 # plt.savefig('../../figures/report/tess/lc_not.png', dpi=400)
-lc_plot(lc_NOT_kepler, [-0.02110, 0.02181], [0.63887, 0.67778])
+# lc_plot(lc_NOT_kepler, [-0.02110, 0.02181], [0.63887, 0.67778])
 # plt.savefig('../../figures/report/kepler/lc_sigmaclip.png', dpi=400)
 # rv_plot(rva_not, rvb_not, rva_gau, rvb_gau, sys_not_A, sys_not_B, sys_gau_A, sys_gau_B, not_model, gau_model)
 # plt.savefig('../../figures/report/kepler/rv.png', dpi=400)
