@@ -362,6 +362,11 @@ if True:
     ax2.set_xlabel('Phase')
     plt.show()
 
+# # # Add fictitious contamination # # #
+flux_p1 = flux_p1 * 0.95 + 0.05
+flux_p2 = flux_p2 * 0.95 + 0.05
+flux_p12 = flux_p12 * 0.95 + 0.05
+
 # # # Convert to magnitudes # # #
 m_1     = -2.5*np.log10(flux_p1)
 m_2     = -2.5*np.log10(flux_p2)
@@ -434,8 +439,8 @@ print(save_data.shape)
 save_data[:, 0] = time_p12
 save_data[:, 1] = m
 save_data[:, 2] = m_err
-np.savetxt('../Data/processed/KIC8430105/lcmag_kepler_ltf_wide.txt', save_data)
+np.savetxt('../Data/processed/KIC8430105/lcmag_kepler_ltf_wide_3lbias.txt', save_data)
 save_data[:, 1] = flux_p12
 save_data[:, 2] = np.ones(flux_p12.shape) * error
-np.savetxt('../Data/processed/KIC8430105/lcflux_kepler_ltf_wide.txt', save_data)
+np.savetxt('../Data/processed/KIC8430105/lcflux_kepler_ltf_wide_3lbias.txt', save_data)
 

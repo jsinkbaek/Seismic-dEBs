@@ -14,13 +14,17 @@ import matplotlib
 import astropy.units as u, astropy.constants as c
 import astropy as ap
 from numpy.polynomial import Polynomial
+import sys
 
-matplotlib.use('Qt5Agg')
+# matplotlib.use('Qt5Agg')
 
 # # Download 2-minute cadence targetpixelfiles and create light curve using pipeline aperture # #
 target = 'KIC8430105'
+print(lk.search_targetpixelfile(target, mission='TESS'))
 tpf_2min = lk.search_targetpixelfile(target, mission='TESS').download(quality_bitmask='hard')
 raw_lc = tpf_2min.to_lightcurve().remove_nans()
+print(raw_lc.meta)
+sys.exit()
 raw_lc.plot()
 plt.show(block=False)
 lc_time = raw_lc.time.value

@@ -72,7 +72,6 @@ ax2 = fig.add_subplot(gs[1, 0])
 print(lk.search_targetpixelfile('KIC8430105', mission='TESS'))
 tpf_2min = lk.search_targetpixelfile('KIC8430105', mission='TESS', sector=15).download(quality_bitmask='hard')
 tpf_2min.plot(frame=300,  aperture_mask=tpf_2min.pipeline_mask, mask_color='red', ax=ax1)
-sys.exit()
 
 # Using pipeline aperture or extended background mask
 aper = tpf_2min.pipeline_mask
@@ -101,6 +100,8 @@ plt.tight_layout()
 # plt.savefig('/home/sinkbaek/PycharmProjects/Seismic-dEBs/figures/report/tess/apertures.png', dpi=400)
 plt.show()
 raw_lc_2min = tpf_2min.to_lightcurve()
+print(raw_lc_2min.meta)
+sys.exit()
 
 # Make design matrix
 dm = DesignMatrix(tpf_2min.flux[:, ~aper2], name='pixels').pca(2)
