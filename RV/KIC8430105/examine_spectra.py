@@ -18,6 +18,7 @@ filename_list = []
 date_array = []
 RA_array = np.array([])
 DEC_array = np.array([])
+sn_array = np.array([])
 
 period = 63.3271045716
 
@@ -25,10 +26,11 @@ eclipse_primary = 0.0
 eclipse_secondary = 0.6589
 approximate_eclipse_hwidth= 0.02
 
+wavelength_normalization_limit = (4450, 7000)
 
 for filename in os.listdir(spectra_folder_path):
     if filename_identifier in filename and '.lowSN' not in filename:
-        _, _, date, ra, dec = spf.load_program_spectrum(spectra_folder_path + filename)
+        wavelength, flux, date, ra, dec = spf.load_program_spectrum(spectra_folder_path + filename)
 
         filename_bulk = filename[:filename.rfind(".fits")]
 
@@ -36,6 +38,35 @@ for filename in os.listdir(spectra_folder_path):
         RA_array = np.append(RA_array, ra * 15.0)  # converts unit
         DEC_array = np.append(DEC_array, dec)
         filename_list.append(filename[:filename.rfind("_step011_merge.fits")])
+
+        # Prepare for continuum fit
+        selection_mask = (wavelength > wavelength_normalization_limit[0]) & \
+                         (wavelength < wavelength_normalization_limit[1])
+        wavelength = wavelength[selection_mask]
+        flux = flux[selection_mask]
+
+        # Remove values under 0
+        selection_mask = (flux >= 0.0)
+        flux = flux[selection_mask]
+        wavelength = wavelength[selection_mask]
+
+        # Performs continuum fit and reduces emission lines (by removing above 2.5 std from fitted continuum)
+        wavelength, flux = spf.simple_normalizer(wavelength, flux, reduce_em_lines=True, plot=False)
+
+        # Calculate S/N
+        mask = (wavelength > 5605) & (wavelength < 5613)
+        rms = np.sqrt(np.sum((1-flux[mask]) ** 2)/flux[mask].size)
+        signal_noise = 1/rms
+        # print(rms)
+        # print(signal_noise)
+
+        plt.figure(figsize=(16, 9))
+        plt.plot(wavelength, flux)
+        plt.plot(wavelength[mask], flux[mask])
+        plt.xlim([5602, 5617])
+        sn_array = np.append(sn_array, signal_noise)
+
+plt.show()
 
 
 # # Calculate bjdtdb
@@ -70,18 +101,19 @@ time_rvB, rvB, error_rvB, phase_rvB = time_rvB[sort_idx], rvB[sort_idx], error_r
 sort_idx = np.argsort(phase_spectra)
 filenames_sorted = np.array(filename_list)[sort_idx]
 phase_spectra_sorted = phase_spectra[sort_idx]
+sn_sorted = sn_array[sort_idx]
 
-print('Phase\tSpectra')
+print('Phase\tSpectra\tS/N')
 for i in range(0, len(phase_spectra_sorted)):
-    print(phase_spectra_sorted[i], filenames_sorted[i])
+    print(phase_spectra_sorted[i], filenames_sorted[i], sn_sorted[i])
 print('')
 print('Processed rv A:')
-print('Phase\tRV\tError\tTime')
+print('Phase\tTime\tRV\tError')
 for i in range(0, len(rvA)):
     print(phase_rvA[i], time_rvA[i]-50000, rvA[i], error_rvA[i])
 print('')
 print('Processed rv B:')
-print('Phase\tRV\tError\tTime')
+print('Phase\tTime\tRV\tError')
 for i in range(0, len(rvB)):
     print(phase_rvB[i], time_rvB[i]-50000, rvB[i], error_rvB[i])
 print('')

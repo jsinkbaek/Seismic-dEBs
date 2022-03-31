@@ -439,8 +439,16 @@ def main():
     #    mTurb_range_G=np.array([0.0, 2.0]), MH_range=np.array([-2.0, 1.0]), mTurb_MS=2.0, fit_ldb_G=False,
     #    fit_lda_G=True
     #)
+    #jktebop_iterator(
+    #    5042, -0.49, 0.91, n_iter=4,
+    #    loc_infile='../Binary_Analysis/JKTEBOP/gaulme2016/KIC8430105/kepler_pdcsap/infile.KEPLER',
+    #    loc_jktebop='../Binary_Analysis/JKTEBOP/gaulme2016/KIC8430105/kepler_pdcsap/',
+    #    loc_ld_table='Data/tables/claret2011_ld_ab.dat',
+    #    mTurb_range_G=np.array([0.0, 2.0]), MH_range=np.array([-2.0, 1.0]), mTurb_MS=2.0, fit_ldb_G=False,
+    #    fit_lda_G=True
+    #)
     jktebop_iterator(
-        5042, -0.49, 0.91, n_iter=4,
+        4990, -0.46, 0.91, n_iter=3,
         loc_infile='../Binary_Analysis/JKTEBOP/gaulme2016/KIC8430105/kepler_pdcsap/infile.KEPLER',
         loc_jktebop='../Binary_Analysis/JKTEBOP/gaulme2016/KIC8430105/kepler_pdcsap/',
         loc_ld_table='Data/tables/claret2011_ld_ab.dat',

@@ -23,5 +23,6 @@ print(quarter[sorter])
 print(contamination[sorter])
 print(contamination_avg)
 print(contamination_std)
+print(np.max(contamination))
 
 
