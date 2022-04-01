@@ -82,6 +82,8 @@ aper2[-2:, -2:] = True
 aper2[-3:, -1] = True
 aper2[0:3, -2:] = True
 aper2[1:4, 2:5] = True
+aper2 = tpf_2min.background_mask  # reset
+
 tpf_2min.plot(frame=300,  aperture_mask=~aper2, mask_color='red', ax=ax2)
 ax1.set_xticks([])
 ax2.set_xticks([])
@@ -101,7 +103,7 @@ plt.tight_layout()
 plt.show()
 raw_lc_2min = tpf_2min.to_lightcurve()
 print(raw_lc_2min.meta)
-sys.exit()
+# sys.exit()
 
 # Make design matrix
 dm = DesignMatrix(tpf_2min.flux[:, ~aper2], name='pixels').pca(2)
@@ -180,7 +182,7 @@ save_data[:, 2] = m_err_tot
 plt.plot(lc.time.value + time_correct, -m_tot)
 plt.show()
 
-# np.savetxt('Data/processed/lcmag_tess_tot.txt', save_data, delimiter='\t')
+np.savetxt('/home/sinkbaek/PycharmProjects/Seismic-dEBs/LC/Data/processed/KIC8430105/lcmag_tess_tot.txt', save_data, delimiter='\t')
 
 plt.figure()
 plt.plot(lc.time.value, m_tot, 'r.')
@@ -210,15 +212,23 @@ plt.show()
 # idx_fit1 = np.array(range(int(coords[0][0]), int(coords[1][0])))
 # idx_fit2 = np.array(range(int(coords[2][0]), int(coords[3][0])))
 # print(int(coords[0][0]), int(coords[1][0]), int(coords[2][0]), int(coords[3][0]))
-# idx_fit1 = np.array(range(13, 5817))
-idx_fit1 = np.array(range(13, 5017))
-# idx_fit2 = np.array(range(8981, 13580))
-idx_fit2 = np.array(range(8681, 13580))
+# idx_fit1 = np.array(range(13, 5017))
+idx_fit1 = np.array(range(13, 1600))
+# idx_fit2 = np.array(range(8681, 13580))
+idx_fit2 = np.array(range(12000, 13580))
 lc_median = np.median(lc[mask].flux)
 lc_fit1, lc_fit2 = lc[mask][idx_fit1]/lc_median, lc[mask][idx_fit2]/lc_median
 
 p1 = Polynomial.fit(lc_fit1.time.value, lc_fit1.flux, deg=2)
-p2 = Polynomial.fit(lc_fit2.time.value, lc_fit2.flux, deg=2)
+p2 = Polynomial.fit(lc_fit2.time.value, lc_fit2.flux, deg=3)
+
+idx_norm1 = np.array(range(idx_fit1[0], idx_fit1[-1]+(exclude1[-1]-exclude1[0])))
+idx_norm2 = np.array(range(idx_fit2[0]+(exclude1[-1]-exclude1[0]), idx_fit2[-1]+(exclude1[-1]-exclude1[0])
+                           + (exclude2[-1]-exclude2[0])))
+lc_norm1, lc_norm2 = lc[idx_norm1]/lc_median, lc[idx_norm2]/lc_median
+lc_norm1 = lc_norm1 / p1(lc_norm1.time.value)
+lc_norm2 = lc_norm2 / p2(lc_norm2.time.value)
+lc_norm = lc_norm1.append(lc_norm2)
 
 fig = plt.figure(figsize=(16, 9))
 ax = fig.add_subplot()
@@ -227,8 +237,8 @@ msize = matplotlib.rcParams['lines.markersize']
 (lc[mask]/lc_median).scatter(ax=ax, label='_no_legend_', color='gray', s=msize*1.5, marker='o', alpha=0.6)
 lc_fit1.scatter(ax=ax, label='LC for polynomial trend fit 1', s=msize*1.5, marker='o')
 lc_fit2.scatter(ax=ax, label='LC for polynomial trend fit 2', s=msize*1.5, marker='o')
-plt.plot(lc_fit1.time.value, p1(lc_fit1.time.value), 'k--')
-plt.plot(lc_fit2.time.value, p2(lc_fit2.time.value), 'k--')
+plt.plot(lc_norm1.time.value, p1(lc_norm1.time.value), 'k--')
+plt.plot(lc_norm2.time.value, p2(lc_norm2.time.value), 'k--')
 ax.set_ylabel('Median Normalized Flux')
 
 lgnd = ax.get_legend()
@@ -241,20 +251,16 @@ plt.tight_layout()
 plt.savefig('/home/sinkbaek/PycharmProjects/Seismic-dEBs/figures/report/tess/fit.png', dpi=400)
 plt.show()
 
-idx_norm1 = np.array(range(idx_fit1[0], idx_fit1[-1]+(exclude1[-1]-exclude1[0])))
-idx_norm2 = np.array(range(idx_fit2[0]+(exclude1[-1]-exclude1[0]), idx_fit2[-1]+(exclude1[-1]-exclude1[0])
-                           + (exclude2[-1]-exclude2[0])))
-lc_norm1, lc_norm2 = lc[idx_norm1]/lc_median, lc[idx_norm2]/lc_median
-lc_norm1 = lc_norm1 / p1(lc_norm1.time.value)
-lc_norm2 = lc_norm2 / p2(lc_norm2.time.value)
-lc_norm = lc_norm1.append(lc_norm2)
+
 # plt.plot(lc_norm.flux)
 # coords = plt.ginput(n=4, timeout=0, show_clicks=True, mouse_add=1, mouse_stop=3, mouse_pop=2)
 # print(int(coords[0][0]), int(coords[1][0]), int(coords[2][0]), int(coords[3][0]))
 # include1 = np.array(range(int(coords[0][0]), int(coords[1][0])))
 # include2 = np.array(range(int(coords[2][0]), int(coords[3][0])))
-include1 = np.array(range(360, 1870))
-include2 = np.array(range(10682, 12385))
+# include1 = np.array(range(360, 1870))
+# include2 = np.array(range(10682, 12385))
+include1 = np.argwhere((lc_norm.time.value > 1711.65) & (lc_norm.time.value < 1714.35))
+include2 = np.argwhere((lc_norm.time.value > 1733.20) & (lc_norm.time.value < 1735.95))
 include = np.append(include1, include2)
 mask2 = np.zeros(lc_norm.flux.shape, bool)
 mask2[include] = True
@@ -302,8 +308,10 @@ save_data = np.zeros((lc_mag.flux.size, 3))
 save_data[:, 0] = lc_mag.time.value + time_correct
 save_data[:, 1] = lc_mag.flux
 save_data[:, 2] = lc_mag.flux_err
-np.savetxt('Data/processed/lcmag_tess.txt', save_data, delimiter='\t')
+np.savetxt('/home/sinkbaek/PycharmProjects/Seismic-dEBs/LC/Data/processed/KIC8430105/lcmag_tess.txt', save_data,
+           delimiter='\t')
 save_data[:, 0] = lc_norm.time.value + time_correct
 save_data[:, 1] = lc_norm.flux
 save_data[:, 2] = lc_norm.flux_err
-np.savetxt('Data/processed/lcflux_tess.txt', save_data, delimiter='\t')
+np.savetxt('/home/sinkbaek/PycharmProjects/Seismic-dEBs/LC/Data/processed/KIC8430105/lcflux_tess.txt', save_data,
+           delimiter='\t')

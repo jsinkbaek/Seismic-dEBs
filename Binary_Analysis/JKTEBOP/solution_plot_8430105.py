@@ -8,6 +8,18 @@ matplotlib.rcParams.update({'font.size': 17})
 os.chdir('/home/sinkbaek/PycharmProjects/Seismic-dEBs/Binary_Analysis/JKTEBOP/')
 
 lc_NOT_kepler = np.loadtxt('NOT/kepler_pdcsap/lc.out')
+lc_exclusions_NOT = np.loadtxt('NOT/kepler_pdcsap/lc.KEPLER')
+mask = np.zeros((lc_exclusions_NOT[:, 0].size, ), dtype=bool)
+for i in range(0, len(lc_exclusions_NOT[:, 0])):
+    true_array = np.isclose(lc_exclusions_NOT[i, 0], lc_NOT_kepler[:, 0], rtol=1e-08, atol=1e-09)
+    if true_array[true_array].size == 1:
+        pass
+    elif true_array[true_array].size > 1:
+        raise ValueError('More than 1 timestamp assumed equal')
+    else:
+        mask[i] = True
+lc_exclusions_NOT = lc_exclusions_NOT[mask]
+lc_exclusions_NOT[:, 0] = np.mod(lc_exclusions_NOT[:, 0]-54998.2336069366, 63.3271055478)/63.3271055478
 # lc_NOT_kepler_2 = np.loadtxt('NOT/kepler_LTF (copy)/lc.out')
 lc_gaulme_kepler = np.loadtxt('gaulme2016/KIC8430105/kepler_pdcsap_olderr/lc.out')
 lc_NOT_tess = np.loadtxt('NOT/tess_LTF/lc.out')
@@ -30,7 +42,7 @@ sys_not_A = 11.6126002555
 sys_not_B = 12.0261221106
 
 
-def lc_plot(lc_, xlim1, xlim2):
+def lc_plot(lc_, xlim1, xlim2, lc_exclusions=None):
     mag = lc_[:, 1]
     err = lc_[:, 2]
     phase = lc_[:, 3]
@@ -45,6 +57,12 @@ def lc_plot(lc_, xlim1, xlim2):
     ax2 = fig.add_subplot(gs[3, 0:2])
     ax21 = fig.add_subplot(gs[3, 0])
     ax22 = fig.add_subplot(gs[3, 1])
+
+    if lc_exclusions is not None:  # assumes lc_exclusions[:, 0] is phase
+        model_interp = np.interp(lc_exclusions[:, 0], phase, model, period=1)
+        ax11.plot(lc_exclusions[:, 0], lc_exclusions[:, 1], 'r*', markersize=2)
+        ax11.plot(lc_exclusions[:, 0]-1, lc_exclusions[:, 1], 'r*', markersize=2)
+        ax12.plot(lc_exclusions[:, 0], lc_exclusions[:, 1], 'r*', markersize=2)
 
     ax11.errorbar(phase, mag, yerr=err, fmt='k.', ecolor='gray', markersize=0.7, elinewidth=0.4)
     ax11.errorbar(phase-1, mag, yerr=err, fmt='k.', ecolor='gray', markersize=0.7, elinewidth=0.4)
@@ -67,6 +85,10 @@ def lc_plot(lc_, xlim1, xlim2):
     ax21.set_xlim(xlim1)
     ax22.set_xlim(xlim2)
     ylim = ax21.get_ylim()
+    if lc_exclusions is not None:
+        ax21.plot(lc_exclusions[:, 0], lc_exclusions[:, 1] - model_interp, 'r*', markersize=2)
+        ax21.plot(lc_exclusions[:, 0] - 1, lc_exclusions[:, 1] - model_interp, 'r*', markersize=2)
+        ax22.plot(lc_exclusions[:, 0], lc_exclusions[:, 1] - model_interp, 'r*', markersize=2)
     ax21.set_ylim([ylim[1], ylim[0]])
     ax22.set_ylim([ylim[1], ylim[0]])
 
@@ -300,9 +322,9 @@ def rv_plot_article(rv1_a, rv1_b, rv2_a, rv2_b, rv1_model, rv2_model):
 
 # lc_plot(lc_NOT_tess, [-0.01756, 0.01859], [0.64334, 0.67481])
 # plt.savefig('../../figures/report/tess/lc_not.png', dpi=400)
-lc_plot(lc_NOT_kepler, [-0.02110, 0.02181], [0.63887, 0.67778])
+lc_plot(lc_NOT_kepler, [-0.02110, 0.02181], [0.63887, 0.67778], lc_exclusions_NOT)
 plt.savefig('../../figures/report/kepler/lc_article.png', dpi=400)
 # rv_plot(rva_not, rvb_not, rva_gau, rvb_gau, sys_not_A, sys_not_B, sys_gau_A, sys_gau_B, not_model, gau_model)
-rv_plot_article(rva_not, rvb_not, rva_gau, rvb_gau, not_model, gau_model)
-plt.savefig('../../figures/report/kepler/rv_article.png', dpi=400)
+# rv_plot_article(rva_not, rvb_not, rva_gau, rvb_gau, not_model, gau_model)
+# plt.savefig('../../figures/report/kepler/rv_article.png', dpi=400)
 plt.show()

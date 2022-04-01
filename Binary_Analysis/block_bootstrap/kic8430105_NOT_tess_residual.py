@@ -15,7 +15,7 @@ rvB_model = np.loadtxt('Data/rvB.NOT.TESS.model', unpack=True, usecols=4)
 param_names = [
     'sb_ratio', 'sum_radii', 'ratio_radii', 'incl', 'ecc', 'perilong', 'light_scale_factor', 'ephemeris_tbase',
     'rv_amp_A', 'rv_amp_B', 'system_rv_A', 'system_rv_B', 'mass_A', 'mass_B', 'radius_A', 'radius_B', 'logg_A',
-    'logg_B', 'sma_rsun', 'lum_ratio', 'rho_A', 'rho_B', 'chisqr'
+    'logg_B', 'sma_rsun', 'lum_ratio', 'rho_A', 'rho_B', 'chisqr', 'limbd_A1', '3_light'
 ]
 n_iter = 2500
 n_blocks_list = [2, 4, 6, 8, 10, 12, 14, 16]
