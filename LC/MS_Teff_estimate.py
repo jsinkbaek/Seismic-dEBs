@@ -104,16 +104,20 @@ def luminosity_ratio(R1, R2, T1, T2, spectral_response, dw=0.001):
     :param T2: effective temperature of star 2  [K]
     :param spectral_response: spectral response function of detector
     :param dw: wavelength stepsize. Defines precision of fold_summation [Å]
-    :return: luminosity ratio L1/L2
+    :return: luminosity ratio L2/L1
     """
     integrated_radiance_1 = fold_summation(dw, T1, spectral_response)
     integrated_radiance_2 = fold_summation(dw, T2, spectral_response)
     return (R2/R1)**2 * (integrated_radiance_2/integrated_radiance_1)
 
 
+def luminosity_ratio_bolo(R1, R2, T1, T2):
+    return (R2/R1)**2 * (T2/T1)**4
+
+
 def find_T2(R1, R2, T1, L_ratio, spectral_response):
     """
-    Find T2, given R1, R2, T1, and L1/L2.
+    Find T2, given R1, R2, T1, and L2/L1.
     :param R1:                  radius of star 1
     :param R2:                  radius of star 2 [same unit as R1]
     :param T1:                  effective temperature of star 1 [K]
@@ -414,8 +418,12 @@ def main():
     # T_MS = find_T2(7.4805646651, 0.7499888756, 4990, 0.0170878335, kepler_spectral_response)
     # T_MS = find_T2(7.6879323646, 0.7708429083, 5042, 0.0170194096, kepler_spectral_response)
     # T_MS = find_T2(7.5461591574, 0.7603711045, 5042, 0.0156490920, tess_spectral_response)
-    # T_MS = find_T2(7.4293251720, 0.7482196361, 5042, 0.0156412964, tess_spectral_response)
+    # T_MS = find_T2(7.4669251, 0.7344755, 4990, 0.0155509, tess_spectral_response)
     # print(T_MS)
+    # print(luminosity_ratio_bolo(7.4669251, 0.7344755, 4990, 5705.6470474539965))
+    T_MS = find_T2(7.4749773949, 0.7493621441, 4990, 0.0170869904, kepler_spectral_response)
+    print(luminosity_ratio_bolo(7.4749773949, 0.7493621441, 4990, T_MS))
+    print(T_MS)
     # print(interpolated_LD_param(4.62640, T2, -0.5, 2.0, loc='Data/tables/kepler_sing_table.dat'))
     # print(interpolated_LD_param(2.80835, 5042, -0.5, 2.0, loc='Data/tables/kepler_sing_table.dat'))
     # jktebop_iterator(n_iter=1, loc_infile='../Binary_Analysis/JKTEBOP/tess/infile.TESS',
@@ -455,12 +463,12 @@ def main():
     #     mTurb_range_G=np.array([0.0, 2.0]), MH_range=np.array([-2.0, 1.0]), mTurb_MS=2.0, fit_ldb_G=False,
     #     fit_lda_G=True
     # )
-    jktebop_iterator(
-        4990, -0.46, 0.91, n_iter=3, loc_infile='../Binary_Analysis/JKTEBOP/NOT/tess_article/infile.TESS',
-        loc_jktebop='../Binary_Analysis/JKTEBOP/NOT/tess_article/', loc_ld_table='Data/tables/tess_ldquad_table25.dat',
-        mTurb_range_G=np.array([0.0, 2.0]), MH_range=np.array([-2.0, 1.0]), mTurb_MS=2.0, fit_ldb_G=False,
-        fit_lda_G=True
-    )
+    # jktebop_iterator(
+    #     4990, -0.46, 0.91, n_iter=3, loc_infile='../Binary_Analysis/JKTEBOP/NOT/tess_article/infile.TESS',
+    #     loc_jktebop='../Binary_Analysis/JKTEBOP/NOT/tess_article/', loc_ld_table='Data/tables/tess_ldquad_table25.dat',
+    #     mTurb_range_G=np.array([0.0, 2.0]), MH_range=np.array([-2.0, 1.0]), mTurb_MS=2.0, fit_ldb_G=False,
+    #     fit_lda_G=True
+    # )
 
 
 if __name__ == "__main__":
