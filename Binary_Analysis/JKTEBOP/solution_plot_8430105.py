@@ -209,17 +209,18 @@ def rv_plot(rv1_a, rv1_b, rv2_a, rv2_b, sys1_a, sys1_b, sys2_a, sys2_b, rv1_mode
 
 
 def rv_plot_article(rv1_a, rv1_b, rv2_a, rv2_b, rv1_model, rv2_model):
-    fig = plt.figure(figsize=(11, 9))
-    gs = fig.add_gridspec(6, 1)
-    ax1 = fig.add_subplot(gs[0:3, 0])
-    ax2 = fig.add_subplot(gs[3:6, 0])
-    ax21 = fig.add_subplot(gs[3, 0])
-    ax211 = fig.add_subplot(gs[4, 0])
-    ax22 = fig.add_subplot(gs[5, 0])
+    fig = plt.figure(figsize=(11, 11))
+    gs = fig.add_gridspec(8, 1)
+    ax1 = fig.add_subplot(gs[0:4, 0])
+    ax2 = fig.add_subplot(gs[4:8, 0])
+    ax21 = fig.add_subplot(gs[4, 0])
+    ax211 = fig.add_subplot(gs[5, 0])
+    ax22 = fig.add_subplot(gs[6, 0])
+    ax23 = fig.add_subplot(gs[7, 0])
 
-    ax22.set_xlabel('Orbital Phase', fontsize=22)
+    ax23.set_xlabel('Orbital Phase', fontsize=22)
     ax1.set_ylabel('Radial Velocity [km/s]', fontsize=22)
-    ax2.set_ylabel('O-C', fontsize=22)
+    ax2.set_ylabel('O-C [km/s]', fontsize=22)
     ax2.yaxis.set_label_coords(-0.09, 0.5)
     plt.setp(ax2.spines.values(), visible=False)
     ax1.set_xlim([-0.015, 1.0])
@@ -227,29 +228,34 @@ def rv_plot_article(rv1_a, rv1_b, rv2_a, rv2_b, rv1_model, rv2_model):
     ax211.set_xlim([-0.015, 1.0])
     ax22.set_xlim([-0.015, 1.0])
     ax211.set_ylim([-3, 3])
+    ax23.set_xlim([-0.015, 1.0])
 
-    ax1.errorbar(rv1_a[:, 3], rv1_a[:, 1], yerr=rv1_a[:, 2], fmt='D', color='indianred', markersize=6)
+    ax1.errorbar(rv1_a[:, 3], rv1_a[:, 1], yerr=rv1_a[:, 2], fmt='D', color='indianred', markersize=6, label='Giant, this work')
     ax1.errorbar(rv1_a[:, 3]-1, rv1_a[:, 1], yerr=rv1_a[:, 2], fmt='D', color='indianred', markersize=6)
 
-    ax1.errorbar(rv1_b[:, 3], rv1_b[:, 1], yerr=rv1_b[:, 2], fmt='D', color='royalblue', markersize=6)
-    ax1.errorbar(rv1_b[:, 3]-1, rv1_b[:, 1], yerr=rv1_b[:, 2], fmt='D', color='royalblue', markersize=6)
-
-    ax1.errorbar(rv2_a[:, 3], rv2_a[:, 1], yerr=rv2_a[:, 2], fmt='s', color='darkorange', markersize=6)
+    ax1.errorbar(rv2_a[:, 3], rv2_a[:, 1], yerr=rv2_a[:, 2], fmt='s', color='darkorange', markersize=6, label='Giant, G16')
     ax1.errorbar(rv2_a[:, 3]-1, rv2_a[:, 1], yerr=rv2_a[:, 2], fmt='s', color='darkorange', markersize=6)
 
-    ax1.errorbar(rv2_b[:, 3], rv2_b[:, 1], yerr=rv2_b[:, 2], fmt='s', color='blueviolet', markersize=6)
+    ax1.errorbar(rv1_b[:, 3], rv1_b[:, 1], yerr=rv1_b[:, 2], fmt='D', color='royalblue', markersize=6,
+                 label='Main sequence, this work')
+    ax1.errorbar(rv1_b[:, 3] - 1, rv1_b[:, 1], yerr=rv1_b[:, 2], fmt='D', color='royalblue', markersize=6)
+
+    ax1.errorbar(rv2_b[:, 3], rv2_b[:, 1], yerr=rv2_b[:, 2], fmt='s', color='blueviolet', markersize=6, label='Main sequence, G16')
     ax1.errorbar(rv2_b[:, 3]-1, rv2_b[:, 1], yerr=rv2_b[:, 2], fmt='s', color='blueviolet', markersize=6)
 
-    ax1.plot(rv2_model[:, 0], rv2_model[:, 6], '-.', alpha=0.8, color='darkorange')
-    ax1.plot(rv2_model[:, 0]-1, rv2_model[:, 6], '-.', alpha=0.8, color='darkorange')
+    ax1.plot(rv2_model[:, 0], rv2_model[:, 6], '-.', alpha=0.8, color='darkorange', linewidth=2)
+    ax1.plot(rv2_model[:, 0]-1, rv2_model[:, 6], '-.', alpha=0.8, color='darkorange', linewidth=2)
 
-    ax1.plot(rv2_model[:, 0], rv2_model[:, 7], '-.', alpha=0.8, color='blueviolet')
-    ax1.plot(rv2_model[:, 0]-1, rv2_model[:, 7], '-.', alpha=0.8, color='blueviolet')
+    ax1.plot(rv2_model[:, 0], rv2_model[:, 7], '-.', alpha=0.8, color='blueviolet', linewidth=2)
+    ax1.plot(rv2_model[:, 0]-1, rv2_model[:, 7], '-.', alpha=0.8, color='blueviolet', linewidth=2)
 
-    ax1.plot(rv1_model[:, 0], rv1_model[:, 7], linestyle='dotted', alpha=0.8, color='royalblue')
-    ax1.plot(rv1_model[:, 0] - 1, rv1_model[:, 7], linestyle='dotted', alpha=0.8, color='royalblue')
-    ax1.plot(rv1_model[:, 0], rv1_model[:, 6], linestyle='dotted', alpha=0.8, color='indianred')
-    ax1.plot(rv1_model[:, 0] - 1, rv1_model[:, 6], linestyle='dotted', alpha=0.8, color='indianred')
+    ax1.plot(rv1_model[:, 0], rv1_model[:, 7], linestyle='dotted', alpha=0.8, color='royalblue', linewidth=2)
+    ax1.plot(rv1_model[:, 0] - 1, rv1_model[:, 7], linestyle='dotted', alpha=0.8, color='royalblue', linewidth=2)
+    ax1.plot(rv1_model[:, 0], rv1_model[:, 6], linestyle='dotted', alpha=0.8, color='indianred', linewidth=2)
+    ax1.plot(rv1_model[:, 0] - 1, rv1_model[:, 6], linestyle='dotted', alpha=0.8, color='indianred', linewidth=2)
+    ax1.set_ylim([-50, ax1.get_ylim()[1]])
+    ax1.set_yticks([-40, -20, 0, 20, 40])
+    ax1.legend(fontsize=14)
 
     ax1.plot([-0.05, 1.0], [0.0, 0.0], color='gray', alpha=0.6)
 
@@ -258,6 +264,7 @@ def rv_plot_article(rv1_a, rv1_b, rv2_a, rv2_b, rv1_model, rv2_model):
     ax2.set_yticks([])
     ax21.set_xticks([])
     ax211.set_xticks([])
+    ax22.set_xticks([])
 
     # ax21.yaxis.set_ticks([-0.1, 0.1])
 
@@ -266,9 +273,6 @@ def rv_plot_article(rv1_a, rv1_b, rv2_a, rv2_b, rv1_model, rv2_model):
 
     ax21.plot([-0.05, 1], [0, 0], '--', color='black', alpha=0.7)
 
-    ax211.errorbar(rv1_a[:, 3], rv1_a[:, 5], yerr=rv1_a[:, 2], fmt='D', color='indianred')
-    ax211.errorbar(rv1_a[:, 3] - 1, rv1_a[:, 5], yerr=rv1_a[:, 2], fmt='D', color='indianred')
-
     ax211.errorbar(rv2_a[:, 3], rv2_a[:, 5], yerr=rv2_a[:, 2], fmt='s', color='darkorange')
     ax211.errorbar(rv2_a[:, 3] - 1, rv2_a[:, 5], yerr=rv2_a[:, 2], fmt='s', color='darkorange')
 
@@ -276,10 +280,11 @@ def rv_plot_article(rv1_a, rv1_b, rv2_a, rv2_b, rv1_model, rv2_model):
     ax22.errorbar(rv1_b[:, 3], rv1_b[:, 5], yerr=rv1_b[:, 2], fmt='D', color='royalblue')
     ax22.errorbar(rv1_b[:, 3]-1, rv1_b[:, 5], yerr=rv1_b[:, 2], fmt='D', color='royalblue')
 
-    ax22.errorbar(rv2_b[:, 3], rv2_b[:, 5], yerr=rv2_b[:, 2], fmt='s', color='blueviolet')
-    ax22.errorbar(rv2_b[:, 3]-1, rv2_b[:, 5], yerr=rv2_b[:, 2], fmt='s', color='blueviolet')
+    ax23.errorbar(rv2_b[:, 3], rv2_b[:, 5], yerr=rv2_b[:, 2], fmt='s', color='blueviolet')
+    ax23.errorbar(rv2_b[:, 3]-1, rv2_b[:, 5], yerr=rv2_b[:, 2], fmt='s', color='blueviolet')
 
     ax22.plot([-0.05, 1], [0, 0], '--', color='black', alpha=0.7)
+    ax23.plot([-0.05, 1], [0, 0], '--', color='black', alpha=0.7)
 
     std1_a = np.std(rv1_a[:, 5])
     # std1_a = np.sqrt(np.sum(rv1_a[:, 5]**2)/len(rv1_a[:, 5]))
@@ -294,27 +299,34 @@ def rv_plot_article(rv1_a, rv1_b, rv2_a, rv2_b, rv1_model, rv2_model):
     print('rv_mean_err_1b', np.mean(rv1_b[:, 2]))
 
     ax21.fill_between([-0.05, 1], [std1_a, std1_a], [-std1_a, -std1_a], color='indianred', alpha=0.25)
-    ax211.fill_between([-0.05, 1], [std1_a, std1_a], [-std1_a, -std1_a], color='indianred', alpha=0.25)
     ax211.fill_between([-0.05, 1], [std2_a, std2_a], [-std2_a, -std2_a], color='darkorange', alpha=0.25)
     ax22.fill_between([-0.05, 1], [std1_b, std1_b], [-std1_b, -std1_b], color='royalblue', alpha=0.25)
-    ax22.fill_between([-0.05, 1], [std2_b, std2_b], [-std2_b, -std2_b], color='blueviolet', alpha=0.25)
+    ax23.fill_between([-0.05, 1], [std2_b, std2_b], [-std2_b, -std2_b], color='blueviolet', alpha=0.25)
 
     ylim = ax1.get_ylim()
     ax1.set_ylim(ylim)
-    ax1.plot([0.65892, 0.65892], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.5)
-    ax1.plot([0., 0.], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.5)
+    ax1.plot([0.65892, 0.65892], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.8, linewidth=2)
+    ax1.plot([0., 0.], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.8, linewidth=2)
     ylim = ax21.get_ylim()
     ax21.set_ylim(ylim)
-    ax21.plot([0.65892, 0.65892], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.5)
-    ax21.plot([0., 0.], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.5)
-    ylim = ax211.get_ylim()
-    ax211.set_ylim(ylim)
-    ax211.plot([0.65892, 0.65892], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.5)
-    ax211.plot([0., 0.], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.5)
-    ylim = ax22.get_ylim()
+    ax21.plot([0.65892, 0.65892], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.8, linewidth=2)
+    ax21.plot([0., 0.], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.8, linewidth=2)
+
+    # ylim = ax211.get_ylim()
+    # ax211.set_ylim(ylim)
+
+    # ylim = ax22.get_ylim()
+    # ax22.set_ylim(ylim)
+    ylim = ax23.get_ylim()
+    ax23.set_ylim(ylim)
     ax22.set_ylim(ylim)
-    ax22.plot([0.65892, 0.65892], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.5)
-    ax22.plot([0., 0.], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.5)
+    ax211.set_ylim(ylim)
+    ax23.plot([0.65892, 0.65892], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.8, linewidth=2)
+    ax23.plot([0., 0.], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.8, linewidth=2)
+    ax22.plot([0.65892, 0.65892], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.8, linewidth=2)
+    ax22.plot([0., 0.], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.8, linewidth=2)
+    ax211.plot([0.65892, 0.65892], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.8, linewidth=2)
+    ax211.plot([0., 0.], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.8, linewidth=2)
 
     # ax21.set_yticks([-2.5, 0.0, 2.5])
     ax22.set_yticks([-2.5, 0.0, 2.5])
@@ -322,9 +334,9 @@ def rv_plot_article(rv1_a, rv1_b, rv2_a, rv2_b, rv1_model, rv2_model):
 
 # lc_plot(lc_NOT_tess, [-0.01756, 0.01859], [0.64334, 0.67481])
 # plt.savefig('../../figures/report/tess/lc_not.png', dpi=400)
-lc_plot(lc_NOT_kepler, [-0.02110, 0.02181], [0.63887, 0.67778], lc_exclusions_NOT)
-plt.savefig('../../figures/report/kepler/lc_article.png', dpi=400)
+# lc_plot(lc_NOT_kepler, [-0.02110, 0.02181], [0.63887, 0.67778], lc_exclusions_NOT)
+# plt.savefig('../../figures/report/kepler/lc_article.png', dpi=400)
 # rv_plot(rva_not, rvb_not, rva_gau, rvb_gau, sys_not_A, sys_not_B, sys_gau_A, sys_gau_B, not_model, gau_model)
-# rv_plot_article(rva_not, rvb_not, rva_gau, rvb_gau, not_model, gau_model)
-# plt.savefig('../../figures/report/kepler/rv_article.png', dpi=400)
+rv_plot_article(rva_not, rvb_not, rva_gau, rvb_gau, not_model, gau_model)
+plt.savefig('../../figures/report/kepler/rv_article.png', dpi=400)
 plt.show()
