@@ -44,7 +44,7 @@ period = 63.32713
 phase = np.mod(time, period) / period
 
 
-if False:
+if True:
     plt.figure()
     plt.plot(time, corr_long, 'g.', markersize=0.5)
     plt.plot(time, flux, 'b.', markersize=0.2)

@@ -184,6 +184,10 @@ def load_kasoc_lc(loc='../Data/processed/KIC8430105/lcflux_kasoc_reduced_full.tx
 # # # Start of Script # # #
 # Load data (Either previous trend fitted dataset, or KASOC datafile)
 load_previous = True
+load_a = [1, 3, 8, 19, 20]  # [1, 3, 8, 18, 19, 20]
+# load_b = [6, 8, 13, 14, 15]  # [6, 8, 12, 13, 14, 15]
+# load_a = [7, 9, 11, 13, 15]
+load_b = [4, 7, 9, 11, 21]
 if load_previous:
     flux_p1 = np.array([])
     flux_p2 = np.array([])
@@ -194,23 +198,34 @@ if load_previous:
     time_p1 = np.array([])
     time_p2 = np.array([])
     time_p12 = np.array([])
+    fig1, ax1 = plt.subplots()
+    fig2, ax2 = plt.subplots()
+    ax1.set_title('A')
+    ax2.set_title('B')
     for i in range(1, 24):
-        load1 = load_phase(i, 'A')
-        if load1 is not None:
-            phase1, time1, flux1 = load1
-            phase_p1, time_p1, flux_p1 = np.append(phase_p1, phase1), np.append(time_p1, time1), np.append(flux_p1,
-                                                                                                           flux1)
-            phase_p12 = np.append(phase_p12, phase1)
-            flux_p12 = np.append(flux_p12, flux1)
-            time_p12 = np.append(time_p12, time1)
-        load2 = load_phase(i, 'B')
-        if load2 is not None:
-            phase2, time2, flux2 = load2
-            phase_p2, time_p2, flux_p2 = np.append(phase_p2, phase2), np.append(time_p2, time2), np.append(flux_p2,
-                                                                                                           flux2)
-            flux_p12 = np.append(flux_p12, flux2)
-            phase_p12 = np.append(phase_p12, phase2)
-            time_p12 = np.append(time_p12, time2)
+        if i in load_a:
+            load1 = load_phase(i, 'A')
+            if load1 is not None:
+                phase1, time1, flux1 = load1
+                phase_p1, time_p1, flux_p1 = np.append(phase_p1, phase1), np.append(time_p1, time1), np.append(flux_p1,
+                                                                                                               flux1)
+                phase_p12 = np.append(phase_p12, phase1)
+                flux_p12 = np.append(flux_p12, flux1)
+                time_p12 = np.append(time_p12, time1)
+                ax1.plot(phase1, flux1, '-', label=f'{i}')
+        if i in load_b:
+            load2 = load_phase(i, 'B')
+            if load2 is not None:
+                phase2, time2, flux2 = load2
+                phase_p2, time_p2, flux_p2 = np.append(phase_p2, phase2), np.append(time_p2, time2), np.append(flux_p2,
+                                                                                                               flux2)
+                flux_p12 = np.append(flux_p12, flux2)
+                phase_p12 = np.append(phase_p12, phase2)
+                time_p12 = np.append(time_p12, time2)
+                ax2.plot(phase2, flux2, '-', label=f'{i}')
+    ax1.legend()
+    ax2.legend()
+    plt.show()
 else:
     pdcsap = np.array([])
     time = np.array([])
@@ -247,6 +262,9 @@ else:
     time_split = np.split(time, phasecut_idxs)
     for i in range(0, len(phase_split)):
         plt.plot(phase_split[i], flux_split[i], '.')
+    plt.figure()
+    for i in range(0, len(phase_split)):
+        plt.plot(time_split[i], flux_split[i], '.')
     plt.show()
 
     # Correct and normalize flux (either with eclipse normalization for quick plot, or polynomial local trend fitting)
@@ -332,7 +350,7 @@ if False:
     plt.plot(norm_phase, norm_flux2, 'b.', markersize=0.7)
     plt.show()
 
-if True:
+if False:
     _, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
     ax1.plot(phase_p1, flux_p1, 'r.', markersize=0.7)
     ax1.set_xlabel('Phase')
@@ -341,10 +359,9 @@ if True:
     ax2.set_xlabel('Phase')
     plt.show()
 
-if False:
+if True:
     plt.figure()
     plt.plot(time_p1, flux_p1, 'r.', markersize=0.7)
-    plt.show(block=False)
     plt.figure()
     plt.plot(time_p2, flux_p2, 'b.', markersize=0.7)
     plt.show()
@@ -353,7 +370,8 @@ if False:
 rmse_measure_mask = (phase_p1 > 0.2569) & (phase_p1 < 0.2798)
 rmse_used_vals = flux_p1[rmse_measure_mask]
 mean_val = np.mean(rmse_used_vals)
-error = np.sqrt(np.sum((mean_val - rmse_used_vals)**2) / rmse_used_vals.size)
+# error = np.sqrt(np.sum((mean_val - rmse_used_vals)**2) / rmse_used_vals.size)
+error = 4.390107947529067007e-04
 
 if True:
     _, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
@@ -366,9 +384,9 @@ if True:
 
 
 # # # Add fictitious contamination # # #
-flux_p1 = flux_p1 * 0.9 + 0.1
-flux_p2 = flux_p2 * 0.9 + 0.1
-flux_p12 = flux_p12 * 0.9 + 0.1
+# flux_p1 = flux_p1 * 0.9 + 0.1
+# flux_p2 = flux_p2 * 0.9 + 0.1
+# flux_p12 = flux_p12 * 0.9 + 0.1
 
 # # # Convert to magnitudes # # #
 m_1     = -2.5*np.log10(flux_p1)
@@ -445,8 +463,8 @@ print(save_data.shape)
 save_data[:, 0] = time_p12 + 54833.0
 save_data[:, 1] = m
 save_data[:, 2] = m_err
-np.savetxt('../Data/processed/KIC8430105/lcmag_kepler_pdcsap_3lbi.txt', save_data)
+np.savetxt('../Data/processed/KIC8430105/lcmag_kepler_pdcsap_upper1lower2.txt', save_data)
 save_data[:, 1] = flux_p12
 save_data[:, 2] = np.ones(flux_p12.shape) * error
-np.savetxt('../Data/processed/KIC8430105/lcflux_kepler_pdcsap_3lbi.txt', save_data)
+np.savetxt('../Data/processed/KIC8430105/lcflux_kepler_pdcsap_upper1lower2.txt', save_data)
 
