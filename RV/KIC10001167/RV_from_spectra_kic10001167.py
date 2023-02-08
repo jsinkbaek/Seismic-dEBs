@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 from copy import deepcopy
 import RV.library.calculate_radial_velocities as cRV
+import glob
 
 matplotlib.rcParams.update({'font.size': 25})
 print(os.getcwd())
@@ -21,18 +22,17 @@ print(os.getcwd())
 # # # # Set variables for script # # # #
 warnings.filterwarnings("ignore", category=UserWarning)
 plt.ion()
-data_path = '../Data/unprocessed/NOT/KIC10001167/'
 
 observatory_location = EarthLocation.of_site("lapalma")
 observatory_name = "lapalma"
 stellar_target = "kic10001167"
 wavelength_normalization_limit = (4450, 7000)   # Ångström, limit to data before performing continuum normalization
 wavelength_RV_limit = (4450, 7000)              # Ångström, the actual spectrum area used for analysis
-wavelength_buffer_size = 25                     # Ångström, padding included at ends of spectra. Useful when doing
+wavelength_buffer_size = 5                     # Ångström, padding included at ends of spectra. Useful when doing
                                                 # wavelength shifts with np.roll()
 wavelength_intervals_full = [(4500, 5825)]
-# wavelength_intervals = [(4500, 4765), (4765, 5030), (5030, 5295), (5295, 5560), (5560, 5825)]
-wavelength_intervals = [(5560, 5825), (5985, 6250), (6575, 6840)]
+wavelength_intervals = [(4500, 4765), (4765, 5030), (5030, 5295), (5295, 5560), (5560, 5825), (5985, 6250), (6575, 6840)]
+# wavelength_intervals = [(5560, 5825), (5985, 6250), (6575, 6840)]
 combine_intervals = None
 # telluric lines: 5885-5970, 6266-6330, 6465-6525, 6850-7050
 # relevant balmer lines: 6563 (H alpha), 4861 (H beta)
@@ -42,26 +42,30 @@ load_data = True      # Defines if normalized spectrum should be loaded from ear
 plot = False
 file_exclude_list = []  # ['FIBl060068_step011_merge.fits']
 
-use_for_spectral_separation_A = [
-    'FIBi240074_step011_merge.fits', 'FIBi230039_step011_merge.fits', 'FIDh160097_step011_merge.fits',
-    'FIBi240077_step011_merge.fits', 'FIDh200065_step011_merge.fits', 'FIDh170096_step011_merge.fits',
-    'FIBj150077_step011_merge.fits', 'FIBk030040_step011_merge.fits',
-    'FIBk040034_step011_merge.fits', 'FIBk050060_step011_merge.fits', 'FIBk060008_step011_merge.fits',
-    'FIBl050130_step011_merge.fits', 'FIBl080066_step011_merge.fits', 'FIDg070066_step011_merge.fits',
-    'FIDg080034_step011_merge.fits', 'FIDh100076_step011_merge.fits', 'FIDh150097_step011_merge.fits',
-    'FIEh020096_step012_merge.fits', 'FIEh060100_step012_merge.fits', 'FIBk140072_step011_merge.fits'
-    ]
-# not used: FIBk230065, FIBj040096, FIBi300035, FIBj010039, FIBl010111. See examine_spectra.py for reasons
+files_science = glob.glob(
+    '/home/sinkbaek/Data/KIC10001167/*merge.fits'
+)
+folder_len = len('/home/sinkbaek/Data/KIC10001167/')
+print(files_science)
 
-use_for_spectral_separation_B = [
-    'FIBi240074_step011_merge.fits', 'FIBi230039_step011_merge.fits', 'FIDh160097_step011_merge.fits',
-    'FIBi240077_step011_merge.fits', 'FIDh200065_step011_merge.fits', 'FIDh170096_step011_merge.fits',
-    'FIBj150077_step011_merge.fits', 'FIBk030040_step011_merge.fits',
-    'FIBk040034_step011_merge.fits', 'FIBk050060_step011_merge.fits', 'FIBk060008_step011_merge.fits',
-    'FIBl050130_step011_merge.fits', 'FIBl080066_step011_merge.fits', 'FIDg070066_step011_merge.fits',
-    'FIDg080034_step011_merge.fits', 'FIDh100076_step011_merge.fits', 'FIDh150097_step011_merge.fits',
-    'FIEh020096_step012_merge.fits', 'FIEh060100_step012_merge.fits', 'FIBk140072_step011_merge.fits'
-    ]
+use_for_spectral_separation = np.array([
+    'FIBi230039_step011_merge.fits', 'FIBi240074_step011_merge.fits',
+    'FIBi240077_step011_merge.fits', 'FIBj150077_step011_merge.fits',
+    'FIBk030040_step011_merge.fits', 'FIBk040034_step011_merge.fits',
+    'FIBk050060_step011_merge.fits', 'FIBk060008_step011_merge.fits',
+    'FIBk140072_step011_merge.fits', 'FIBl010111_step011_merge.fits',
+    'FIBl050130_step011_merge.fits', 'FIBl080066_step011_merge.fits',
+    'FIDg050102_step011_merge.fits', 'FIDg060105_step011_merge.fits',
+    'FIDg070066_step011_merge.fits', 'FIDg080034_step011_merge.fits',
+    'FIDg160034_step011_merge.fits', 'FIDh100076_step011_merge.fits',
+    'FIDh150097_step011_merge.fits', 'FIDh160097_step011_merge.fits',
+    'FIDh170096_step011_merge.fits', 'FIDh200065_step011_merge.fits',
+    'FIEf140066_step011_merge.fits', 'FIEh020096_step012_merge.fits',
+    'FIEh060100_step012_merge.fits', 'FIEh190105_step011_merge.fits',
+    'FIFj100096_step011_merge.fits'
+])
+
+# not used: FIBk230065, FIBj040096, FIBi300035, FIBj010039, FIBl010111. See examine_spectra.py for reasons
 
 delta_v = 1.0          # interpolation resolution for spectrum in km/s
 speed_of_light = scc.c / 1000       # in km/s
@@ -82,9 +86,9 @@ mTur_A, mTur_B = 2.0, 2.0
 bf_velocity_span = 300        # broadening function span in velocity space, should be the same for both components
 limbd_A = estimate_linear_limbd(wavelength_RV_limit, logg_A, Teff_A, MH_A, mTur_A, loc='../Data/tables/atlasco.dat')
 limbd_B = estimate_linear_limbd(wavelength_RV_limit, logg_B, Teff_B, MH_B, mTur_B, loc='../Data/tables/atlasco.dat')
-ifitpar_A = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=100, limbd_coef=limbd_A,
+ifitpar_A = InitialFitParameters(vsini_guess=4.0, spectral_resolution=67000, velocity_fit_width=100, limbd_coef=limbd_A,
                                  smooth_sigma=2.0, bf_velocity_span=bf_velocity_span)
-ifitpar_B = InitialFitParameters(vsini_guess=4.0, spectral_resolution=60000, velocity_fit_width=20, limbd_coef=limbd_B,
+ifitpar_B = InitialFitParameters(vsini_guess=4.0, spectral_resolution=67000, velocity_fit_width=20, limbd_coef=limbd_B,
                                  smooth_sigma=4.0, bf_velocity_span=bf_velocity_span,
                                  ignore_at_phase=(0.4152-0.02, 0.4152+0.02))
 
@@ -111,10 +115,10 @@ spectral_separation_array_B = np.array([])
 
 # # # Load fits files, collect and normalize data # # #
 i = 0
-for filename in os.listdir(data_path):
+for filename in files_science:
     if 'merge.fits' in filename and filename not in file_exclude_list:
         # Load observation
-        wavelength, flux, date, ra, dec = spf.load_program_spectrum(data_path+filename)
+        wavelength, flux, date, ra, dec = spf.load_program_spectrum(filename)
         date_array = np.append(date_array, date)
         RA_array = np.append(RA_array, ra*15.0)     # converts unit
         DEC_array = np.append(DEC_array, dec)
@@ -134,9 +138,9 @@ for filename in os.listdir(data_path):
         wavelength, flux = spf.simple_normalizer(wavelength, flux, reduce_em_lines=True, plot=False)
 
         # Designate if spectrum should be used for spectral separation
-        if filename in use_for_spectral_separation_A:
+        if filename[folder_len:] in use_for_spectral_separation:
             spectral_separation_array_A = np.append(spectral_separation_array_A, i)
-        if filename in use_for_spectral_separation_B:
+        if filename[folder_len:] in use_for_spectral_separation:
             spectral_separation_array_B = np.append(spectral_separation_array_B, i)
 
         # Append to collection
@@ -281,7 +285,8 @@ if False:
         flux_template_A_inverted_buffered,
         flux_template_B_inverted_buffered, delta_v, ifitpar_A, ifitpar_B, RV_guess_collection,
         bjdtdb - (2400000 + 55028.0908),
-        combine_intervals, wavelength_buffer_size, rv_lower_limit, convergence_limit=1E-2, iteration_limit=8,
+        buffer_size=wavelength_buffer_size, rv_lower_limit=rv_lower_limit,
+        convergence_limit=1E-2, iteration_limit=4,
         period=orbital_period_estimate, plot=True, return_unbuffered=False, save_additional_results=True,
         suppress_print='scs', save_location='../Data/additionals/separation_routine/10001167/'
     )
@@ -298,7 +303,8 @@ interval_results = ssr.spectral_separation_routine_multiple_intervals(
      wavelength_buffered, wavelength_intervals, flux_collection_inverted_buffered,
      flux_template_A_inverted_buffered,
      flux_template_B_inverted_buffered, delta_v, ifitpar_A, ifitpar_B, RV_guess_collection, bjdtdb-(2400000+55028.0908),
-     combine_intervals, wavelength_buffer_size, rv_lower_limit, convergence_limit=2E-2, iteration_limit=8,
+     buffer_size=wavelength_buffer_size, rv_lower_limit=rv_lower_limit, convergence_limit=5E-2,
+     iteration_limit=4,
      period=orbital_period_estimate, plot=False, return_unbuffered=False, save_additional_results=True,
      suppress_print='scs', save_location='../Data/additionals/separation_routine/10001167/'
 )

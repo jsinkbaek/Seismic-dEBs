@@ -757,7 +757,7 @@ def spectral_separation_routine_multiple_intervals(
         ifitparamsA: InitialFitParameters, ifitparamsB: InitialFitParameters,
         RV_guess_collection: np.ndarray,
         time_values: np.ndarray,
-        buffer_size: float = None,
+        buffer_size: float = 0,
         rv_lower_limit: float = 0.0, rv_proximity_limit: float = 0.0,
         convergence_limit: float = 1E-5, iteration_limit: int = 10, convergence_limit_scs: float = 1E-7,
         period: float = None,

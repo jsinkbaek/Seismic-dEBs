@@ -9,7 +9,7 @@ observatory_name = "lapalma"
 stellar_target = "kic10001167"
 
 
-spectra_folder_path = '../Data/unprocessed/NOT/KIC10001167/'
+spectra_folder_path = '/home/sinkbaek/Data/KIC10001167/'
 # reduced_spectra_folder_path = '../Data/processed/AFS_algorithm/Normalized_Spectrum/'
 filename_identifier = 'merge.fits'
 # reduced_filename_identifier = '_reduced_set.dat'

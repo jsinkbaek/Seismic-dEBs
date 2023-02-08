@@ -66,7 +66,9 @@ def draw_lc_sample(lc_blocks: np.ndarray, block_midtime: List[np.ndarray] or np.
     return lc_sample
 
 
-def draw_rv_sample(rvA, rvB, rvA_model, rvB_model, draw_random_timestamps=True):
+def draw_rv_sample(
+        rvA, rvB, rvA_model, rvB_model, draw_random_timestamps=True, monte_carlo=False
+):
     rng = default_rng()
 
     # Draw random rvs for sample
@@ -95,14 +97,22 @@ def draw_rv_sample(rvA, rvB, rvA_model, rvB_model, draw_random_timestamps=True):
         # Error
         rvA_sample[:, 2] = rvA[residual_indices_A, 2]
         rvB_sample[:, 2] = rvB[residual_indices_B, 2]
+
+    # Include Monte Carlo sampling using sample and associated errors
+    if monte_carlo:
+        rvA_sample[:, 1] = rng.normal(rvA_sample[:, 1], scale=rvA_sample[:, 2])
+        rvB_sample[:, 1] = rng.normal(rvB_sample[:, 1], scale=rvB_sample[:, 2])
     return rvA_sample, rvB_sample
 
 
 def draw_residual_sample(
-        model_blocks, residuals, error_residuals, rvA, rvB, rvA_model, rvB_model, draw_random_rv_obs=False
+        model_blocks, residuals, error_residuals, rvA, rvB, rvA_model, rvB_model, draw_random_rv_obs=False,
+        monte_carlo_rv=False
 ):
     lc_sample = draw_residual_lc_sample(model_blocks, residuals, error_residuals)
-    rvA_sample, rvB_sample = draw_rv_sample(rvA, rvB, rvA_model, rvB_model, draw_random_timestamps=draw_random_rv_obs)
+    rvA_sample, rvB_sample = draw_rv_sample(
+        rvA, rvB, rvA_model, rvB_model, draw_random_timestamps=draw_random_rv_obs, monte_carlo=monte_carlo_rv
+    )
     return lc_sample, rvA_sample, rvB_sample
 
 

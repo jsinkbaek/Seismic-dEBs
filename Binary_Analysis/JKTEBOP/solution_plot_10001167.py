@@ -13,8 +13,8 @@ matplotlib.rcParams.update({
 })
 os.chdir('/home/sinkbaek/PycharmProjects/Seismic-dEBs/Binary_Analysis/JKTEBOP/')
 
-lc_NOT_kepler = np.loadtxt('NOT/kepler_pdcsap/lc.out')
-lc_exclusions_NOT = np.loadtxt('NOT/kepler_pdcsap/lc.KEPLER')
+lc_NOT_kepler = np.loadtxt('kic10001167/kepler_pdcsap/lc.out')
+lc_exclusions_NOT = np.loadtxt('kic10001167/kepler_pdcsap/lc.KEPLER')
 mask = np.zeros((lc_exclusions_NOT[:, 0].size, ), dtype=bool)
 for i in range(0, len(lc_exclusions_NOT[:, 0])):
     true_array = np.isclose(lc_exclusions_NOT[i, 0], lc_NOT_kepler[:, 0], rtol=1e-08, atol=1e-09)
@@ -31,11 +31,11 @@ lc_gaulme_kepler = np.loadtxt('gaulme2016/KIC8430105/kepler_pdcsap_olderr/lc.out
 lc_NOT_tess = np.loadtxt('NOT/tess_LTF/lc.out')
 # lc_gaulme_tess = np.loadtxt('gaulme2016/KIC8430105/tess_ltf/lc.out')
 
-rva_not = np.loadtxt('NOT/kepler_pdcsap/rvA.out')
-rvb_not = np.loadtxt('NOT/kepler_pdcsap/rvB.out')
+rva_not = np.loadtxt('kic10001167/kepler_pdcsap/rvA.out')
+rvb_not = np.loadtxt('kic10001167/kepler_pdcsap/rvB.out')
 # rva_not = np.loadtxt('NOT/kepler_sb2ls_test/rvA.out')
 # rvb_not = np.loadtxt('NOT/kepler_sb2ls_test/rvB.out')
-not_model = np.loadtxt('NOT/kepler_pdcsap/model.out')
+not_model = np.loadtxt('kic10001167/kepler_pdcsap/model.out')
 # gau_model = np.loadtxt('gaulme2016/KIC8430105/kepler_pdcsap_olderr/model.out')
 gau_model = np.loadtxt('NOT/kepler_sb2ls_test/model.out')
 # rva_gau = np.loadtxt('gaulme2016/KIC8430105/kepler_pdcsap_olderr/rvA.out')
@@ -46,8 +46,12 @@ rvb_gau = np.loadtxt('NOT/kepler_sb2ls_test/rvB.out')
 # sys_gau_B = 16.6779564382
 sys_gau_A = 11.6126002555
 sys_gau_B = 12.0261221106
-sys_not_A = 11.6126002555
-sys_not_B = 12.0261221106
+sys_not_A = -102.9837666192
+sys_not_B = -102.2326955621
+rva_not[:, 1] -= np.mean([sys_not_A, sys_not_B])
+rvb_not[:, 1] -= np.mean([sys_not_A, sys_not_B])
+not_model[:, 7] -= np.mean([sys_not_A, sys_not_B])
+not_model[:, 6] -= np.mean([sys_not_A, sys_not_B])
 rva_sub = np.loadtxt('/home/sinkbaek/PycharmProjects/Subaru-dEBs/Binary_Analysis/JKTEBOP/KIC8430105/4855_5304_angstrom/rvA.out')
 rvb_sub = np.loadtxt('/home/sinkbaek/PycharmProjects/Subaru-dEBs/Binary_Analysis/JKTEBOP/KIC8430105/4855_5304_angstrom/rvB.out')
 sub_model = np.loadtxt('/home/sinkbaek/PycharmProjects/Subaru-dEBs/Binary_Analysis/JKTEBOP/KIC8430105/4855_5304_angstrom/model.out')
@@ -447,7 +451,7 @@ def rv_plot_1(rv1_a, rv1_b, rv1_model, markersize=6, linewidth=2, elinewidth=1):
     ax22 = fig.add_subplot(gs[5, 0])
 
     ax22.set_xlabel('Orbital Phase')
-    ax1.set_ylabel('Radial Velocity [km/s]')
+    ax1.set_ylabel(f'RV + {-np.mean([sys_not_A, sys_not_B]):.1f} [km/s]')
     ax2.set_ylabel('O-C [km/s]')
     ax2.yaxis.set_label_coords(-0.11, 0.5)
     plt.setp(ax2.spines.values(), visible=False)
@@ -455,7 +459,7 @@ def rv_plot_1(rv1_a, rv1_b, rv1_model, markersize=6, linewidth=2, elinewidth=1):
     ax21.set_xlim([-0.015, 1.0])
     ax22.set_xlim([-0.015, 1.0])
     # ax211.set_ylim([-3, 3])
-    ax21.set_ylim([-0.12, 0.12])
+    ax21.set_ylim([-0.35, 0.35])
     # ax22.set_ylim([-1.1, 1.1])
 
     std1_a = np.std(rv1_a[:, 5])
@@ -538,11 +542,11 @@ def rv_plot_1(rv1_a, rv1_b, rv1_model, markersize=6, linewidth=2, elinewidth=1):
 
     ylim = ax1.get_ylim()
     ax1.set_ylim(ylim)
-    ax1.plot([0.65892, 0.65892], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.8, linewidth=linewidth)
+    ax1.plot([0.4151, 0.4151], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.8, linewidth=linewidth)
     ax1.plot([0., 0.], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.8, linewidth=linewidth)
     ylim = ax21.get_ylim()
     ax21.set_ylim(ylim)
-    ax21.plot([0.65892, 0.65892], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.8, linewidth=linewidth)
+    ax21.plot([0.4151, 0.4151], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.8, linewidth=linewidth)
     ax21.plot([0., 0.], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.8, linewidth=linewidth)
 
     # ylim = ax211.get_ylim()
@@ -554,10 +558,10 @@ def rv_plot_1(rv1_a, rv1_b, rv1_model, markersize=6, linewidth=2, elinewidth=1):
     # ax21.set_ylim(ylim)
     ax22.set_ylim(ylim)
     # ax211.set_ylim(ylim)
-    ax22.plot([0.65892, 0.65892], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.8, linewidth=linewidth)
+    ax22.plot([0.4151, 0.4151], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.8, linewidth=linewidth)
     ax22.plot([0., 0.], [ylim[0], ylim[1]], linestyle='dotted', color='gray', alpha=0.8, linewidth=linewidth)
 
-    # ax21.set_yticks([-2.5, 0.0, 2.5])
+    ax21.set_yticks([-0.3, 0.0, 0.3])
     # ax22.set_yticks([-2.5, 0.0, 2.5])
 
 
@@ -568,9 +572,9 @@ def rv_plot_1(rv1_a, rv1_b, rv1_model, markersize=6, linewidth=2, elinewidth=1):
 # plt.savefig('../../figures/report/kepler/lc_article.png', dpi=400)
 # rv_plot(rva_not, rvb_not, rva_gau, rvb_gau, sys_not_A, sys_not_B, sys_gau_A, sys_gau_B, not_model, gau_model)
 # rv_plot_article(rva_not, rvb_not, rva_gau, rvb_gau, not_model, gau_model)
-# rv_plot_1(rva_not, rvb_not, not_model, markersize=10, linewidth=4, elinewidth=2)
+rv_plot_1(rva_not, rvb_not, not_model, markersize=10, linewidth=4, elinewidth=2)
 # plt.savefig('../../figures/report/kepler/rv_article.png', dpi=400)
-# plt.savefig('../../figures/report/kepler/rv_bologna.png', dpi=150)
-lc_presentation(lc_NOT_kepler, [-0.02110, 0.02181], [0.63887, 0.67778], lc_exclusions_NOT)
-plt.savefig('../../figures/report/kepler/lc_bologna.png', dpi=100)
+plt.savefig('../../figures/report/kepler/rv_bologna_10001167.png', dpi=150)
+# lc_presentation(lc_NOT_kepler, [-0.02110, 0.02181], [0.63887, 0.67778], lc_exclusions_NOT)
+# plt.savefig('../../figures/report/kepler/lc_bologna.png', dpi=100)
 plt.show()
